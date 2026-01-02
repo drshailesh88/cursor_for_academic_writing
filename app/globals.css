@@ -109,6 +109,17 @@
   .ProseMirror h3 {
     @apply text-xl font-semibold mb-2 text-primary-500 dark:text-primary-500;
   }
+
+  /* Placeholder styles */
+  .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    @apply text-muted-foreground pointer-events-none float-left h-0;
+  }
+
+  .ProseMirror.is-editor-empty::before {
+    content: attr(data-placeholder);
+    @apply text-muted-foreground pointer-events-none float-left h-0;
+  }
 }
 
 /* Custom scrollbar for academic aesthetic */

@@ -12,6 +12,7 @@ import { AuthButton } from '@/components/auth/auth-button';
 import { useDocument } from '@/lib/hooks/use-document';
 import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 export function ThreePanelLayout() {
   const { user } = useAuth();
@@ -28,10 +29,28 @@ export function ThreePanelLayout() {
     lastSaved,
     createNew,
     updateTitle,
+    saveNow,
   } = useDocument({
     documentId: currentDocumentId,
     autoSaveInterval: 30000, // 30 seconds
   });
+
+  // Handle inserting content from chat into the editor
+  const handleInsertToEditor = (chatContent: string) => {
+    // Convert markdown to HTML for the editor
+    // For now, just append to content with proper paragraph tags
+    const htmlContent = chatContent
+      .split('\n\n')
+      .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)
+      .join('');
+
+    const newContent = content
+      ? `${content}${htmlContent}`
+      : htmlContent;
+
+    setContent(newContent);
+    toast.success('Content inserted into editor');
+  };
 
   // Create initial document when user signs in
   useEffect(() => {
@@ -57,9 +76,23 @@ export function ThreePanelLayout() {
     try {
       const newDocId = await createNew('Untitled Document');
       setCurrentDocumentId(newDocId);
+      toast.success('New document created');
     } catch (error) {
       console.error('Failed to create new document:', error);
-      alert('Failed to create new document');
+      toast.error('Failed to create new document');
+    }
+  };
+
+  const handleDocumentDeleted = async (deletedId: string) => {
+    // If the deleted document was the current one, create a new document
+    if (deletedId === currentDocumentId) {
+      try {
+        const newDocId = await createNew('Untitled Document');
+        setCurrentDocumentId(newDocId);
+      } catch (error) {
+        console.error('Failed to create new document after deletion:', error);
+        setCurrentDocumentId(undefined);
+      }
     }
   };
 
@@ -133,6 +166,7 @@ export function ThreePanelLayout() {
                   currentDocumentId={currentDocumentId}
                   onDocumentSelect={handleDocumentSelect}
                   onCreateNew={handleCreateNew}
+                  onDocumentDeleted={handleDocumentDeleted}
                 />
               ) : (
                 <div className="p-4">
@@ -172,6 +206,7 @@ export function ThreePanelLayout() {
                   <AcademicEditor
                     content={content}
                     onChange={setContent}
+                    onSave={saveNow}
                     placeholder="Start writing your academic paper... Use the AI chat on the right to search PubMed or generate content."
                   />
                 )}
@@ -191,7 +226,10 @@ export function ThreePanelLayout() {
             onExpand={() => setIsChatCollapsed(false)}
           >
             <div className="h-full relative bg-card border-l border-border">
-              <ChatInterface />
+              <ChatInterface
+                documentId={currentDocumentId}
+                onInsertToEditor={handleInsertToEditor}
+              />
 
               {/* Collapse button */}
               <Button

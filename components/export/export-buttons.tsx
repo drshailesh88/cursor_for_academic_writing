@@ -5,6 +5,7 @@ import { FileText, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { exportDocumentToDocx } from '@/lib/export/docx';
 import { exportDocumentToPdf } from '@/lib/export/pdf';
+import { toast } from 'sonner';
 
 interface ExportButtonsProps {
   title?: string;
@@ -20,12 +21,14 @@ export function ExportButtons({ title, content }: ExportButtonsProps) {
     try {
       if (format === 'docx') {
         await exportDocumentToDocx({ title, content });
+        toast.success('Exported to DOCX');
       } else {
         exportDocumentToPdf({ title, content });
+        toast.success('Exported to PDF');
       }
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
+      toast.error('Export failed. Please try again.');
     } finally {
       setExportingFormat(null);
     }

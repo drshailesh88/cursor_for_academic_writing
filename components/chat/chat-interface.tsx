@@ -2,11 +2,19 @@
 
 import { useChat } from 'ai/react';
 import { useState } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Copy, Check, ClipboardPaste } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
-export function ChatInterface({ documentId }: { documentId?: string }) {
+interface ChatInterfaceProps {
+  documentId?: string;
+  onInsertToEditor?: (content: string) => void;
+}
+
+export function ChatInterface({ documentId, onInsertToEditor }: ChatInterfaceProps) {
   const [selectedModel, setSelectedModel] = useState<string>('anthropic');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: '/api/chat',
@@ -15,6 +23,16 @@ export function ChatInterface({ documentId }: { documentId?: string }) {
       documentId,
     },
   });
+
+  const handleCopy = async (content: string, messageId: string) => {
+    await navigator.clipboard.writeText(content);
+    setCopiedId(messageId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleInsert = (content: string) => {
+    onInsertToEditor?.(content);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -68,20 +86,85 @@ export function ChatInterface({ documentId }: { documentId?: string }) {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                className={`group relative max-w-[85%] rounded-lg px-4 py-3 ${
                   message.role === 'user'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-foreground'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                {message.role === 'user' ? (
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                ) : (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc ml-4 mb-2">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal ml-4 mb-2">{children}</ol>,
+                        li: ({ children }) => <li className="mb-1">{children}</li>,
+                        code: ({ children, className }) => {
+                          const isInline = !className;
+                          return isInline ? (
+                            <code className="bg-background/50 px-1 py-0.5 rounded text-xs">{children}</code>
+                          ) : (
+                            <code className="block bg-background/50 p-2 rounded text-xs overflow-x-auto my-2">{children}</code>
+                          );
+                        },
+                        pre: ({ children }) => <pre className="bg-background/50 p-2 rounded overflow-x-auto my-2">{children}</pre>,
+                        h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
+                        table: ({ children }) => <table className="border-collapse border border-border my-2 w-full text-xs">{children}</table>,
+                        th: ({ children }) => <th className="border border-border px-2 py-1 bg-muted font-semibold">{children}</th>,
+                        td: ({ children }) => <td className="border border-border px-2 py-1">{children}</td>,
+                        blockquote: ({ children }) => <blockquote className="border-l-2 border-primary pl-3 italic my-2">{children}</blockquote>,
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
+
+                {/* Action buttons for assistant messages */}
+                {message.role === 'assistant' && (
+                  <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleCopy(message.content, message.id)}
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-background/50 transition-colors"
+                      title="Copy to clipboard"
+                    >
+                      {copiedId === message.id ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          Copy
+                        </>
+                      )}
+                    </button>
+                    {onInsertToEditor && (
+                      <button
+                        onClick={() => handleInsert(message.content)}
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-background/50 transition-colors"
+                        title="Insert into editor"
+                      >
+                        <ClipboardPaste className="w-3 h-3" />
+                        Insert
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))
         )}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-muted text-foreground max-w-[80%] rounded-lg px-4 py-2">
+            <div className="bg-muted text-foreground max-w-[80%] rounded-lg px-4 py-3">
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
           </div>

@@ -10,6 +10,7 @@ import {
 } from '@/lib/firebase/documents';
 import { Document } from '@/lib/firebase/schema';
 import { useAuth } from '@/lib/firebase/auth';
+import { toast } from 'sonner';
 
 interface UseDocumentOptions {
   documentId?: string;
@@ -154,9 +155,10 @@ export function useDocument(options: UseDocumentOptions = {}) {
     [documentId]
   );
 
-  // Manual save
+  // Manual save with toast feedback
   const saveNow = useCallback(async () => {
     await save();
+    toast.success('Document saved');
   }, [save]);
 
   return {

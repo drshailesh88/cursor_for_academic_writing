@@ -10,7 +10,7 @@ import {
   User,
 } from 'firebase/auth';
 import { auth, db } from './client';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, FieldValue } from 'firebase/firestore';
 import { COLLECTIONS, UserProfile } from './schema';
 
 // Google Sign-In
@@ -26,8 +26,8 @@ export async function signInWithGoogle() {
     if (!userSnap.exists()) {
       // First time user - create profile
       const userProfile: Omit<UserProfile, 'createdAt' | 'lastLoginAt'> & {
-        createdAt: any;
-        lastLoginAt: any;
+        createdAt: FieldValue;
+        lastLoginAt: FieldValue;
       } = {
         uid: result.user.uid,
         email: result.user.email || '',

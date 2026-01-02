@@ -7,19 +7,36 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import { useEffect } from 'react';
+import CharacterCount from '@tiptap/extension-character-count';
+import Placeholder from '@tiptap/extension-placeholder';
+import { useEffect, useCallback } from 'react';
 
 interface AcademicEditorProps {
   content?: string;
   onChange?: (content: string) => void;
+  onSave?: () => void;
   placeholder?: string;
 }
 
 export function AcademicEditor({
   content = '',
   onChange,
+  onSave,
   placeholder = 'Start writing your academic paper...'
 }: AcademicEditorProps) {
+  // Handle Cmd+S / Ctrl+S for manual save
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+      event.preventDefault();
+      onSave?.();
+    }
+  }, [onSave]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -53,6 +70,11 @@ export function AcademicEditor({
         HTMLAttributes: {
           class: 'border border-border px-4 py-2 bg-muted font-semibold',
         },
+      }),
+      CharacterCount,
+      Placeholder.configure({
+        placeholder,
+        emptyEditorClass: 'is-editor-empty',
       }),
     ],
     content,
