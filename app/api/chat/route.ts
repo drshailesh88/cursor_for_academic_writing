@@ -3,6 +3,7 @@ import { openai, createOpenAI } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
+import { getSystemPrompt, type DisciplineId } from '@/lib/prompts/disciplines';
 
 // Create OpenRouter provider
 const openrouter = createOpenAI({
@@ -36,61 +37,30 @@ const MODEL_MAP = {
   'openrouter-toppy-7b': openrouter('undi95/toppy-m-7b:free'),
 };
 
-const ACADEMIC_WRITING_SYSTEM_PROMPT = `You are an expert academic writing assistant specializing in medical and scientific literature.
-
-CORE PRINCIPLES:
-
-1. AVOID Common AI Writing Patterns:
-   - ❌ "plays a significant role in shaping"
-   - ❌ "it is important to note that"
-   - ❌ "in conclusion, it can be said"
-   - ❌ "delve into the intricacies"
-   - ❌ Excessive use of "moreover," "furthermore," "additionally"
-   - ❌ Overly formal or pompous language
-   - ❌ Generic statements without specifics
-
-2. Write Clear, Professional Academic Prose:
-   - ✅ Be direct and precise
-   - ✅ Use active voice when appropriate
-   - ✅ Support claims with evidence
-   - ✅ Vary sentence structure naturally
-   - ✅ Use field-appropriate terminology
-   - ✅ Be objective and evidence-based
-
-3. Citation Format (CRITICAL):
-   - Use author-year parenthetical citations: (Author et al., Year)
-   - Examples: (Mbachu et al., 2020), (Tiwari et al., 2023)
-   - Multiple citations: (Smith et al., 2020; Jones & Brown, 2021)
-   - Integrate citations naturally into sentences
-   - Place citations at the end of relevant statements
-   - This format allows easy integration with Paperpile, Zotero, and other citation managers
-
-4. Style Flexibility:
-   - Adapt tone to the target audience (undergraduate, graduate, professional)
-   - Match the formality level requested by the user
-   - Can range from conversational to highly formal
-   - Always maintain academic integrity and precision
-
-Your capabilities:
-- Search PubMed for relevant research articles
-- Generate well-structured tables of contents
-- Write academic content in various styles (formal, conversational, technical)
-- Use author-year parenthetical citations for easy citation manager integration
-- Provide evidence-based analysis and synthesis`;
+// Default prompt for backwards compatibility (life-sciences focused)
+const DEFAULT_DISCIPLINE: DisciplineId = 'life-sciences';
 
 export async function POST(req: Request) {
   try {
-    const { messages, model = 'anthropic', documentId } = await req.json();
+    const {
+      messages,
+      model = 'anthropic',
+      documentId,
+      discipline = DEFAULT_DISCIPLINE
+    } = await req.json();
 
     const selectedModel = MODEL_MAP[model as keyof typeof MODEL_MAP] || MODEL_MAP.anthropic;
+
+    // Get discipline-specific system prompt
+    const systemPrompt = getSystemPrompt(discipline as DisciplineId);
 
     const result = await streamText({
       model: selectedModel,
       messages,
-      system: ACADEMIC_WRITING_SYSTEM_PROMPT,
+      system: systemPrompt,
       tools: {
         searchPubMed: tool({
-          description: 'Search PubMed for academic articles on a given topic. Returns articles with author-year citations.',
+          description: 'Search PubMed for academic articles on a given topic. Returns articles with author-year citations. Best for life sciences, medicine, and biomedical research.',
           parameters: z.object({
             query: z.string().describe('PubMed search query (e.g., "SGLT2 inhibitors heart failure")'),
             maxResults: z.number().default(15).describe('Maximum number of results'),
@@ -118,6 +88,39 @@ export async function POST(req: Request) {
               articles: articlesWithCitations,
               count: articles.length,
               message: `Found ${articles.length} articles. Use these citations in your writing: ${articlesWithCitations.map(a => a.citation).join(', ')}`,
+            };
+          },
+        }),
+
+        // Placeholder for future multi-database search
+        searchArxiv: tool({
+          description: 'Search arXiv for preprints in physics, mathematics, computer science, and quantitative biology. Best for physical sciences, CS, and math.',
+          parameters: z.object({
+            query: z.string().describe('arXiv search query'),
+            category: z.enum(['physics', 'math', 'cs', 'q-bio', 'cond-mat', 'astro-ph']).optional().describe('arXiv category'),
+            maxResults: z.number().default(10).describe('Maximum number of results'),
+          }),
+          execute: async ({ query, category, maxResults }) => {
+            // TODO: Implement arXiv search in Phase 1
+            return {
+              message: `arXiv search coming soon. For now, use this query on arxiv.org: ${query}${category ? ` in category ${category}` : ''}`,
+              status: 'not_implemented',
+            };
+          },
+        }),
+
+        searchSemanticScholar: tool({
+          description: 'Search Semantic Scholar for papers across all scientific disciplines. Returns papers with citation counts and related work.',
+          parameters: z.object({
+            query: z.string().describe('Search query'),
+            maxResults: z.number().default(10).describe('Maximum number of results'),
+            year: z.number().optional().describe('Filter by publication year'),
+          }),
+          execute: async ({ query, maxResults, year }) => {
+            // TODO: Implement Semantic Scholar search in Phase 1
+            return {
+              message: `Semantic Scholar search coming soon. For now, search at semanticscholar.org: ${query}`,
+              status: 'not_implemented',
             };
           },
         }),

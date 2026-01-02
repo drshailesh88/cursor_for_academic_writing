@@ -1,0 +1,267 @@
+# Academic Writing Platform - Implementation Plan
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Academic Writing Platform                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Frontend (Next.js 14)                                                       │
+│  ├── Components                                                              │
+│  │   ├── Editor (TipTap)                                                    │
+│  │   ├── Chat Interface                                                     │
+│  │   ├── Document List                                                      │
+│  │   ├── Discipline Selector ← NEW                                         │
+│  │   └── Export Buttons                                                     │
+│  └── Pages                                                                  │
+│      └── Main App (three-panel layout)                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  API Routes                                                                  │
+│  ├── /api/chat                                                              │
+│  │   ├── Multi-model support (14 LLMs)                                      │
+│  │   ├── Discipline-specific prompts ← ENHANCED                            │
+│  │   └── Research tools (PubMed, arXiv*, Semantic Scholar*)                │
+│  └── /api/research ← NEW                                                    │
+│      ├── Unified search endpoint                                            │
+│      └── Database aggregator                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Libraries                                                                   │
+│  ├── /lib/prompts/disciplines ← NEW (15 discipline prompts)                │
+│  ├── /lib/research ← NEW (multi-database clients)                          │
+│  ├── /lib/firebase (auth, documents)                                       │
+│  ├── /lib/export (docx, pdf, latex*)                                       │
+│  └── /lib/pubmed (existing)                                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  External Services                                                          │
+│  ├── Firebase (Auth + Firestore)                                           │
+│  ├── OpenRouter (11 free models)                                           │
+│  ├── OpenAI, Anthropic, Google (premium models)                            │
+│  └── Research APIs: PubMed, arXiv*, Semantic Scholar*, OpenAlex*           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+* = Planned for Phase 1
+```
+
+---
+
+## Phase 1: Multi-Database & Discipline Foundation (Weeks 1-4)
+
+### Week 1: Database Clients
+
+**Goal:** Implement arXiv and Semantic Scholar API clients
+
+**Tasks:**
+1. Create `/lib/research/arxiv.ts`
+   - Atom feed parser
+   - Category filtering
+   - Rate limiting (1 req/s)
+
+2. Create `/lib/research/semantic-scholar.ts`
+   - REST API client
+   - Paper metadata extraction
+   - Related papers endpoint
+
+3. Create `/lib/research/openalex.ts`
+   - Works endpoint
+   - Author disambiguation
+   - Citation counts
+
+4. Update `/app/api/chat/route.ts`
+   - Connect tools to real implementations
+   - Remove placeholder returns
+
+**Files to Create:**
+```
+lib/research/
+├── index.ts           # Unified search aggregator
+├── arxiv.ts           # arXiv API client
+├── semantic-scholar.ts # Semantic Scholar client
+├── openalex.ts        # OpenAlex client
+├── types.ts           # Shared types
+└── dedup.ts           # DOI-based deduplication
+```
+
+### Week 2: Discipline System UI
+
+**Goal:** Add discipline selection to the UI
+
+**Tasks:**
+1. Create discipline selector component
+   - Grid of discipline cards
+   - Icon and color for each
+   - Persisted to document metadata
+
+2. Update chat interface
+   - Pass discipline to API
+   - Show current discipline badge
+
+3. Update document schema
+   - Add `discipline` field
+   - Migration for existing documents
+
+**Files to Modify:**
+```
+components/
+├── discipline/
+│   └── discipline-selector.tsx  # NEW
+├── chat/
+│   └── chat-interface.tsx       # Add discipline prop
+└── layout/
+    └── three-panel-layout.tsx   # Add discipline selector
+```
+
+### Week 3: Prompt Enhancement
+
+**Goal:** Polish discipline prompts with real-world testing
+
+**Tasks:**
+1. Test each discipline prompt with sample writing tasks
+2. Collect feedback on terminology and conventions
+3. Add discipline-specific examples
+4. Refine avoidance patterns
+
+### Week 4: Integration Testing
+
+**Goal:** End-to-end testing of multi-discipline system
+
+**Tasks:**
+1. Test search across disciplines
+2. Verify prompt switching works
+3. Test database result deduplication
+4. Performance optimization
+
+---
+
+## Phase 2: PDF Analysis (Weeks 5-8)
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  PDF Analysis Pipeline                                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Upload → Parse → Extract → Embed → Store → Query              │
+│                                                                 │
+│  1. Upload: Client-side file handling (max 50MB)               │
+│  2. Parse: PDF.js text extraction                               │
+│  3. Extract: Section detection, reference parsing              │
+│  4. Embed: OpenAI embeddings for semantic search               │
+│  5. Store: Firestore with user ownership                       │
+│  6. Query: RAG-based Q&A with citations                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Files to Create:**
+```
+lib/pdf/
+├── parser.ts          # PDF.js wrapper
+├── sections.ts        # Section detection
+├── embeddings.ts      # Vector embeddings
+└── rag.ts             # Retrieval-augmented generation
+
+components/pdf/
+├── pdf-upload.tsx     # Upload component
+├── pdf-viewer.tsx     # PDF display
+└── pdf-chat.tsx       # Chat with PDF
+```
+
+---
+
+## Phase 3: Citation System (Weeks 9-12)
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Citation Pipeline                                              │
+├─────────────────────────────────────────────────────────────────┤
+│  Reference → Format → Insert → Track → Generate Bibliography   │
+│                                                                 │
+│  1. Reference: Paper metadata from search or PDF               │
+│  2. Format: Apply style (APA, MLA, Vancouver, etc.)            │
+│  3. Insert: TipTap command to add in-text citation             │
+│  4. Track: Store citations in document metadata                │
+│  5. Bibliography: Auto-generate formatted reference list       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Files to Create:**
+```
+lib/citations/
+├── styles/
+│   ├── apa7.ts
+│   ├── mla9.ts
+│   ├── vancouver.ts
+│   ├── ieee.ts
+│   ├── chicago.ts
+│   └── ... (20+ styles)
+├── formatter.ts       # Style application
+├── tracker.ts         # Citation management
+└── bibliography.ts    # Reference list generation
+```
+
+---
+
+## Technical Decisions
+
+### 1. Why Client-Side PDF Parsing?
+- No server storage of user documents
+- Faster processing for small files
+- Lower server costs
+
+### 2. Why OpenAlex over Others?
+- Free with 100K requests/day
+- 250M+ works (comprehensive)
+- Good API design
+- DOI-based deduplication easy
+
+### 3. Why Keep Prompts in Code (not DB)?
+- Version control for prompts
+- Type safety for discipline IDs
+- Easier testing and review
+- No latency for prompt loading
+
+### 4. Citation Library Choice
+- Consider: citation-js, citeproc-js
+- Recommendation: citation-js (smaller, active maintenance)
+- Fallback: Custom implementation for core styles
+
+---
+
+## Risk Mitigation
+
+| Risk | Mitigation |
+|------|------------|
+| arXiv rate limiting | Implement exponential backoff, cache results |
+| PDF parsing accuracy | Fallback to OCR for scanned docs, manual override |
+| Citation style errors | Test against reference implementations, user feedback |
+| Prompt drift | Version prompts, A/B testing framework |
+| Model API changes | Abstraction layer, graceful degradation |
+
+---
+
+## Success Criteria
+
+### Phase 1 Complete When:
+- [ ] 4 databases searchable (PubMed, arXiv, Semantic Scholar, OpenAlex)
+- [ ] 15 disciplines selectable in UI
+- [ ] Prompts switch based on discipline
+- [ ] Results deduplicated by DOI
+- [ ] Response time < 3 seconds
+
+### Phase 2 Complete When:
+- [ ] PDF upload working for files up to 50MB
+- [ ] Section detection accuracy > 85%
+- [ ] Chat cites specific pages
+- [ ] 10+ PDFs per user in free tier
+
+### Phase 3 Complete When:
+- [ ] 25+ citation styles implemented
+- [ ] In-text citations insert correctly
+- [ ] Bibliography generates on export
+- [ ] Style switching updates all citations
+
+---
+
+**Last Updated:** January 2, 2026
+**Status:** Phase 1 Ready to Begin
