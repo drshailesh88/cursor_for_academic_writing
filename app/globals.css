@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+
+    /* Academic Purple - Primary */
+    --primary: 265 35% 48%;        /* #6f5d96 */
+    --primary-foreground: 0 0% 98%;
+
+    /* Warm Gray - Secondary */
+    --secondary: 30 15% 55%;        /* #a18a76 */
+    --secondary-foreground: 240 5.9% 10%;
+
+    /* Scholarly Gold - Accent */
+    --accent: 41 76% 53%;           /* #d9a836 */
+    --accent-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 265 35% 48%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --primary: 265 45% 65%;         /* Lighter purple for dark mode */
+    --primary-foreground: 240 5.9% 10%;
+
+    --secondary: 30 20% 45%;        /* Adjusted warm gray */
+    --secondary-foreground: 0 0% 98%;
+
+    --accent: 41 80% 60%;           /* Brighter gold for dark mode */
+    --accent-foreground: 240 5.9% 10%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 265 45% 65%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Academic serif for content */
+  .prose {
+    @apply font-serif text-base leading-7;
+  }
+
+  /* Citation styles */
+  .citation {
+    @apply text-primary-600 dark:text-primary-400 text-sm align-super;
+  }
+
+  /* Editor styles */
+  .ProseMirror {
+    @apply prose prose-lg max-w-none focus:outline-none;
+  }
+
+  .ProseMirror p {
+    @apply mb-4;
+  }
+
+  .ProseMirror h1 {
+    @apply text-3xl font-bold mb-4 text-primary-700 dark:text-primary-300;
+  }
+
+  .ProseMirror h2 {
+    @apply text-2xl font-bold mb-3 text-primary-600 dark:text-primary-400;
+  }
+
+  .ProseMirror h3 {
+    @apply text-xl font-semibold mb-2 text-primary-500 dark:text-primary-500;
+  }
+}
+
+/* Custom scrollbar for academic aesthetic */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-secondary-100 dark:bg-secondary-900;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-secondary-300 dark:bg-secondary-700 rounded-full;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-secondary-400 dark:bg-secondary-600;
+  }
+}

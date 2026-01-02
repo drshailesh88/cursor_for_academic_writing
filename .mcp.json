@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pubmed": {
+      "command": "npx",
+      "args": ["-y", "@cyanheads/pubmed-mcp-server"],
+      "env": {
+        "PUBMED_EMAIL": "${PUBMED_EMAIL}",
+        "PUBMED_API_KEY": "${PUBMED_API_KEY}"
+      }
+    }
+  }
+}
