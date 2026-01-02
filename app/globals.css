@@ -146,6 +146,46 @@
   .citation[data-suppress-author="true"] {
     @apply text-muted-foreground;
   }
+
+  /* Track Changes styles */
+  .track-insertion {
+    background-color: rgba(34, 197, 94, 0.2);
+    border-bottom: 2px solid rgb(34, 197, 94);
+    cursor: help;
+  }
+
+  .dark .track-insertion {
+    background-color: rgba(34, 197, 94, 0.15);
+  }
+
+  .track-deletion {
+    background-color: rgba(239, 68, 68, 0.2);
+    text-decoration: line-through;
+    color: rgb(239, 68, 68);
+    cursor: help;
+  }
+
+  .dark .track-deletion {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: rgb(252, 165, 165);
+  }
+
+  /* Track changes tooltip on hover */
+  .track-insertion:hover::after,
+  .track-deletion:hover::after {
+    content: attr(data-user-name);
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+  }
 }
 
 /* Custom scrollbar for academic aesthetic */

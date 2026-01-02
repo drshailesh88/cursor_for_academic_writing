@@ -154,3 +154,157 @@ export interface VersionDiff {
   /** Time elapsed between versions (milliseconds) */
   timeDiff: number;
 }
+
+// Document Sharing Types
+
+/**
+ * Permission levels for document sharing
+ */
+export type SharePermission = 'view' | 'comment' | 'edit';
+
+/**
+ * Represents a share of a document with another user or via link
+ */
+export interface DocumentShare {
+  /** Unique share identifier */
+  id: string;
+
+  /** Parent document ID */
+  documentId: string;
+
+  // Share method
+  /** Type of share - link or email invitation */
+  type: 'link' | 'email';
+
+  // For link sharing
+  /** Cryptographically secure token for link sharing */
+  shareToken?: string;
+
+  // For email sharing
+  /** Email address of the person being shared with */
+  sharedWithEmail?: string;
+
+  /** User ID if the email user exists in the system */
+  sharedWithUserId?: string;
+
+  // Permission level
+  /** Permission level granted to the share recipient */
+  permission: SharePermission;
+
+  // Metadata
+  /** User ID of the person who created the share */
+  createdBy: string;
+
+  /** Display name of the person who created the share */
+  createdByName: string;
+
+  /** Creation timestamp (milliseconds since epoch) */
+  createdAt: number;
+
+  /** Optional expiration timestamp (milliseconds since epoch) */
+  expiresAt?: number;
+
+  // Status
+  /** Whether the share is currently active */
+  active: boolean;
+}
+
+/**
+ * Represents a document that has been shared with the current user
+ */
+export interface SharedDocument {
+  /** Document ID */
+  documentId: string;
+
+  /** Document title */
+  title: string;
+
+  /** Display name of the document owner */
+  ownerName: string;
+
+  /** User ID of the document owner */
+  ownerId: string;
+
+  /** Permission level the current user has */
+  permission: SharePermission;
+
+  /** Timestamp when the document was shared (milliseconds since epoch) */
+  sharedAt: number;
+
+  /** Last updated timestamp */
+  updatedAt?: number;
+
+  /** Word count */
+  wordCount?: number;
+}
+
+// Track Changes Types
+
+/**
+ * Type of tracked change
+ */
+export type ChangeType = 'insertion' | 'deletion' | 'formatting';
+
+/**
+ * Represents a tracked change in the document
+ */
+export interface TrackedChange {
+  /** Unique change identifier */
+  id: string;
+
+  /** Parent document ID */
+  documentId: string;
+
+  // Change info
+  /** Type of change made */
+  type: ChangeType;
+
+  // Position
+  /** Starting position in document */
+  from: number;
+
+  /** Ending position in document */
+  to: number;
+
+  // Content
+  /** Original content (for deletions) */
+  oldContent?: string;
+
+  /** New content (for insertions) */
+  newContent?: string;
+
+  // Author
+  /** User ID who made the change */
+  userId: string;
+
+  /** User name at time of change */
+  userName: string;
+
+  // Timestamp
+  /** Creation timestamp (milliseconds since epoch) */
+  createdAt: number;
+
+  // Status
+  /** Change status */
+  status: 'pending' | 'accepted' | 'rejected';
+
+  /** User ID who resolved the change */
+  resolvedBy?: string;
+
+  /** Resolution timestamp */
+  resolvedAt?: number;
+}
+
+/**
+ * Track changes state
+ */
+export interface TrackChangesState {
+  /** Whether tracking is enabled */
+  enabled: boolean;
+
+  /** Whether changes are visible */
+  showChanges: boolean;
+
+  /** Array of tracked changes */
+  changes: TrackedChange[];
+}

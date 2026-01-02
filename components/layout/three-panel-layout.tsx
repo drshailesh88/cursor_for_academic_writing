@@ -15,6 +15,7 @@ import {
   MessageCircle,
   Menu,
   X,
+  Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChatInterface } from '@/components/chat/chat-interface';
@@ -25,6 +26,7 @@ import { AuthButton } from '@/components/auth/auth-button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { KeyboardShortcuts, useKeyboardShortcuts } from '@/components/ui/keyboard-shortcuts';
 import { CommentsSidebar } from '@/components/collaboration/comments-sidebar';
+import { ShareDialog, useShareDialog } from '@/components/collaboration/share-dialog';
 import { useDocument } from '@/lib/hooks/use-document';
 import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
@@ -59,6 +61,7 @@ export function ThreePanelLayout() {
   const [rightPanelView, setRightPanelView] = useState<RightPanelView>('chat');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isOpen: shortcutsOpen, setIsOpen: setShortcutsOpen } = useKeyboardShortcuts();
+  const { isOpen: shareDialogOpen, documentId: shareDocumentId, open: openShareDialog, close: closeShareDialog } = useShareDialog();
 
   const {
     document,
@@ -168,11 +171,20 @@ export function ThreePanelLayout() {
     <KeyboardShortcuts isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
   );
 
+  const shareDialog = shareDocumentId ? (
+    <ShareDialog
+      isOpen={shareDialogOpen}
+      onClose={closeShareDialog}
+      documentId={shareDocumentId}
+    />
+  ) : null;
+
   // Mobile Layout
   if (isMobile) {
     return (
       <div className="h-screen w-screen bg-background flex flex-col">
         {shortcutsModal}
+        {shareDialog}
         {/* Mobile Top Bar */}
         <div className="h-14 border-b border-border flex items-center justify-between px-3 bg-card">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -211,6 +223,20 @@ export function ThreePanelLayout() {
         {/* Mobile Menu Dropdown */}
         {mobileMenuOpen && (
           <div className="absolute top-14 left-0 right-0 bg-card border-b border-border z-50 p-4 space-y-3">
+            {user && currentDocumentId && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  openShareDialog(currentDocumentId);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share Document
+              </Button>
+            )}
             {user && (
               <ExportButtons title={document?.title} content={content} />
             )}
@@ -324,6 +350,7 @@ export function ThreePanelLayout() {
   return (
     <div className="h-screen w-screen bg-background flex flex-col">
       {shortcutsModal}
+      {shareDialog}
       {/* Top bar with auth and save status */}
       <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-card">
         <div className="flex items-center gap-4">
@@ -360,6 +387,17 @@ export function ThreePanelLayout() {
           )}
 
           <div className="flex items-center gap-2">
+            {user && currentDocumentId && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openShareDialog(currentDocumentId)}
+                title="Share document"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+            )}
             {user && (
               <ExportButtons title={document?.title} content={content} />
             )}

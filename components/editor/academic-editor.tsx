@@ -17,11 +17,15 @@ import { useCitations } from '@/lib/hooks/use-citations';
 import { useWritingAnalysis } from '@/lib/hooks/use-writing-analysis';
 import { usePlagiarism } from '@/lib/hooks/use-plagiarism';
 import { useVersions } from '@/lib/hooks/use-versions';
+import { useTrackChanges } from '@/lib/hooks/use-track-changes';
 import { AnalysisPanel } from '@/components/writing-analysis/analysis-panel';
 import { PlagiarismPanel } from '@/components/plagiarism/plagiarism-panel';
 import { AIWritingToolbar } from '@/components/ai-writing/ai-writing-toolbar';
 import { VersionHistoryPanel } from '@/components/collaboration/version-history-panel';
 import { VersionPreviewModal } from '@/components/collaboration/version-preview-modal';
+import { TrackChangesToolbar } from '@/components/collaboration/track-changes-toolbar';
+import { TrackChangesPanel } from '@/components/collaboration/track-changes-panel';
+import { TrackInsertion, TrackDeletion } from '@/lib/editor/track-changes-extensions';
 import type { Reference } from '@/lib/citations/types';
 import type { CitationOptions } from '@/components/citations/citation-dialog';
 import type { DocumentVersion } from '@/lib/collaboration/types';
@@ -105,6 +109,8 @@ export function AcademicEditor({
         placeholder,
         emptyEditorClass: 'is-editor-empty',
       }),
+      TrackInsertion,
+      TrackDeletion,
     ],
     content,
     editorProps: {
@@ -184,6 +190,26 @@ export function AcademicEditor({
     documentId,
     currentContent: content,
     currentWordCount: editor?.storage.characterCount?.words() || 0,
+    enabled: !!documentId,
+  });
+
+  // Track changes
+  const [showTrackChanges, setShowTrackChanges] = useState(false);
+  const {
+    trackingEnabled,
+    showChanges,
+    changes,
+    loading: trackChangesLoading,
+    pendingCount,
+    toggleTracking,
+    toggleShowChanges,
+    acceptChange,
+    rejectChange,
+    acceptAll,
+    rejectAll,
+  } = useTrackChanges({
+    documentId,
+    editor,
     enabled: !!documentId,
   });
 
@@ -526,6 +552,26 @@ export function AcademicEditor({
 
           <div className="w-px h-6 bg-border mx-2" />
 
+          {/* Track Changes toggle button */}
+          <button
+            onClick={toggleTracking}
+            disabled={!documentId}
+            className={`px-3 py-1 text-sm rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              trackingEnabled
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+            title="Toggle track changes"
+          >
+            <span className="text-sm">📝</span>
+            <span className="hidden sm:inline">Track</span>
+            {pendingCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-white/20">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+
           {/* Save Version button */}
           <button
             onClick={handleSaveVersion}
@@ -559,10 +605,24 @@ export function AcademicEditor({
         </div>
       </div>
 
+      {/* Track Changes Toolbar */}
+      {trackingEnabled && (
+        <TrackChangesToolbar
+          trackingEnabled={trackingEnabled}
+          showChanges={showChanges}
+          pendingCount={pendingCount}
+          onToggleTracking={toggleTracking}
+          onToggleShowChanges={toggleShowChanges}
+          onAcceptAll={acceptAll}
+          onRejectAll={rejectAll}
+          disabled={!documentId}
+        />
+      )}
+
       {/* Main content area with optional panels */}
       <div className="flex-1 flex overflow-hidden">
         {/* Editor with AI toolbar */}
-        <div className={`flex-1 flex flex-col overflow-hidden ${(showAnalysis || showPlagiarism || showVersionHistory) ? 'border-r border-border' : ''}`}>
+        <div className={`flex-1 flex flex-col overflow-hidden ${(showAnalysis || showPlagiarism || showVersionHistory || trackingEnabled) ? 'border-r border-border' : ''}`}>
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <EditorContent editor={editor} />
           </div>
@@ -572,11 +632,11 @@ export function AcademicEditor({
         </div>
 
         {/* Right sidebar with panels */}
-        {(showAnalysis || showPlagiarism || showVersionHistory) && (
+        {(showAnalysis || showPlagiarism || showVersionHistory || trackingEnabled) && (
           <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden bg-card border-l border-border">
             {/* Analysis Panel */}
             {showAnalysis && (
-              <div className={`${showPlagiarism || showVersionHistory ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
+              <div className={`${showPlagiarism || showVersionHistory || trackingEnabled ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
                 <AnalysisPanel
                   analysis={analysis}
                   isAnalyzing={isAnalyzing}
@@ -588,7 +648,7 @@ export function AcademicEditor({
 
             {/* Plagiarism Panel */}
             {showPlagiarism && (
-              <div className={`${showAnalysis || showVersionHistory ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
+              <div className={`${showAnalysis || showVersionHistory || trackingEnabled ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
                 <PlagiarismPanel
                   result={plagiarismResult}
                   isChecking={isPlagiarismChecking}
@@ -602,7 +662,7 @@ export function AcademicEditor({
 
             {/* Version History Panel */}
             {showVersionHistory && (
-              <div className={`${showAnalysis || showPlagiarism ? 'flex-1' : 'h-full'} overflow-hidden`}>
+              <div className={`${showAnalysis || showPlagiarism || trackingEnabled ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
                 <VersionHistoryPanel
                   versions={versions}
                   loading={versionsLoading}
@@ -612,6 +672,19 @@ export function AcademicEditor({
                   onPreview={handlePreviewVersion}
                   onRefresh={refreshVersions}
                   onClose={() => setShowVersionHistory(false)}
+                />
+              </div>
+            )}
+
+            {/* Track Changes Panel */}
+            {trackingEnabled && (
+              <div className={`${showAnalysis || showPlagiarism || showVersionHistory ? 'flex-1' : 'h-full'} overflow-hidden`}>
+                <TrackChangesPanel
+                  changes={changes}
+                  loading={trackChangesLoading}
+                  onAcceptChange={acceptChange}
+                  onRejectChange={rejectChange}
+                  onClose={() => toggleTracking()}
                 />
               </div>
             )}
