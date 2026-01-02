@@ -6,13 +6,15 @@ import { getUserDocuments, deleteDocument } from '@/lib/firebase/documents';
 import { DocumentMetadata } from '@/lib/firebase/schema';
 import { FileText, Plus, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TemplateSelector } from '@/components/templates/template-selector';
+import { DocumentTemplate } from '@/lib/templates/document-templates';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
 interface DocumentListProps {
   currentDocumentId?: string;
   onDocumentSelect: (documentId: string) => void;
-  onCreateNew: () => void;
+  onCreateNew: (template?: DocumentTemplate) => void;
   onDocumentDeleted?: (documentId: string) => void;
 }
 
@@ -28,6 +30,7 @@ export function DocumentList({
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
   useEffect(() => {
     async function loadDocuments() {
@@ -91,11 +94,22 @@ export function DocumentList({
     );
   }
 
+  const handleTemplateSelect = (template: DocumentTemplate) => {
+    onCreateNew(template);
+    setShowTemplateSelector(false);
+  };
+
   return (
     <div className="flex flex-col h-full">
+      <TemplateSelector
+        isOpen={showTemplateSelector}
+        onClose={() => setShowTemplateSelector(false)}
+        onSelect={handleTemplateSelect}
+      />
+
       <div className="p-4 space-y-3 border-b border-border">
         <Button
-          onClick={onCreateNew}
+          onClick={() => setShowTemplateSelector(true)}
           className="w-full"
           size="sm"
         >

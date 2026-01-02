@@ -101,7 +101,27 @@ export function AcademicEditor({
   return (
     <div className="h-full overflow-y-auto scrollbar-thin">
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 p-2 bg-background border-b border-border">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 md:gap-2 p-2 bg-background border-b border-border">
+        {/* Undo/Redo */}
+        <button
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          className="px-2 py-1 text-sm rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Undo (Cmd+Z)"
+        >
+          ↩
+        </button>
+        <button
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          className="px-2 py-1 text-sm rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Redo (Cmd+Shift+Z)"
+        >
+          ↪
+        </button>
+
+        <div className="w-px h-6 bg-border mx-1 hidden md:block" />
+
         {/* Headings */}
         <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}

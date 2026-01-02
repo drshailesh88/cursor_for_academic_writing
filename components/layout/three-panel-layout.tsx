@@ -2,23 +2,58 @@
 
 import { useState, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Save, CheckCircle } from 'lucide-react';
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  Save,
+  CheckCircle,
+  FileText,
+  Edit3,
+  MessageSquare,
+  Menu,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChatInterface } from '@/components/chat/chat-interface';
 import { AcademicEditor } from '@/components/editor/academic-editor';
 import { DocumentList } from '@/components/history/document-list';
 import { ExportButtons } from '@/components/export/export-buttons';
 import { AuthButton } from '@/components/auth/auth-button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { KeyboardShortcuts, useKeyboardShortcuts } from '@/components/ui/keyboard-shortcuts';
 import { useDocument } from '@/lib/hooks/use-document';
 import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
+import { DocumentTemplate } from '@/lib/templates/document-templates';
+
+// Hook to detect mobile screen
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
+
+type MobileView = 'documents' | 'editor' | 'chat';
 
 export function ThreePanelLayout() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | undefined>();
+  const [mobileView, setMobileView] = useState<MobileView>('editor');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isOpen: shortcutsOpen, setIsOpen: setShortcutsOpen } = useKeyboardShortcuts();
 
   const {
     document,
@@ -70,13 +105,30 @@ export function ThreePanelLayout() {
 
   const handleDocumentSelect = (documentId: string) => {
     setCurrentDocumentId(documentId);
+    // On mobile, switch to editor after selecting a document
+    if (isMobile) {
+      setMobileView('editor');
+    }
   };
 
-  const handleCreateNew = async () => {
+  const handleCreateNew = async (template?: DocumentTemplate) => {
     try {
-      const newDocId = await createNew('Untitled Document');
+      const title = template?.name === 'Blank Document' ? 'Untitled Document' : template?.name || 'Untitled Document';
+      const newDocId = await createNew(title);
       setCurrentDocumentId(newDocId);
+
+      // If template has content, set it after the document is created
+      if (template?.content) {
+        // Small delay to ensure document is loaded
+        setTimeout(() => {
+          setContent(template.content);
+        }, 100);
+      }
+
       toast.success('New document created');
+      if (isMobile) {
+        setMobileView('editor');
+      }
     } catch (error) {
       console.error('Failed to create new document:', error);
       toast.error('Failed to create new document');
@@ -96,12 +148,151 @@ export function ThreePanelLayout() {
     }
   };
 
+  // Keyboard Shortcuts Modal (shared between mobile and desktop)
+  const shortcutsModal = (
+    <KeyboardShortcuts isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+  );
+
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="h-screen w-screen bg-background flex flex-col">
+        {shortcutsModal}
+        {/* Mobile Top Bar */}
+        <div className="h-14 border-b border-border flex items-center justify-between px-3 bg-card">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+            {document && mobileView === 'editor' && (
+              <input
+                type="text"
+                value={document.title}
+                onChange={(e) => updateTitle(e.target.value)}
+                className="flex-1 min-w-0 px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary rounded truncate"
+                placeholder="Untitled Document"
+              />
+            )}
+            {mobileView === 'documents' && (
+              <h1 className="text-lg font-semibold truncate">Documents</h1>
+            )}
+            {mobileView === 'chat' && (
+              <h1 className="text-lg font-semibold truncate">AI Assistant</h1>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1">
+            {user && saving && <Save className="w-4 h-4 animate-pulse text-muted-foreground" />}
+            {user && !saving && lastSaved && <CheckCircle className="w-4 h-4 text-green-600" />}
+            <ThemeToggle />
+            <AuthButton />
+          </div>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        {mobileMenuOpen && (
+          <div className="absolute top-14 left-0 right-0 bg-card border-b border-border z-50 p-4 space-y-3">
+            {user && (
+              <ExportButtons title={document?.title} content={content} />
+            )}
+            <div className="text-xs text-muted-foreground">
+              {lastSaved && `Saved ${formatDistanceToNow(lastSaved, { addSuffix: true })}`}
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Content Area */}
+        <div className="flex-1 overflow-hidden">
+          {mobileView === 'documents' && (
+            <div className="h-full bg-card">
+              {user ? (
+                <DocumentList
+                  currentDocumentId={currentDocumentId}
+                  onDocumentSelect={handleDocumentSelect}
+                  onCreateNew={handleCreateNew}
+                  onDocumentDeleted={handleDocumentDeleted}
+                />
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">
+                  Sign in to see your documents
+                </div>
+              )}
+            </div>
+          )}
+
+          {mobileView === 'editor' && (
+            <div className="h-full bg-background">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+                </div>
+              ) : (
+                <AcademicEditor
+                  content={content}
+                  onChange={setContent}
+                  onSave={saveNow}
+                  placeholder="Start writing your academic paper..."
+                />
+              )}
+            </div>
+          )}
+
+          {mobileView === 'chat' && (
+            <div className="h-full bg-card">
+              <ChatInterface
+                documentId={currentDocumentId}
+                onInsertToEditor={handleInsertToEditor}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="h-16 border-t border-border bg-card flex items-center justify-around px-4 safe-area-bottom">
+          <button
+            onClick={() => { setMobileView('documents'); setMobileMenuOpen(false); }}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+              mobileView === 'documents' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+            }`}
+          >
+            <FileText className="h-5 w-5" />
+            <span className="text-xs">Docs</span>
+          </button>
+          <button
+            onClick={() => { setMobileView('editor'); setMobileMenuOpen(false); }}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+              mobileView === 'editor' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+            }`}
+          >
+            <Edit3 className="h-5 w-5" />
+            <span className="text-xs">Write</span>
+          </button>
+          <button
+            onClick={() => { setMobileView('chat'); setMobileMenuOpen(false); }}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+              mobileView === 'chat' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+            }`}
+          >
+            <MessageSquare className="h-5 w-5" />
+            <span className="text-xs">AI Chat</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="h-screen w-screen bg-background flex flex-col">
+      {shortcutsModal}
       {/* Top bar with auth and save status */}
       <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-card">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold">Academic Writing</h1>
+          <h1 className="text-lg font-semibold hidden sm:block">Academic Writing</h1>
           {document && (
             <input
               type="text"
@@ -120,12 +311,12 @@ export function ThreePanelLayout() {
               {saving ? (
                 <>
                   <Save className="w-4 h-4 animate-pulse" />
-                  <span>Saving...</span>
+                  <span className="hidden sm:inline">Saving...</span>
                 </>
               ) : lastSaved ? (
                 <>
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span>
+                  <span className="hidden sm:inline">
                     Saved {formatDistanceToNow(lastSaved, { addSuffix: true })}
                   </span>
                 </>
@@ -133,14 +324,15 @@ export function ThreePanelLayout() {
             </div>
           )}
 
-            <div className="flex items-center gap-2">
-              {user && (
-                <ExportButtons title={document?.title} content={content} />
-              )}
-              <AuthButton />
-            </div>
+          <div className="flex items-center gap-2">
+            {user && (
+              <ExportButtons title={document?.title} content={content} />
+            )}
+            <ThemeToggle />
+            <AuthButton />
           </div>
         </div>
+      </div>
 
       {/* Main content area */}
       <div className="flex-1 overflow-hidden">
