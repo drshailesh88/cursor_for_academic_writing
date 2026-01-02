@@ -193,18 +193,21 @@ cursor_for_academic_writing/
 ├── app/
 │   ├── layout.tsx                      ✅ Root layout with Toaster
 │   ├── page.tsx                        ✅ Main page with AuthGuard
-│   ├── globals.css                     ✅ Academic theme + placeholder styles
+│   ├── globals.css                     ✅ Academic theme + track changes styles
+│   ├── shared/
+│   │   └── [token]/
+│   │       └── page.tsx                ✅ NEW - Share link validation
 │   └── api/
 │       ├── chat/
 │       │   └── route.ts                ✅ AI chat with OpenRouter support
 │       └── ai-writing/
-│           └── route.ts                ✅ NEW - AI writing assistance API
+│           └── route.ts                ✅ AI writing assistance API
 │
 ├── components/
 │   ├── layout/
-│   │   └── three-panel-layout.tsx      ✅ Main layout with all features
+│   │   └── three-panel-layout.tsx      ✅ Main layout + Comments tab + Share button
 │   ├── editor/
-│   │   └── academic-editor.tsx         ✅ TipTap + CharacterCount + Placeholder
+│   │   └── academic-editor.tsx         ✅ TipTap + Plagiarism toggle
 │   ├── chat/
 │   │   └── chat-interface.tsx          ✅ Markdown + Copy + Insert + Discipline
 │   ├── discipline/
@@ -219,12 +222,22 @@ cursor_for_academic_writing/
 │   ├── templates/
 │   │   └── template-selector.tsx       ✅ Template selection modal
 │   ├── ai-writing/
-│   │   └── ai-writing-toolbar.tsx      ✅ NEW - Floating AI writing toolbar
+│   │   └── ai-writing-toolbar.tsx      ✅ Floating AI writing toolbar
 │   ├── writing-analysis/
 │   │   ├── analysis-panel.tsx          ✅ 4-tab analysis panel
 │   │   └── ai-detection-panel.tsx      ✅ GPTZero-style detection UI
 │   ├── plagiarism/
-│   │   └── plagiarism-panel.tsx        ✅ NEW - 4-tab plagiarism panel
+│   │   └── plagiarism-panel.tsx        ✅ 4-tab plagiarism panel
+│   ├── collaboration/                   ✅ NEW - Phase 6
+│   │   ├── comment-card.tsx            ✅ Comment display with actions
+│   │   ├── comment-popover.tsx         ✅ Add comment dialog
+│   │   ├── comments-sidebar.tsx        ✅ Comments panel with filters
+│   │   ├── version-history-panel.tsx   ✅ Version list with restore
+│   │   ├── version-preview-modal.tsx   ✅ Side-by-side comparison
+│   │   ├── share-dialog.tsx            ✅ Link/People share dialog
+│   │   ├── shared-with-me-list.tsx     ✅ Shared documents list
+│   │   ├── track-changes-toolbar.tsx   ✅ Track/Show toggles
+│   │   └── track-changes-panel.tsx     ✅ Changes list with filtering
 │   └── ui/
 │       ├── button.tsx                  ✅ shadcn button
 │       ├── theme-toggle.tsx            ✅ Dark mode toggle
@@ -242,7 +255,11 @@ cursor_for_academic_writing/
 │   │   ├── use-theme.ts                ✅ Theme management hook
 │   │   ├── use-writing-analysis.ts     ✅ Real-time writing analysis
 │   │   ├── use-ai-writing.ts           ✅ AI writing assistance hook
-│   │   └── use-plagiarism.ts           ✅ NEW - Plagiarism detection hook
+│   │   ├── use-plagiarism.ts           ✅ Plagiarism detection hook
+│   │   ├── use-comments.ts             ✅ NEW - Real-time comments hook
+│   │   ├── use-versions.ts             ✅ NEW - Version history hook
+│   │   ├── use-sharing.ts              ✅ NEW - Document sharing hook
+│   │   └── use-track-changes.ts        ✅ NEW - Track changes hook
 │   ├── research/                       ✅ Multi-database research
 │   │   ├── types.ts                    ✅ Unified search types
 │   │   ├── index.ts                    ✅ Unified search aggregator
@@ -269,11 +286,19 @@ cursor_for_academic_writing/
 │   │   └── types.ts                    ✅ Action types and prompts
 │   ├── ai-detection/                   ✅ AI content detection
 │   │   └── detector.ts                 ✅ GPTZero-inspired heuristics
-│   ├── plagiarism/                     ✅ NEW - Plagiarism detection
+│   ├── plagiarism/                     ✅ Plagiarism detection
 │   │   ├── types.ts                    ✅ Type definitions and configs
 │   │   ├── fingerprint.ts              ✅ N-gram fingerprinting + winnowing
 │   │   ├── similarity.ts               ✅ Similarity calculations
 │   │   └── detector.ts                 ✅ Main detection orchestrator
+│   ├── collaboration/                   ✅ NEW - Phase 6 Collaboration
+│   │   ├── types.ts                    ✅ Comment, Version, Share, Change types
+│   │   ├── comments.ts                 ✅ Comments CRUD + real-time
+│   │   ├── versions.ts                 ✅ Version history operations
+│   │   ├── sharing.ts                  ✅ Share links + email sharing
+│   │   └── track-changes.ts            ✅ Track changes operations
+│   ├── editor/                          ✅ NEW - Editor extensions
+│   │   └── track-changes-extensions.ts ✅ TipTap marks for track changes
 │   └── utils/
 │       └── cn.ts                       ✅ CSS utility
 │
@@ -530,7 +555,7 @@ cursor_for_academic_writing/
       - Flagged phrases list
       - Sentence-by-sentence breakdown
 
-### Session 7 Features (Latest - Phase 4 Plagiarism Detection):
+### Session 7 Features (Phase 4 Plagiarism Detection):
 39. ✅ **N-gram Fingerprinting Engine**
     - Location: `lib/plagiarism/fingerprint.ts`
     - Text normalization and word splitting
@@ -580,6 +605,90 @@ cursor_for_academic_writing/
     - **Patterns Tab:** Suspicious patterns with severity ratings
     - Classifications: original, acceptable, needs-review, concerning, high-risk, critical
 
+### Session 8 Features (Phase 5 Enhanced Export + Integration):
+45. ✅ **Enhanced PDF Export**
+    - Location: `lib/export/pdf.ts`
+    - Running headers with document title
+    - Page numbers (Page X of Y format)
+    - 1-inch margins (72pt)
+    - Optional line numbers for manuscripts
+    - Optional double spacing for academic submissions
+    - Optional watermarks (draft, confidential, etc.)
+    - Auto-generated Table of Contents from headings
+    - Proper H1-H4 heading hierarchy
+
+46. ✅ **Plagiarism Panel Integration**
+    - Location: `components/editor/academic-editor.tsx`
+    - Shield icon toggle in editor toolbar
+    - Originality score badge displayed on button
+    - Color-coded score indicator (green/yellow/orange/red)
+    - Integrated with usePlagiarism hook
+
+### Session 8 Features (Phase 6 Collaboration):
+47. ✅ **Comments & Suggestions System**
+    - Location: `lib/collaboration/comments.ts`, `components/collaboration/`
+    - **Comment Types:** comment, suggestion, question
+    - **Firestore Subcollections:** /documents/{docId}/comments
+    - **Real-time Sync:** onSnapshot listener for live updates
+    - **Comment Features:**
+      - Text selection-based commenting
+      - Threaded replies
+      - Resolve/unresolve workflow
+      - Accept/reject suggestions
+    - **UI Components:**
+      - `comment-card.tsx` - Comment display with actions
+      - `comment-popover.tsx` - Floating add-comment dialog
+      - `comments-sidebar.tsx` - Comments panel with filters
+
+48. ✅ **Version History System**
+    - Location: `lib/collaboration/versions.ts`, `components/collaboration/`
+    - **Firestore Subcollections:** /documents/{docId}/versions
+    - **Version Types:** auto (every 5 min), manual, restore-backup
+    - **Features:**
+      - Auto-save versions every 5 minutes
+      - Manual version snapshots with labels
+      - Restore to any previous version
+      - Backup created before restore
+      - Cleanup of old auto-versions (keeps last 50)
+    - **UI Components:**
+      - `version-history-panel.tsx` - Version list with restore
+      - `version-preview-modal.tsx` - Side-by-side comparison
+
+49. ✅ **Document Sharing**
+    - Location: `lib/collaboration/sharing.ts`, `components/collaboration/`
+    - **Share Types:**
+      - Link sharing (view/comment/edit permissions)
+      - Email-based sharing with permission levels
+    - **Security Features:**
+      - Cryptographically secure share tokens (32 bytes)
+      - Optional password protection
+      - Expiry dates for temporary access
+      - Token validation endpoint
+    - **Firestore Schema:** /documents/{docId}/shares
+    - **UI Components:**
+      - `share-dialog.tsx` - Two-tab dialog (Link/People)
+      - `shared-with-me-list.tsx` - List of shared documents
+    - **Routes:**
+      - `/shared/[token]` - Share link validation page
+
+50. ✅ **Track Changes**
+    - Location: `lib/collaboration/track-changes.ts`, `lib/editor/track-changes-extensions.ts`
+    - **TipTap Extensions:**
+      - TrackInsertion mark (green highlight)
+      - TrackDeletion mark (red strikethrough)
+    - **Change Operations:**
+      - Create tracked change with author/timestamp
+      - Accept change (apply insertion, remove deletion)
+      - Reject change (remove insertion, restore deletion)
+      - Batch accept/reject all
+    - **Firestore Schema:** /documents/{docId}/changes
+    - **UI Components:**
+      - `track-changes-toolbar.tsx` - Track/Show toggles
+      - `track-changes-panel.tsx` - Changes list with filtering
+    - **CSS Styling:**
+      - `.track-insertion` - Green background
+      - `.track-deletion` - Red background, strikethrough
+
 ### Bug Fixes:
 - Fixed `toAIStreamResponse` → `toDataStreamResponse` (AI SDK update)
 - Fixed OpenRouter model configuration using createOpenAI
@@ -592,7 +701,7 @@ cursor_for_academic_writing/
 
 ### P1 - High Priority:
 - [x] ~~Mobile responsive layout~~ ✅ DONE
-- [ ] Version history for documents
+- [x] ~~Version history for documents~~ ✅ DONE (Phase 6)
 - [ ] Email/password authentication
 - [ ] User settings/preferences page
 
@@ -601,7 +710,7 @@ cursor_for_academic_writing/
 - [x] ~~Document templates~~ ✅ DONE (6 templates)
 - [ ] LaTeX export
 - [x] ~~Reference list generation from citations~~ ✅ DONE (Phase 2)
-- [ ] Collaborative editing
+- [x] ~~Collaborative editing~~ ✅ DONE (Phase 6 - Comments, Sharing, Track Changes)
 
 ### P3 - Nice to Have:
 - [ ] Offline support (PWA)
@@ -609,6 +718,7 @@ cursor_for_academic_writing/
 - [ ] Advanced formatting (footnotes, equations)
 - [ ] Analytics dashboard
 - [ ] Test suite (Jest + React Testing Library)
+- [ ] Real-time presence indicators
 
 ---
 
@@ -687,6 +797,31 @@ Before deploying:
 - [ ] **Session 7:** Quotes tab shows uncited quotations
 - [ ] **Session 7:** Patterns tab shows suspicious patterns
 - [ ] **Session 7:** Self-plagiarism warning appears when applicable
+- [ ] **Session 8:** PDF export includes page numbers
+- [ ] **Session 8:** PDF export includes running headers
+- [ ] **Session 8:** PDF export optional line numbers work
+- [ ] **Session 8:** PDF export double spacing option works
+- [ ] **Session 8:** PDF export generates Table of Contents
+- [ ] **Session 8:** Plagiarism toggle shows in editor toolbar
+- [ ] **Session 8:** Comments sidebar shows in right panel tabs
+- [ ] **Session 8:** Add comment popover appears on selection
+- [ ] **Session 8:** Comments display with replies and resolve
+- [ ] **Session 8:** Version history panel lists versions
+- [ ] **Session 8:** Create version snapshot works
+- [ ] **Session 8:** Restore version with backup works
+- [ ] **Session 8:** Version comparison modal opens
+- [ ] **Session 8:** Share button opens dialog
+- [ ] **Session 8:** Generate share link works
+- [ ] **Session 8:** Copy link to clipboard works
+- [ ] **Session 8:** Email share adds person to shares
+- [ ] **Session 8:** Share permissions can be changed
+- [ ] **Session 8:** Shared-with-me list shows shared documents
+- [ ] **Session 8:** Track changes toolbar toggles tracking
+- [ ] **Session 8:** Insertions show with green highlight
+- [ ] **Session 8:** Deletions show with red strikethrough
+- [ ] **Session 8:** Accept change applies it
+- [ ] **Session 8:** Reject change removes it
+- [ ] **Session 8:** Accept All/Reject All batch operations work
 
 ---
 
@@ -709,7 +844,16 @@ npm start            # Serve production build
 ---
 
 **Last Updated:** January 2, 2026
-**Status:** ✅ ALL CORE FEATURES COMPLETE
+**Status:** ✅ ALL PHASES 1-6 COMPLETE
 **Ready for:** Firebase Configuration → Production Deploy
 
-🎯 **The app is now feature-complete for MVP!**
+🎯 **The app is now feature-complete with full collaboration suite!**
+
+**Completed Phases:**
+- Phase 1: Multi-Database Research (PubMed, arXiv, Semantic Scholar, OpenAlex)
+- Phase 2: Paperpile-Style Citation Management (CSL, 10 styles)
+- Phase 3A: Writing Analysis (readability, style, vocabulary)
+- Phase 3B: AI Writing Assistance (16 actions) + AI Detection
+- Phase 4: Plagiarism Detection (fingerprinting, similarity, patterns)
+- Phase 5: Enhanced PDF Export + Plagiarism Panel Integration
+- Phase 6: Collaboration (Comments, Versions, Sharing, Track Changes)
