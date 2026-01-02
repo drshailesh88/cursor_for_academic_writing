@@ -28,6 +28,7 @@ import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { DocumentTemplate } from '@/lib/templates/document-templates';
+import type { DisciplineId } from '@/lib/firebase/schema';
 
 // Hook to detect mobile screen
 function useIsMobile() {
@@ -64,11 +65,21 @@ export function ThreePanelLayout() {
     lastSaved,
     createNew,
     updateTitle,
+    updateDiscipline,
     saveNow,
   } = useDocument({
     documentId: currentDocumentId,
     autoSaveInterval: 30000, // 30 seconds
   });
+
+  // Handle discipline change from chat interface
+  const handleDisciplineChange = async (newDiscipline: DisciplineId) => {
+    try {
+      await updateDiscipline(newDiscipline);
+    } catch (error) {
+      console.error('Failed to update discipline:', error);
+    }
+  };
 
   // Handle inserting content from chat into the editor
   const handleInsertToEditor = (chatContent: string) => {
@@ -246,6 +257,8 @@ export function ThreePanelLayout() {
               <ChatInterface
                 documentId={currentDocumentId}
                 onInsertToEditor={handleInsertToEditor}
+                initialDiscipline={document?.discipline}
+                onDisciplineChange={handleDisciplineChange}
               />
             </div>
           )}
@@ -421,6 +434,8 @@ export function ThreePanelLayout() {
               <ChatInterface
                 documentId={currentDocumentId}
                 onInsertToEditor={handleInsertToEditor}
+                initialDiscipline={document?.discipline}
+                onDisciplineChange={handleDisciplineChange}
               />
 
               {/* Collapse button */}

@@ -1,26 +1,50 @@
 'use client';
 
 import { useChat } from 'ai/react';
-import { useState } from 'react';
-import { Send, Loader2, Copy, Check, ClipboardPaste } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Send, Loader2, Copy, Check, ClipboardPaste, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { DisciplineSelector, useDiscipline, DisciplineBadge } from '@/components/discipline/discipline-selector';
+import type { DisciplineId } from '@/lib/prompts/disciplines';
 
 interface ChatInterfaceProps {
   documentId?: string;
   onInsertToEditor?: (content: string) => void;
+  initialDiscipline?: DisciplineId;
+  onDisciplineChange?: (discipline: DisciplineId) => void;
 }
 
-export function ChatInterface({ documentId, onInsertToEditor }: ChatInterfaceProps) {
+export function ChatInterface({
+  documentId,
+  onInsertToEditor,
+  initialDiscipline,
+  onDisciplineChange,
+}: ChatInterfaceProps) {
   const [selectedModel, setSelectedModel] = useState<string>('anthropic');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showDisciplineSelector, setShowDisciplineSelector] = useState(false);
+
+  const { discipline, setDiscipline, config: disciplineConfig } = useDiscipline(
+    initialDiscipline || 'life-sciences'
+  );
+
+  const handleDisciplineChange = useCallback(
+    (newDiscipline: DisciplineId) => {
+      setDiscipline(newDiscipline);
+      onDisciplineChange?.(newDiscipline);
+      setShowDisciplineSelector(false);
+    },
+    [setDiscipline, onDisciplineChange]
+  );
 
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: '/api/chat',
     body: {
       model: selectedModel,
       documentId,
+      discipline, // Pass discipline to API
     },
   });
 
@@ -36,8 +60,21 @@ export function ChatInterface({ documentId, onInsertToEditor }: ChatInterfacePro
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with Model Selector */}
-      <div className="p-4 border-b border-border">
+      {/* Header with Model & Discipline Selector */}
+      <div className="p-3 border-b border-border space-y-2">
+        {/* Discipline Badge/Selector */}
+        <div className="flex items-center justify-between gap-2">
+          <DisciplineSelector
+            selected={discipline}
+            onSelect={handleDisciplineChange}
+            compact
+          />
+          <div className="text-xs text-muted-foreground hidden sm:block">
+            {disciplineConfig.databases.slice(0, 2).join(' + ')}
+          </div>
+        </div>
+
+        {/* Model Selector */}
         <select
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
@@ -74,10 +111,31 @@ export function ChatInterface({ documentId, onInsertToEditor }: ChatInterfacePro
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            <p className="text-lg font-medium mb-2">Start a conversation</p>
-            <p className="text-sm">
-              Ask me to search PubMed, generate a table of contents, or write sections of your paper.
+            <div
+              className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3"
+              style={{ backgroundColor: disciplineConfig.color + '20' }}
+            >
+              <span className="text-2xl">{disciplineConfig.icon}</span>
+            </div>
+            <p className="text-lg font-medium mb-2">
+              {disciplineConfig.name} Assistant
             </p>
+            <p className="text-sm mb-4">
+              I can search {disciplineConfig.databases.join(', ')} and help you write with{' '}
+              {disciplineConfig.defaultCitationStyle.toUpperCase()} citations.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 text-xs">
+              <span className="px-2 py-1 rounded-full bg-muted">
+                <Search className="w-3 h-3 inline mr-1" />
+                Search papers
+              </span>
+              <span className="px-2 py-1 rounded-full bg-muted">
+                Write sections
+              </span>
+              <span className="px-2 py-1 rounded-full bg-muted">
+                Generate citations
+              </span>
+            </div>
           </div>
         ) : (
           messages.map((message) => (
@@ -165,7 +223,12 @@ export function ChatInterface({ documentId, onInsertToEditor }: ChatInterfacePro
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-muted text-foreground max-w-[80%] rounded-lg px-4 py-3">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">
+                  Searching {disciplineConfig.databases[0]}...
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -177,7 +240,7 @@ export function ChatInterface({ documentId, onInsertToEditor }: ChatInterfacePro
           <input
             value={input}
             onChange={handleInputChange}
-            placeholder="Ask me anything about academic writing..."
+            placeholder={`Ask about ${disciplineConfig.name.toLowerCase()}...`}
             className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm"
             disabled={isLoading}
           />
@@ -185,6 +248,9 @@ export function ChatInterface({ documentId, onInsertToEditor }: ChatInterfacePro
             <Send className="h-4 w-4" />
           </Button>
         </form>
+        <p className="text-xs text-muted-foreground mt-1.5 text-center">
+          Searching: {disciplineConfig.databases.join(', ')} | Style: {disciplineConfig.defaultCitationStyle}
+        </p>
       </div>
     </div>
   );

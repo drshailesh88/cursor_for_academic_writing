@@ -1,5 +1,23 @@
 // Firestore Data Schema and Types
 
+// Discipline types for multi-discipline support
+export type DisciplineId =
+  | 'life-sciences'
+  | 'bioinformatics'
+  | 'chemistry'
+  | 'clinical-medicine'
+  | 'physics'
+  | 'astronomy'
+  | 'computer-science'
+  | 'engineering'
+  | 'materials-science'
+  | 'mathematics'
+  | 'neuroscience'
+  | 'earth-sciences'
+  | 'social-sciences'
+  | 'economics'
+  | 'environmental-science';
+
 export interface Document {
   id: string;
   userId: string;
@@ -11,6 +29,7 @@ export interface Document {
   citations: Citation[];
   tags?: string[];
   folder?: string;
+  discipline?: DisciplineId; // Academic discipline for AI assistance
 }
 
 export interface Citation {
@@ -45,6 +64,7 @@ export interface DocumentMetadata {
   updatedAt: Date;
   wordCount: number;
   folder?: string;
+  discipline?: DisciplineId;
 }
 
 // Firestore collection names
