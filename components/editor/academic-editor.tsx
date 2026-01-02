@@ -10,10 +10,12 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { BookOpen, List, ChevronDown } from 'lucide-react';
+import { BookOpen, List, ChevronDown, BarChart3, X } from 'lucide-react';
 import { CitationDialog, useCitationDialog } from '@/components/citations/citation-dialog';
 import type { CitationStyleId } from '@/lib/citations/csl-formatter';
 import { useCitations } from '@/lib/hooks/use-citations';
+import { useWritingAnalysis } from '@/lib/hooks/use-writing-analysis';
+import { AnalysisPanel } from '@/components/writing-analysis/analysis-panel';
 import type { Reference } from '@/lib/citations/types';
 import type { CitationOptions } from '@/components/citations/citation-dialog';
 
@@ -127,6 +129,15 @@ export function AcademicEditor({
   const [showBibDropdown, setShowBibDropdown] = useState(false);
   const bibDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Writing analysis
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const {
+    analysis,
+    isAnalyzing,
+    overallScore,
+    refreshAnalysis,
+  } = useWritingAnalysis({ editor, enabled: showAnalysis });
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -152,7 +163,7 @@ export function AcademicEditor({
   }
 
   return (
-    <div className="h-full overflow-y-auto scrollbar-thin">
+    <div className="h-full flex flex-col">
       {/* Toolbar */}
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 md:gap-2 p-2 bg-background border-b border-border">
         {/* Undo/Redo */}
@@ -387,13 +398,54 @@ export function AcademicEditor({
           </>
         )}
 
-        <div className="ml-auto text-sm text-muted-foreground">
-          {editor.storage.characterCount?.words() || 0} words
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {editor.storage.characterCount?.words() || 0} words
+          </span>
+
+          {/* Analysis toggle button */}
+          <button
+            onClick={() => setShowAnalysis(!showAnalysis)}
+            className={`px-3 py-1 text-sm rounded flex items-center gap-1.5 transition-colors ${
+              showAnalysis
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+            title="Toggle writing analysis"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Analysis</span>
+            {showAnalysis && overallScore > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] rounded-full ${
+                overallScore >= 80 ? 'bg-green-500/20 text-green-200' :
+                overallScore >= 60 ? 'bg-yellow-500/20 text-yellow-200' :
+                'bg-red-500/20 text-red-200'
+              }`}>
+                {overallScore}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Editor */}
-      <EditorContent editor={editor} />
+      {/* Main content area with optional analysis panel */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Editor */}
+        <div className={`flex-1 overflow-y-auto scrollbar-thin ${showAnalysis ? 'border-r border-border' : ''}`}>
+          <EditorContent editor={editor} />
+        </div>
+
+        {/* Analysis Panel */}
+        {showAnalysis && (
+          <div className="w-72 flex-shrink-0 overflow-hidden bg-card border-l border-border">
+            <AnalysisPanel
+              analysis={analysis}
+              isAnalyzing={isAnalyzing}
+              onRefresh={refreshAnalysis}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Citation Dialog */}
       <CitationDialog
