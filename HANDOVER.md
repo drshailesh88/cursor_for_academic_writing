@@ -222,7 +222,9 @@ cursor_for_academic_writing/
 │   │   └── ai-writing-toolbar.tsx      ✅ NEW - Floating AI writing toolbar
 │   ├── writing-analysis/
 │   │   ├── analysis-panel.tsx          ✅ 4-tab analysis panel
-│   │   └── ai-detection-panel.tsx      ✅ NEW - GPTZero-style detection UI
+│   │   └── ai-detection-panel.tsx      ✅ GPTZero-style detection UI
+│   ├── plagiarism/
+│   │   └── plagiarism-panel.tsx        ✅ NEW - 4-tab plagiarism panel
 │   └── ui/
 │       ├── button.tsx                  ✅ shadcn button
 │       ├── theme-toggle.tsx            ✅ Dark mode toggle
@@ -239,7 +241,8 @@ cursor_for_academic_writing/
 │   │   ├── use-document.ts             ✅ Document hook + updateDiscipline
 │   │   ├── use-theme.ts                ✅ Theme management hook
 │   │   ├── use-writing-analysis.ts     ✅ Real-time writing analysis
-│   │   └── use-ai-writing.ts           ✅ NEW - AI writing assistance hook
+│   │   ├── use-ai-writing.ts           ✅ AI writing assistance hook
+│   │   └── use-plagiarism.ts           ✅ NEW - Plagiarism detection hook
 │   ├── research/                       ✅ Multi-database research
 │   │   ├── types.ts                    ✅ Unified search types
 │   │   ├── index.ts                    ✅ Unified search aggregator
@@ -264,8 +267,13 @@ cursor_for_academic_writing/
 │   │   └── analyzers.ts                ✅ Metric analyzers
 │   ├── ai-writing/                     ✅ NEW - AI writing assistance
 │   │   └── types.ts                    ✅ Action types and prompts
-│   ├── ai-detection/                   ✅ NEW - AI content detection
+│   ├── ai-detection/                   ✅ AI content detection
 │   │   └── detector.ts                 ✅ GPTZero-inspired heuristics
+│   ├── plagiarism/                     ✅ NEW - Plagiarism detection
+│   │   ├── types.ts                    ✅ Type definitions and configs
+│   │   ├── fingerprint.ts              ✅ N-gram fingerprinting + winnowing
+│   │   ├── similarity.ts               ✅ Similarity calculations
+│   │   └── detector.ts                 ✅ Main detection orchestrator
 │   └── utils/
 │       └── cn.ts                       ✅ CSS utility
 │
@@ -522,6 +530,56 @@ cursor_for_academic_writing/
       - Flagged phrases list
       - Sentence-by-sentence breakdown
 
+### Session 7 Features (Latest - Phase 4 Plagiarism Detection):
+39. ✅ **N-gram Fingerprinting Engine**
+    - Location: `lib/plagiarism/fingerprint.ts`
+    - Text normalization and word splitting
+    - N-gram generation (configurable size, default: 5)
+    - Rolling hash computation (Rabin-Karp style)
+    - Winnowing algorithm for fingerprint selection
+    - Fingerprint index for fast multi-document lookup
+
+40. ✅ **Similarity Calculation**
+    - Location: `lib/plagiarism/similarity.ts`
+    - Jaccard similarity (intersection/union)
+    - Containment similarity (asymmetric)
+    - Overlap coefficient
+    - Word-based similarity for intuitive scoring
+    - Match clustering for contiguous regions
+    - Levenshtein distance for match type detection
+
+41. ✅ **Main Plagiarism Detector**
+    - Location: `lib/plagiarism/detector.ts`
+    - **Quote Detection:** Double, single, smart, guillemet quotes
+    - **Citation Detection:** Author-year, numeric, footnote formats
+    - **Uncited Quote Flagging:** Quotes without nearby citations
+    - **Suspicious Pattern Detection:**
+      - Unicode character substitution (Cyrillic lookalikes)
+      - Invisible characters (zero-width, BOM)
+      - Writing style inconsistency
+    - **Exclusion Handling:** Quoted text, cited text, common phrases
+    - **Match Type Classification:** exact, near-exact, paraphrase, mosaic, structural
+
+42. ✅ **Self-Plagiarism Detection**
+    - Compares against user's own documents in Firestore
+    - Shows source document title and snippet
+    - Useful for academic text reuse awareness
+
+43. ✅ **Plagiarism Hook**
+    - Location: `lib/hooks/use-plagiarism.ts`
+    - Full check with `checkPlagiarism(text)`
+    - Quick check for fast scanning
+    - Exclude/include matches from scoring
+    - Position-based match lookup
+
+44. ✅ **Plagiarism Panel UI**
+    - Location: `components/plagiarism/plagiarism-panel.tsx`
+    - **Overview Tab:** Originality score circle, stats grid, classification
+    - **Matches Tab:** Match cards with expand/collapse, exclude option
+    - **Quotes Tab:** Uncited quotations list with suggestions
+    - **Patterns Tab:** Suspicious patterns with severity ratings
+    - Classifications: original, acceptable, needs-review, concerning, high-risk, critical
+
 ### Bug Fixes:
 - Fixed `toAIStreamResponse` → `toDataStreamResponse` (AI SDK update)
 - Fixed OpenRouter model configuration using createOpenAI
@@ -619,6 +677,16 @@ Before deploying:
 - [ ] **Session 6:** Probability bar shows human vs AI percentages
 - [ ] **Session 6:** Flagged phrases are listed
 - [ ] **Session 6:** Sentence-level analysis is expandable
+- [ ] **Session 7:** Plagiarism panel accessible from editor
+- [ ] **Session 7:** Check button runs plagiarism detection
+- [ ] **Session 7:** Originality score displays correctly
+- [ ] **Session 7:** Classification shows (original/acceptable/etc.)
+- [ ] **Session 7:** Matches tab shows plagiarism matches
+- [ ] **Session 7:** Match cards expand/collapse
+- [ ] **Session 7:** Exclude match removes from score
+- [ ] **Session 7:** Quotes tab shows uncited quotations
+- [ ] **Session 7:** Patterns tab shows suspicious patterns
+- [ ] **Session 7:** Self-plagiarism warning appears when applicable
 
 ---
 
