@@ -16,6 +16,7 @@ import type { CitationStyleId } from '@/lib/citations/csl-formatter';
 import { useCitations } from '@/lib/hooks/use-citations';
 import { useWritingAnalysis } from '@/lib/hooks/use-writing-analysis';
 import { AnalysisPanel } from '@/components/writing-analysis/analysis-panel';
+import { AIWritingToolbar } from '@/components/ai-writing/ai-writing-toolbar';
 import type { Reference } from '@/lib/citations/types';
 import type { CitationOptions } from '@/components/citations/citation-dialog';
 
@@ -430,9 +431,14 @@ export function AcademicEditor({
 
       {/* Main content area with optional analysis panel */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Editor */}
-        <div className={`flex-1 overflow-y-auto scrollbar-thin ${showAnalysis ? 'border-r border-border' : ''}`}>
-          <EditorContent editor={editor} />
+        {/* Editor with AI toolbar */}
+        <div className={`flex-1 flex flex-col overflow-hidden ${showAnalysis ? 'border-r border-border' : ''}`}>
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <EditorContent editor={editor} />
+          </div>
+
+          {/* AI Writing Toolbar - appears when text is selected */}
+          <AIWritingToolbar editor={editor} />
         </div>
 
         {/* Analysis Panel */}
@@ -442,6 +448,7 @@ export function AcademicEditor({
               analysis={analysis}
               isAnalyzing={isAnalyzing}
               onRefresh={refreshAnalysis}
+              text={editor.getText()}
             />
           </div>
         )}

@@ -13,14 +13,17 @@ import {
   MessageSquare,
   Target,
   RefreshCw,
+  Shield,
 } from 'lucide-react';
 import type { WritingAnalysis, WritingIssue, IssueCategory } from '@/lib/writing-analysis/types';
 import { getScoreRating, getReadabilityLevel } from '@/lib/writing-analysis/types';
+import { AIDetectionPanel } from './ai-detection-panel';
 
 interface AnalysisPanelProps {
   analysis: WritingAnalysis | null;
   isAnalyzing: boolean;
   onRefresh: () => void;
+  text?: string;
 }
 
 /**
@@ -187,8 +190,8 @@ function IssueSection({
 /**
  * Main Analysis Panel Component
  */
-export function AnalysisPanel({ analysis, isAnalyzing, onRefresh }: AnalysisPanelProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'issues' | 'stats'>('overview');
+export function AnalysisPanel({ analysis, isAnalyzing, onRefresh, text = '' }: AnalysisPanelProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'issues' | 'stats' | 'ai-check'>('overview');
 
   if (!analysis) {
     return (
@@ -231,7 +234,7 @@ export function AnalysisPanel({ analysis, isAnalyzing, onRefresh }: AnalysisPane
 
       {/* Tabs */}
       <div className="flex border-b border-border">
-        {(['overview', 'issues', 'stats'] as const).map((tab) => (
+        {(['overview', 'issues', 'stats', 'ai-check'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -241,7 +244,14 @@ export function AnalysisPanel({ analysis, isAnalyzing, onRefresh }: AnalysisPane
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'ai-check' ? (
+              <span className="flex items-center justify-center gap-1">
+                <Shield className="h-3 w-3" />
+                AI
+              </span>
+            ) : (
+              tab.charAt(0).toUpperCase() + tab.slice(1)
+            )}
           </button>
         ))}
       </div>
@@ -454,6 +464,10 @@ export function AnalysisPanel({ analysis, isAnalyzing, onRefresh }: AnalysisPane
               </div>
             )}
           </div>
+        )}
+
+        {activeTab === 'ai-check' && (
+          <AIDetectionPanel text={text} />
         )}
       </div>
     </div>
