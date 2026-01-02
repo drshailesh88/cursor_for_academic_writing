@@ -92,6 +92,41 @@
    - Custom scrollbar styling
    - Placeholder text styling
 
+9. **Mobile Responsive Layout** ✅ NEW
+   - Location: `components/layout/three-panel-layout.tsx`
+   - Bottom navigation with Docs/Write/AI Chat tabs
+   - Swipe between panels
+   - Mobile-optimized top bar
+   - Safe area support for notched devices
+
+10. **Dark Mode Toggle** ✅ NEW
+    - Location: `components/ui/theme-toggle.tsx`, `lib/hooks/use-theme.ts`
+    - Three modes: Light, Dark, System (auto-detect)
+    - Persists preference to localStorage
+    - Smooth transitions
+
+11. **Document Templates** ✅ NEW
+    - Location: `lib/templates/document-templates.ts`, `components/templates/template-selector.tsx`
+    - 6 academic templates:
+      - Blank Document
+      - Research Article (IMRaD structure)
+      - Systematic Review (PRISMA)
+      - Case Report
+      - Literature Review
+      - Grant Proposal
+    - Template selector modal on "New Document"
+
+12. **Keyboard Shortcuts** ✅ NEW
+    - Location: `components/ui/keyboard-shortcuts.tsx`
+    - **Cmd+/** to toggle shortcuts modal
+    - Categories: Document, Formatting, History, Editing, Navigation
+    - Platform-aware (⌘ on Mac, Ctrl on Windows)
+
+13. **Editor Enhancements** ✅ NEW
+    - Undo/Redo buttons in toolbar
+    - Visual ↩/↪ icons with tooltips
+    - Disabled state when no history
+
 ---
 
 ## 📁 FILE STRUCTURE (Complete)
@@ -128,8 +163,12 @@ cursor_for_academic_writing/
 │   │   └── document-list.tsx           ✅ Search + Delete features
 │   ├── export/
 │   │   └── export-buttons.tsx          ✅ DOCX + PDF with toasts
+│   ├── templates/
+│   │   └── template-selector.tsx       ✅ NEW - Template selection modal
 │   └── ui/
-│       └── button.tsx                  ✅ shadcn button
+│       ├── button.tsx                  ✅ shadcn button
+│       ├── theme-toggle.tsx            ✅ NEW - Dark mode toggle
+│       └── keyboard-shortcuts.tsx      ✅ NEW - Shortcuts modal
 │
 ├── lib/
 │   ├── firebase/
@@ -139,7 +178,10 @@ cursor_for_academic_writing/
 │   │   ├── documents.ts                ✅ Document CRUD operations
 │   │   └── schema.ts                   ✅ Data types & schema
 │   ├── hooks/
-│   │   └── use-document.ts             ✅ Document hook with toast
+│   │   ├── use-document.ts             ✅ Document hook with toast
+│   │   └── use-theme.ts                ✅ NEW - Theme management hook
+│   ├── templates/
+│   │   └── document-templates.ts       ✅ NEW - 6 academic templates
 │   ├── export/
 │   │   ├── docx.ts                     ✅ DOCX export
 │   │   └── pdf.ts                      ✅ PDF export
@@ -245,7 +287,7 @@ cursor_for_academic_writing/
 
 ## 🚀 WHAT'S NEW IN THIS SESSION
 
-### Features Added:
+### Session 1 Features:
 1. ✅ CharacterCount extension properly integrated for word count
 2. ✅ Placeholder extension with custom styling
 3. ✅ Cmd+S / Ctrl+S keyboard shortcut for manual save
@@ -259,6 +301,14 @@ cursor_for_academic_writing/
 11. ✅ Fixed OpenRouter API integration with createOpenAI
 12. ✅ Updated tsconfig to ES2022 for regex support
 
+### Session 2 Features (Latest):
+13. ✅ **Mobile Responsive Layout** - Bottom navigation, swipe between panels
+14. ✅ **Dark Mode Toggle** - Light/Dark/System with persistence
+15. ✅ **Undo/Redo Buttons** - Visual toolbar buttons with disabled states
+16. ✅ **Document Templates** - 6 academic templates (Research Article, Systematic Review, etc.)
+17. ✅ **Keyboard Shortcuts Modal** - Cmd+/ to toggle, platform-aware keys
+18. ✅ **Safe Area CSS** - Support for notched mobile devices
+
 ### Bug Fixes:
 - Fixed `toAIStreamResponse` → `toDataStreamResponse` (AI SDK update)
 - Fixed OpenRouter model configuration using createOpenAI
@@ -270,14 +320,14 @@ cursor_for_academic_writing/
 ## 📌 REMAINING ITEMS FOR FUTURE SESSIONS
 
 ### P1 - High Priority:
-- [ ] Mobile responsive layout
+- [x] ~~Mobile responsive layout~~ ✅ DONE
 - [ ] Version history for documents
 - [ ] Email/password authentication
 - [ ] User settings/preferences page
 
 ### P2 - Medium Priority:
 - [ ] Document folders/categories
-- [ ] Document templates
+- [x] ~~Document templates~~ ✅ DONE (6 templates)
 - [ ] LaTeX export
 - [ ] Reference list generation from citations
 - [ ] Collaborative editing
@@ -314,6 +364,13 @@ Before deploying:
 - [ ] DOCX export downloads file
 - [ ] PDF export downloads file
 - [ ] All toasts appear correctly
+- [ ] **NEW:** Mobile layout works (resize to <768px)
+- [ ] **NEW:** Bottom navigation switches views
+- [ ] **NEW:** Dark mode toggle cycles through modes
+- [ ] **NEW:** Template selector opens on "New Document"
+- [ ] **NEW:** Templates create document with content
+- [ ] **NEW:** Cmd+/ opens keyboard shortcuts modal
+- [ ] **NEW:** Undo/Redo buttons work in editor
 
 ---
 
