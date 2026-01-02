@@ -94,6 +94,27 @@
       - Selector in chat interface
       - Persists across sessions
 
+15. **Paperpile-Style Citation Management** ✅ NEW
+    - Location: `lib/citations/`, `components/citations/`, `lib/hooks/use-citations.ts`
+    - **Reference Library:**
+      - 30+ reference types (CSL-compatible)
+      - Firestore nested collections (references, folders, labels)
+      - Full CRUD with search and filtering
+    - **Cite-While-You-Write:**
+      - Cmd+Shift+P keyboard shortcut
+      - Citation picker with keyboard navigation
+      - Options: suppress author, page numbers, prefix/suffix
+    - **CSL Formatter:**
+      - 10 styles: APA, MLA, Chicago, Vancouver, Harvard, IEEE, AMA, Nature, Cell
+      - In-text and bibliography formatting
+    - **Bibliography Generation:**
+      - Style selector dropdown
+      - Insert formatted reference list at cursor
+      - Hanging indent styling
+    - **Import/Export:**
+      - BibTeX/RIS import with LaTeX character handling
+      - Export to BibTeX, RIS, CSV, JSON
+
 6. **Export Functionality** ✅ COMPLETE
    - **DOCX Export:**
      - Heading levels (H1-H3 → Word headings)
@@ -347,7 +368,7 @@ cursor_for_academic_writing/
 17. ✅ **Keyboard Shortcuts Modal** - Cmd+/ to toggle, platform-aware keys
 18. ✅ **Safe Area CSS** - Support for notched mobile devices
 
-### Session 3 Features (Latest - Phase 1 SDD Implementation):
+### Session 3 Features (Phase 1 SDD Implementation):
 19. ✅ **arXiv API Client** - Atom XML parsing, 1.8M+ preprints
 20. ✅ **Semantic Scholar Client** - 200M+ papers, citations, related papers
 21. ✅ **OpenAlex Client** - 250M+ works, inverted index abstract reconstruction
@@ -356,6 +377,37 @@ cursor_for_academic_writing/
 24. ✅ **Discipline Selector UI** - Compact dropdown with full grid view
 25. ✅ **Document Discipline Persistence** - Stored per document in Firestore
 26. ✅ **5 Research Tools in AI Chat** - Unified, PubMed, arXiv, Semantic Scholar, OpenAlex
+
+### Session 4 Features (Latest - Phase 2 Citation Management):
+27. ✅ **Paperpile-Style Reference Library**
+    - Location: `lib/citations/types.ts`, `lib/citations/library.ts`
+    - 30+ reference types (journal, book, conference, thesis, patent, etc.)
+    - 86+ subtypes following CSL specification
+    - Firestore nested collections: references, folders, labels
+    - Full CRUD operations with search and filtering
+28. ✅ **Cite-While-You-Write (Cmd+Shift+P)**
+    - Location: `components/citations/citation-dialog.tsx`
+    - Keyboard shortcut opens citation picker
+    - Library search with keyboard navigation (↑↓ arrows)
+    - Tab for quick insert, Enter for options panel
+    - Citation options: suppress author, page numbers, prefix/suffix
+29. ✅ **CSL Citation Formatter**
+    - Location: `lib/citations/csl-formatter.ts`
+    - 10 popular styles: APA 7, MLA 9, Chicago, Vancouver, Harvard, IEEE, AMA, Nature, Cell
+    - In-text citation formatting per style
+    - Full bibliography entry formatting
+    - Author-date, numeric, and note-based categories
+30. ✅ **Bibliography Generation**
+    - Bibliography button in editor toolbar with style selector
+    - Insert formatted reference list at cursor position
+    - Proper hanging indent styling for entries
+    - Citations tracked per document
+31. ✅ **BibTeX/RIS Import/Export**
+    - Location: `lib/citations/import-export.ts`
+    - BibTeX parser with LaTeX character handling (é, ü, ñ, etc.)
+    - RIS parser for EndNote/Zotero compatibility
+    - Export to BibTeX, RIS, CSV, JSON formats
+    - Duplicate detection via DOI matching
 
 ### Bug Fixes:
 - Fixed `toAIStreamResponse` → `toDataStreamResponse` (AI SDK update)
@@ -377,12 +429,12 @@ cursor_for_academic_writing/
 - [ ] Document folders/categories
 - [x] ~~Document templates~~ ✅ DONE (6 templates)
 - [ ] LaTeX export
-- [ ] Reference list generation from citations
+- [x] ~~Reference list generation from citations~~ ✅ DONE (Phase 2)
 - [ ] Collaborative editing
 
 ### P3 - Nice to Have:
 - [ ] Offline support (PWA)
-- [ ] Citation manager integration (Zotero/Mendeley)
+- [x] ~~Citation manager integration~~ ✅ DONE (Paperpile-style, Phase 2)
 - [ ] Advanced formatting (footnotes, equations)
 - [ ] Analytics dashboard
 - [ ] Test suite (Jest + React Testing Library)
@@ -419,12 +471,20 @@ Before deploying:
 - [ ] Templates create document with content
 - [ ] Cmd+/ opens keyboard shortcuts modal
 - [ ] Undo/Redo buttons work in editor
-- [ ] **NEW:** Discipline selector appears in chat header
-- [ ] **NEW:** Discipline changes persist to document
-- [ ] **NEW:** AI responds with discipline-specific prompts
-- [ ] **NEW:** Search arXiv works for physics/CS queries
-- [ ] **NEW:** Search Semantic Scholar returns citation counts
-- [ ] **NEW:** Unified search deduplicates results
+- [ ] **Session 3:** Discipline selector appears in chat header
+- [ ] **Session 3:** Discipline changes persist to document
+- [ ] **Session 3:** AI responds with discipline-specific prompts
+- [ ] **Session 3:** Search arXiv works for physics/CS queries
+- [ ] **Session 3:** Search Semantic Scholar returns citation counts
+- [ ] **Session 3:** Unified search deduplicates results
+- [ ] **Session 4:** Cmd+Shift+P opens citation dialog
+- [ ] **Session 4:** Citation dialog shows library references
+- [ ] **Session 4:** Arrow keys navigate citation results
+- [ ] **Session 4:** Tab quick-inserts citation
+- [ ] **Session 4:** Enter opens citation options panel
+- [ ] **Session 4:** Bibliography button shows style selector
+- [ ] **Session 4:** Insert Bibliography adds formatted references
+- [ ] **Session 4:** Citation style changes update formatting
 
 ---
 
