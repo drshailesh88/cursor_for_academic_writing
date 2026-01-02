@@ -64,7 +64,35 @@
    - **Copy button** on AI messages
    - **Insert to Editor button** - append AI content to document
    - Streaming responses
-   - PubMed search integration
+   - **Multi-database research:** PubMed, arXiv, Semantic Scholar, OpenAlex
+   - **Discipline-aware AI** with 15 scientific disciplines
+
+14. **Multi-Discipline Research System** ✅ NEW
+    - Location: `lib/research/`, `lib/prompts/disciplines/`, `components/discipline/`
+    - **4 Academic Databases:**
+      - PubMed (biomedical)
+      - arXiv (physics, CS, math)
+      - Semantic Scholar (200M+ papers, citations)
+      - OpenAlex (250M+ works, open access)
+    - **15 Scientific Disciplines:**
+      - Life Sciences, Bioinformatics, Chemistry, Clinical Medicine
+      - Physics, Astronomy, Computer Science, Engineering
+      - Materials Science, Mathematics, Neuroscience
+      - Earth Sciences, Social Sciences, Economics, Environmental Science
+    - **Discipline-Specific Features:**
+      - Custom AI system prompts per discipline
+      - Discipline-aware database prioritization
+      - Field-specific citation styles (AMA, APA, IEEE, etc.)
+      - Terminology and conventions per field
+    - **Unified Search:**
+      - Cross-database search with parallel queries
+      - DOI-based deduplication
+      - Normalized title matching
+      - Relevance ranking with citation count
+    - **Document Discipline:**
+      - Discipline stored per document in Firestore
+      - Selector in chat interface
+      - Persists across sessions
 
 6. **Export Functionality** ✅ COMPLETE
    - **DOCX Export:**
@@ -155,7 +183,9 @@ cursor_for_academic_writing/
 │   ├── editor/
 │   │   └── academic-editor.tsx         ✅ TipTap + CharacterCount + Placeholder
 │   ├── chat/
-│   │   └── chat-interface.tsx          ✅ Markdown + Copy + Insert buttons
+│   │   └── chat-interface.tsx          ✅ Markdown + Copy + Insert + Discipline
+│   ├── discipline/
+│   │   └── discipline-selector.tsx     ✅ NEW - 15 discipline selector
 │   ├── auth/
 │   │   ├── auth-button.tsx             ✅ Sign in/out button
 │   │   └── auth-guard.tsx              ✅ Require auth wrapper
@@ -175,13 +205,23 @@ cursor_for_academic_writing/
 │   │   ├── client.ts                   ✅ Firebase client SDK
 │   │   ├── admin.ts                    ✅ Firebase admin SDK
 │   │   ├── auth.ts                     ✅ Auth hooks (no `any` types)
-│   │   ├── documents.ts                ✅ Document CRUD operations
-│   │   └── schema.ts                   ✅ Data types & schema
+│   │   ├── documents.ts                ✅ Document CRUD + discipline
+│   │   └── schema.ts                   ✅ Data types + DisciplineId
 │   ├── hooks/
-│   │   ├── use-document.ts             ✅ Document hook with toast
-│   │   └── use-theme.ts                ✅ NEW - Theme management hook
+│   │   ├── use-document.ts             ✅ Document hook + updateDiscipline
+│   │   └── use-theme.ts                ✅ Theme management hook
+│   ├── research/                       ✅ NEW - Multi-database research
+│   │   ├── types.ts                    ✅ Unified search types
+│   │   ├── index.ts                    ✅ Unified search aggregator
+│   │   ├── arxiv.ts                    ✅ arXiv API client
+│   │   ├── semantic-scholar.ts         ✅ Semantic Scholar client
+│   │   └── openalex.ts                 ✅ OpenAlex client
+│   ├── prompts/
+│   │   ├── writing-styles.ts           ✅ Writing styles
+│   │   └── disciplines/
+│   │       └── index.ts                ✅ NEW - 15 discipline prompts
 │   ├── templates/
-│   │   └── document-templates.ts       ✅ NEW - 6 academic templates
+│   │   └── document-templates.ts       ✅ 6 academic templates
 │   ├── export/
 │   │   ├── docx.ts                     ✅ DOCX export
 │   │   └── pdf.ts                      ✅ PDF export
@@ -189,8 +229,6 @@ cursor_for_academic_writing/
 │   │   └── client.ts                   ✅ PubMed API
 │   ├── citations/
 │   │   └── author-year-parser.ts       ✅ Citation formatting
-│   ├── prompts/
-│   │   └── writing-styles.ts           ✅ Writing styles
 │   └── utils/
 │       └── cn.ts                       ✅ CSS utility
 │
@@ -301,13 +339,23 @@ cursor_for_academic_writing/
 11. ✅ Fixed OpenRouter API integration with createOpenAI
 12. ✅ Updated tsconfig to ES2022 for regex support
 
-### Session 2 Features (Latest):
+### Session 2 Features:
 13. ✅ **Mobile Responsive Layout** - Bottom navigation, swipe between panels
 14. ✅ **Dark Mode Toggle** - Light/Dark/System with persistence
 15. ✅ **Undo/Redo Buttons** - Visual toolbar buttons with disabled states
 16. ✅ **Document Templates** - 6 academic templates (Research Article, Systematic Review, etc.)
 17. ✅ **Keyboard Shortcuts Modal** - Cmd+/ to toggle, platform-aware keys
 18. ✅ **Safe Area CSS** - Support for notched mobile devices
+
+### Session 3 Features (Latest - Phase 1 SDD Implementation):
+19. ✅ **arXiv API Client** - Atom XML parsing, 1.8M+ preprints
+20. ✅ **Semantic Scholar Client** - 200M+ papers, citations, related papers
+21. ✅ **OpenAlex Client** - 250M+ works, inverted index abstract reconstruction
+22. ✅ **Unified Search Aggregator** - DOI deduplication, relevance ranking
+23. ✅ **15 Scientific Disciplines** - Custom prompts with field-specific conventions
+24. ✅ **Discipline Selector UI** - Compact dropdown with full grid view
+25. ✅ **Document Discipline Persistence** - Stored per document in Firestore
+26. ✅ **5 Research Tools in AI Chat** - Unified, PubMed, arXiv, Semantic Scholar, OpenAlex
 
 ### Bug Fixes:
 - Fixed `toAIStreamResponse` → `toDataStreamResponse` (AI SDK update)
@@ -364,13 +412,19 @@ Before deploying:
 - [ ] DOCX export downloads file
 - [ ] PDF export downloads file
 - [ ] All toasts appear correctly
-- [ ] **NEW:** Mobile layout works (resize to <768px)
-- [ ] **NEW:** Bottom navigation switches views
-- [ ] **NEW:** Dark mode toggle cycles through modes
-- [ ] **NEW:** Template selector opens on "New Document"
-- [ ] **NEW:** Templates create document with content
-- [ ] **NEW:** Cmd+/ opens keyboard shortcuts modal
-- [ ] **NEW:** Undo/Redo buttons work in editor
+- [ ] Mobile layout works (resize to <768px)
+- [ ] Bottom navigation switches views
+- [ ] Dark mode toggle cycles through modes
+- [ ] Template selector opens on "New Document"
+- [ ] Templates create document with content
+- [ ] Cmd+/ opens keyboard shortcuts modal
+- [ ] Undo/Redo buttons work in editor
+- [ ] **NEW:** Discipline selector appears in chat header
+- [ ] **NEW:** Discipline changes persist to document
+- [ ] **NEW:** AI responds with discipline-specific prompts
+- [ ] **NEW:** Search arXiv works for physics/CS queries
+- [ ] **NEW:** Search Semantic Scholar returns citation counts
+- [ ] **NEW:** Unified search deduplicates results
 
 ---
 
