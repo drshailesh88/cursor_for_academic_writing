@@ -12,6 +12,7 @@ import {
   FileText,
   Edit3,
   MessageSquare,
+  MessageCircle,
   Menu,
   X,
 } from 'lucide-react';
@@ -23,6 +24,7 @@ import { ExportButtons } from '@/components/export/export-buttons';
 import { AuthButton } from '@/components/auth/auth-button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { KeyboardShortcuts, useKeyboardShortcuts } from '@/components/ui/keyboard-shortcuts';
+import { CommentsSidebar } from '@/components/collaboration/comments-sidebar';
 import { useDocument } from '@/lib/hooks/use-document';
 import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
@@ -44,7 +46,8 @@ function useIsMobile() {
   return isMobile;
 }
 
-type MobileView = 'documents' | 'editor' | 'chat';
+type MobileView = 'documents' | 'editor' | 'chat' | 'comments';
+type RightPanelView = 'chat' | 'comments';
 
 export function ThreePanelLayout() {
   const { user } = useAuth();
@@ -53,6 +56,7 @@ export function ThreePanelLayout() {
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | undefined>();
   const [mobileView, setMobileView] = useState<MobileView>('editor');
+  const [rightPanelView, setRightPanelView] = useState<RightPanelView>('chat');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isOpen: shortcutsOpen, setIsOpen: setShortcutsOpen } = useKeyboardShortcuts();
 
@@ -262,13 +266,22 @@ export function ThreePanelLayout() {
               />
             </div>
           )}
+
+          {mobileView === 'comments' && (
+            <div className="h-full bg-card">
+              <CommentsSidebar
+                documentId={currentDocumentId}
+                currentUserId={user?.uid}
+              />
+            </div>
+          )}
         </div>
 
         {/* Mobile Bottom Navigation */}
-        <div className="h-16 border-t border-border bg-card flex items-center justify-around px-4 safe-area-bottom">
+        <div className="h-16 border-t border-border bg-card flex items-center justify-around px-2 safe-area-bottom">
           <button
             onClick={() => { setMobileView('documents'); setMobileMenuOpen(false); }}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               mobileView === 'documents' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
             }`}
           >
@@ -277,7 +290,7 @@ export function ThreePanelLayout() {
           </button>
           <button
             onClick={() => { setMobileView('editor'); setMobileMenuOpen(false); }}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               mobileView === 'editor' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
             }`}
           >
@@ -286,12 +299,21 @@ export function ThreePanelLayout() {
           </button>
           <button
             onClick={() => { setMobileView('chat'); setMobileMenuOpen(false); }}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
               mobileView === 'chat' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
             }`}
           >
             <MessageSquare className="h-5 w-5" />
-            <span className="text-xs">AI Chat</span>
+            <span className="text-xs">Chat</span>
+          </button>
+          <button
+            onClick={() => { setMobileView('comments'); setMobileMenuOpen(false); }}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              mobileView === 'comments' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+            }`}
+          >
+            <MessageCircle className="h-5 w-5" />
+            <span className="text-xs">Comments</span>
           </button>
         </div>
       </div>
@@ -421,7 +443,7 @@ export function ThreePanelLayout() {
 
           <PanelResizeHandle className="w-1 bg-border hover:bg-primary-300 transition-colors" />
 
-          {/* RIGHT PANEL: AI Chat */}
+          {/* RIGHT PANEL: Chat & Comments */}
           <Panel
             defaultSize={30}
             minSize={20}
@@ -430,13 +452,49 @@ export function ThreePanelLayout() {
             onCollapse={() => setIsChatCollapsed(true)}
             onExpand={() => setIsChatCollapsed(false)}
           >
-            <div className="h-full relative bg-card border-l border-border">
-              <ChatInterface
-                documentId={currentDocumentId}
-                onInsertToEditor={handleInsertToEditor}
-                initialDiscipline={document?.discipline}
-                onDisciplineChange={handleDisciplineChange}
-              />
+            <div className="h-full relative bg-card border-l border-border flex flex-col">
+              {/* Tab buttons */}
+              <div className="flex border-b border-border">
+                <button
+                  onClick={() => setRightPanelView('chat')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    rightPanelView === 'chat'
+                      ? 'text-primary border-b-2 border-primary bg-primary/5'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  <MessageSquare className="h-4 w-4 inline mr-2" />
+                  AI Chat
+                </button>
+                <button
+                  onClick={() => setRightPanelView('comments')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    rightPanelView === 'comments'
+                      ? 'text-primary border-b-2 border-primary bg-primary/5'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  <MessageCircle className="h-4 w-4 inline mr-2" />
+                  Comments
+                </button>
+              </div>
+
+              {/* Panel content */}
+              <div className="flex-1 overflow-hidden">
+                {rightPanelView === 'chat' ? (
+                  <ChatInterface
+                    documentId={currentDocumentId}
+                    onInsertToEditor={handleInsertToEditor}
+                    initialDiscipline={document?.discipline}
+                    onDisciplineChange={handleDisciplineChange}
+                  />
+                ) : (
+                  <CommentsSidebar
+                    documentId={currentDocumentId}
+                    currentUserId={user?.uid}
+                  />
+                )}
+              </div>
 
               {/* Collapse button */}
               <Button

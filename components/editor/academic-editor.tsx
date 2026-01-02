@@ -10,17 +10,21 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { BookOpen, List, ChevronDown, BarChart3, X, Shield } from 'lucide-react';
+import { BookOpen, List, ChevronDown, BarChart3, X, Shield, Clock, Save } from 'lucide-react';
 import { CitationDialog, useCitationDialog } from '@/components/citations/citation-dialog';
 import type { CitationStyleId } from '@/lib/citations/csl-formatter';
 import { useCitations } from '@/lib/hooks/use-citations';
 import { useWritingAnalysis } from '@/lib/hooks/use-writing-analysis';
 import { usePlagiarism } from '@/lib/hooks/use-plagiarism';
+import { useVersions } from '@/lib/hooks/use-versions';
 import { AnalysisPanel } from '@/components/writing-analysis/analysis-panel';
 import { PlagiarismPanel } from '@/components/plagiarism/plagiarism-panel';
 import { AIWritingToolbar } from '@/components/ai-writing/ai-writing-toolbar';
+import { VersionHistoryPanel } from '@/components/collaboration/version-history-panel';
+import { VersionPreviewModal } from '@/components/collaboration/version-preview-modal';
 import type { Reference } from '@/lib/citations/types';
 import type { CitationOptions } from '@/components/citations/citation-dialog';
+import type { DocumentVersion } from '@/lib/collaboration/types';
 
 interface AcademicEditorProps {
   content?: string;
@@ -164,6 +168,25 @@ export function AcademicEditor({
     userDocuments,
   });
 
+  // Version history
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState<DocumentVersion | null>(null);
+  const {
+    versions,
+    loading: versionsLoading,
+    stats: versionStats,
+    createManualVersion,
+    restoreVersion: restoreVersionFromHistory,
+    deleteVersion: deleteVersionFromHistory,
+    updateLabel: updateVersionLabel,
+    refreshVersions,
+  } = useVersions({
+    documentId,
+    currentContent: content,
+    currentWordCount: editor?.storage.characterCount?.words() || 0,
+    enabled: !!documentId,
+  });
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -183,6 +206,32 @@ export function AcademicEditor({
     },
     [insertCitation, closeCitationDialog]
   );
+
+  // Handle version history actions
+  const handleSaveVersion = useCallback(async () => {
+    const label = prompt('Enter a label for this version (optional):');
+    const description = prompt('Enter a description for this version (optional):');
+    await createManualVersion(label || undefined, description || undefined);
+  }, [createManualVersion]);
+
+  const handleRestoreVersion = useCallback(
+    async (versionId: string) => {
+      const success = await restoreVersionFromHistory(versionId);
+      if (success) {
+        // Reload the page or refresh the document to show restored content
+        window.location.reload();
+      }
+    },
+    [restoreVersionFromHistory]
+  );
+
+  const handlePreviewVersion = useCallback((version: DocumentVersion) => {
+    setPreviewVersion(version);
+  }, []);
+
+  const handleClosePreview = useCallback(() => {
+    setPreviewVersion(null);
+  }, []);
 
   if (!editor) {
     return null;
@@ -474,13 +523,46 @@ export function AcademicEditor({
               </span>
             )}
           </button>
+
+          <div className="w-px h-6 bg-border mx-2" />
+
+          {/* Save Version button */}
+          <button
+            onClick={handleSaveVersion}
+            disabled={!documentId}
+            className="px-3 py-1 text-sm rounded hover:bg-muted flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Save current version"
+          >
+            <Save className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Save Version</span>
+          </button>
+
+          {/* Version history toggle button */}
+          <button
+            onClick={() => setShowVersionHistory(!showVersionHistory)}
+            disabled={!documentId}
+            className={`px-3 py-1 text-sm rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              showVersionHistory
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+            title="Toggle version history"
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">History</span>
+            {versionStats.totalVersions > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-primary/20 text-primary">
+                {versionStats.totalVersions}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
       {/* Main content area with optional panels */}
       <div className="flex-1 flex overflow-hidden">
         {/* Editor with AI toolbar */}
-        <div className={`flex-1 flex flex-col overflow-hidden ${(showAnalysis || showPlagiarism) ? 'border-r border-border' : ''}`}>
+        <div className={`flex-1 flex flex-col overflow-hidden ${(showAnalysis || showPlagiarism || showVersionHistory) ? 'border-r border-border' : ''}`}>
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <EditorContent editor={editor} />
           </div>
@@ -490,11 +572,11 @@ export function AcademicEditor({
         </div>
 
         {/* Right sidebar with panels */}
-        {(showAnalysis || showPlagiarism) && (
+        {(showAnalysis || showPlagiarism || showVersionHistory) && (
           <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden bg-card border-l border-border">
             {/* Analysis Panel */}
             {showAnalysis && (
-              <div className={`${showPlagiarism ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
+              <div className={`${showPlagiarism || showVersionHistory ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
                 <AnalysisPanel
                   analysis={analysis}
                   isAnalyzing={isAnalyzing}
@@ -506,7 +588,7 @@ export function AcademicEditor({
 
             {/* Plagiarism Panel */}
             {showPlagiarism && (
-              <div className={`${showAnalysis ? 'flex-1' : 'h-full'} overflow-hidden`}>
+              <div className={`${showAnalysis || showVersionHistory ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
                 <PlagiarismPanel
                   result={plagiarismResult}
                   isChecking={isPlagiarismChecking}
@@ -514,6 +596,22 @@ export function AcademicEditor({
                   onExcludeMatch={excludeMatch}
                   onIncludeMatch={includeMatch}
                   wordCount={editor.storage.characterCount?.words() || 0}
+                />
+              </div>
+            )}
+
+            {/* Version History Panel */}
+            {showVersionHistory && (
+              <div className={`${showAnalysis || showPlagiarism ? 'flex-1' : 'h-full'} overflow-hidden`}>
+                <VersionHistoryPanel
+                  versions={versions}
+                  loading={versionsLoading}
+                  onRestore={handleRestoreVersion}
+                  onDelete={deleteVersionFromHistory}
+                  onUpdateLabel={updateVersionLabel}
+                  onPreview={handlePreviewVersion}
+                  onRefresh={refreshVersions}
+                  onClose={() => setShowVersionHistory(false)}
                 />
               </div>
             )}
@@ -526,6 +624,15 @@ export function AcademicEditor({
         isOpen={citationDialogOpen}
         onClose={closeCitationDialog}
         onInsert={handleCitationInsert}
+      />
+
+      {/* Version Preview Modal */}
+      <VersionPreviewModal
+        version={previewVersion}
+        isOpen={!!previewVersion}
+        onClose={handleClosePreview}
+        onRestore={handleRestoreVersion}
+        currentContent={content}
       />
     </div>
   );
