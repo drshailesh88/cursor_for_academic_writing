@@ -195,8 +195,10 @@ cursor_for_academic_writing/
 │   ├── page.tsx                        ✅ Main page with AuthGuard
 │   ├── globals.css                     ✅ Academic theme + placeholder styles
 │   └── api/
-│       └── chat/
-│           └── route.ts                ✅ AI chat with OpenRouter support
+│       ├── chat/
+│       │   └── route.ts                ✅ AI chat with OpenRouter support
+│       └── ai-writing/
+│           └── route.ts                ✅ NEW - AI writing assistance API
 │
 ├── components/
 │   ├── layout/
@@ -206,7 +208,7 @@ cursor_for_academic_writing/
 │   ├── chat/
 │   │   └── chat-interface.tsx          ✅ Markdown + Copy + Insert + Discipline
 │   ├── discipline/
-│   │   └── discipline-selector.tsx     ✅ NEW - 15 discipline selector
+│   │   └── discipline-selector.tsx     ✅ 15 discipline selector
 │   ├── auth/
 │   │   ├── auth-button.tsx             ✅ Sign in/out button
 │   │   └── auth-guard.tsx              ✅ Require auth wrapper
@@ -215,11 +217,16 @@ cursor_for_academic_writing/
 │   ├── export/
 │   │   └── export-buttons.tsx          ✅ DOCX + PDF with toasts
 │   ├── templates/
-│   │   └── template-selector.tsx       ✅ NEW - Template selection modal
+│   │   └── template-selector.tsx       ✅ Template selection modal
+│   ├── ai-writing/
+│   │   └── ai-writing-toolbar.tsx      ✅ NEW - Floating AI writing toolbar
+│   ├── writing-analysis/
+│   │   ├── analysis-panel.tsx          ✅ 4-tab analysis panel
+│   │   └── ai-detection-panel.tsx      ✅ NEW - GPTZero-style detection UI
 │   └── ui/
 │       ├── button.tsx                  ✅ shadcn button
-│       ├── theme-toggle.tsx            ✅ NEW - Dark mode toggle
-│       └── keyboard-shortcuts.tsx      ✅ NEW - Shortcuts modal
+│       ├── theme-toggle.tsx            ✅ Dark mode toggle
+│       └── keyboard-shortcuts.tsx      ✅ Shortcuts modal
 │
 ├── lib/
 │   ├── firebase/
@@ -230,8 +237,10 @@ cursor_for_academic_writing/
 │   │   └── schema.ts                   ✅ Data types + DisciplineId
 │   ├── hooks/
 │   │   ├── use-document.ts             ✅ Document hook + updateDiscipline
-│   │   └── use-theme.ts                ✅ Theme management hook
-│   ├── research/                       ✅ NEW - Multi-database research
+│   │   ├── use-theme.ts                ✅ Theme management hook
+│   │   ├── use-writing-analysis.ts     ✅ Real-time writing analysis
+│   │   └── use-ai-writing.ts           ✅ NEW - AI writing assistance hook
+│   ├── research/                       ✅ Multi-database research
 │   │   ├── types.ts                    ✅ Unified search types
 │   │   ├── index.ts                    ✅ Unified search aggregator
 │   │   ├── arxiv.ts                    ✅ arXiv API client
@@ -240,7 +249,7 @@ cursor_for_academic_writing/
 │   ├── prompts/
 │   │   ├── writing-styles.ts           ✅ Writing styles
 │   │   └── disciplines/
-│   │       └── index.ts                ✅ NEW - 15 discipline prompts
+│   │       └── index.ts                ✅ 15 discipline prompts
 │   ├── templates/
 │   │   └── document-templates.ts       ✅ 6 academic templates
 │   ├── export/
@@ -250,6 +259,13 @@ cursor_for_academic_writing/
 │   │   └── client.ts                   ✅ PubMed API
 │   ├── citations/
 │   │   └── author-year-parser.ts       ✅ Citation formatting
+│   ├── writing-analysis/               ✅ Writing analysis engine
+│   │   ├── types.ts                    ✅ Analysis types
+│   │   └── analyzers.ts                ✅ Metric analyzers
+│   ├── ai-writing/                     ✅ NEW - AI writing assistance
+│   │   └── types.ts                    ✅ Action types and prompts
+│   ├── ai-detection/                   ✅ NEW - AI content detection
+│   │   └── detector.ts                 ✅ GPTZero-inspired heuristics
 │   └── utils/
 │       └── cn.ts                       ✅ CSS utility
 │
@@ -409,7 +425,7 @@ cursor_for_academic_writing/
     - Export to BibTeX, RIS, CSV, JSON formats
     - Duplicate detection via DOI matching
 
-### Session 5 Features (Latest - Phase 3A Writing Analysis):
+### Session 5 Features (Phase 3A Writing Analysis):
 32. ✅ **Real-Time Writing Analysis Engine**
     - Location: `lib/writing-analysis/types.ts`, `lib/writing-analysis/analyzers.ts`
     - **Readability Metrics:**
@@ -450,6 +466,61 @@ cursor_for_academic_writing/
     - Configurable analysis options
     - Score calculation: overall, grammar, clarity, engagement, delivery
     - Position-based issue lookup
+
+### Session 6 Features (Latest - Phase 3B AI Writing Assistance):
+35. ✅ **AI Writing Toolbar**
+    - Location: `components/ai-writing/ai-writing-toolbar.tsx`, `lib/ai-writing/types.ts`
+    - Floating toolbar appears when text is selected
+    - **16 AI Writing Actions:**
+      - Paraphrase, Simplify, Expand, Shorten
+      - Formalize, Improve Clarity, Fix Grammar
+      - Active Voice, Academic Tone, Continue Writing
+      - Summarize, Explain, Counterargument
+      - Add Citations, Transition, Conclusion
+    - Quick action buttons for common tasks
+    - Dropdown menu organized by category (Rewrite, Length, Style, Structure)
+    - Result preview panel with Replace/Insert After options
+
+36. ✅ **AI Writing API Endpoint**
+    - Location: `app/api/ai-writing/route.ts`
+    - Supports streaming and non-streaming responses
+    - Multi-model support: Anthropic Claude, OpenAI GPT-4o, Google Gemini, OpenRouter (Llama, Qwen)
+    - Discipline-aware prompts for field-specific writing
+    - Academic writing system prompt with hedging language
+
+37. ✅ **AI Writing Hook**
+    - Location: `lib/hooks/use-ai-writing.ts`
+    - Convenience methods for all 16 actions
+    - Selection management: getSelectedText, replaceSelection, insertAfterSelection
+    - Abort controller for cancellation
+    - Error handling with user feedback
+
+38. ✅ **GPTZero-Inspired AI Detection**
+    - Location: `lib/ai-detection/detector.ts`, `components/writing-analysis/ai-detection-panel.tsx`
+    - **Burstiness Analysis:**
+      - Sentence length variance (human writing varies more)
+      - Coefficient of variation scoring
+    - **Predictability Scoring:**
+      - 40+ AI-typical phrases detection ("in today's world", "delve into", etc.)
+      - Structural pattern analysis (numbered lists, formal transitions)
+      - Sentence beginning variety check
+    - **Vocabulary Metrics:**
+      - Unique word ratio
+      - Repetition rate detection
+      - Vocabulary richness comparison
+    - **Pattern Analysis:**
+      - Common AI phrases flagging
+      - Structural pattern matching
+    - **Sentence-Level Analysis:**
+      - Per-sentence AI likelihood scores
+      - Flag indicators for suspicious patterns
+    - **AI Detection Panel UI:**
+      - "AI Check" tab in Analysis Panel
+      - Human/Mixed/AI classification with confidence
+      - Probability bar visualization
+      - Expandable metrics details
+      - Flagged phrases list
+      - Sentence-by-sentence breakdown
 
 ### Bug Fixes:
 - Fixed `toAIStreamResponse` → `toDataStreamResponse` (AI SDK update)
@@ -535,6 +606,19 @@ Before deploying:
 - [ ] **Session 5:** Stats tab shows detailed metrics
 - [ ] **Session 5:** Readability level displays correctly
 - [ ] **Session 5:** Passive voice sentences are highlighted
+- [ ] **Session 6:** AI Writing Toolbar appears when text is selected
+- [ ] **Session 6:** Paraphrase action rewrites selected text
+- [ ] **Session 6:** Simplify action makes text clearer
+- [ ] **Session 6:** Result preview shows AI-generated text
+- [ ] **Session 6:** Replace button substitutes selection
+- [ ] **Session 6:** Insert After button adds text after selection
+- [ ] **Session 6:** More Actions dropdown shows all 16 actions
+- [ ] **Session 6:** AI Check tab appears in Analysis Panel
+- [ ] **Session 6:** Analyze button runs AI detection
+- [ ] **Session 6:** Human/Mixed/AI classification displays
+- [ ] **Session 6:** Probability bar shows human vs AI percentages
+- [ ] **Session 6:** Flagged phrases are listed
+- [ ] **Session 6:** Sentence-level analysis is expandable
 
 ---
 
