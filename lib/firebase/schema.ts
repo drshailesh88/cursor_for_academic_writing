@@ -72,6 +72,10 @@ export const COLLECTIONS = {
   USERS: 'users',
   DOCUMENTS: 'documents',
   CITATIONS: 'citations',
+  // Citation library collections (nested under users)
+  REFERENCES: 'references',      // users/{userId}/references
+  LIBRARY_FOLDERS: 'folders',    // users/{userId}/folders
+  LIBRARY_LABELS: 'labels',      // users/{userId}/labels
 } as const;
 
 // Helper function to convert Firestore timestamp to Date
