@@ -10,12 +10,14 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { BookOpen, List, ChevronDown, BarChart3, X } from 'lucide-react';
+import { BookOpen, List, ChevronDown, BarChart3, X, Shield } from 'lucide-react';
 import { CitationDialog, useCitationDialog } from '@/components/citations/citation-dialog';
 import type { CitationStyleId } from '@/lib/citations/csl-formatter';
 import { useCitations } from '@/lib/hooks/use-citations';
 import { useWritingAnalysis } from '@/lib/hooks/use-writing-analysis';
+import { usePlagiarism } from '@/lib/hooks/use-plagiarism';
 import { AnalysisPanel } from '@/components/writing-analysis/analysis-panel';
+import { PlagiarismPanel } from '@/components/plagiarism/plagiarism-panel';
 import { AIWritingToolbar } from '@/components/ai-writing/ai-writing-toolbar';
 import type { Reference } from '@/lib/citations/types';
 import type { CitationOptions } from '@/components/citations/citation-dialog';
@@ -26,6 +28,13 @@ interface AcademicEditorProps {
   onSave?: () => void;
   placeholder?: string;
   onEditorReady?: (editor: Editor) => void;
+  documentId?: string;
+  userDocuments?: Array<{
+    id: string;
+    title: string;
+    content: string;
+    createdAt: number;
+  }>;
 }
 
 export function AcademicEditor({
@@ -34,6 +43,8 @@ export function AcademicEditor({
   onSave,
   placeholder = 'Start writing your academic paper...',
   onEditorReady,
+  documentId,
+  userDocuments = [],
 }: AcademicEditorProps) {
   // Citation dialog state
   const { isOpen: citationDialogOpen, open: openCitationDialog, close: closeCitationDialog } = useCitationDialog();
@@ -138,6 +149,20 @@ export function AcademicEditor({
     overallScore,
     refreshAnalysis,
   } = useWritingAnalysis({ editor, enabled: showAnalysis });
+
+  // Plagiarism detection
+  const [showPlagiarism, setShowPlagiarism] = useState(false);
+  const {
+    result: plagiarismResult,
+    isChecking: isPlagiarismChecking,
+    checkPlagiarism,
+    excludeMatch,
+    includeMatch,
+    quickStats,
+  } = usePlagiarism({
+    documentId: documentId || 'temp-doc',
+    userDocuments,
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -426,13 +451,36 @@ export function AcademicEditor({
               </span>
             )}
           </button>
+
+          {/* Plagiarism toggle button */}
+          <button
+            onClick={() => setShowPlagiarism(!showPlagiarism)}
+            className={`px-3 py-1 text-sm rounded flex items-center gap-1.5 transition-colors ${
+              showPlagiarism
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+            title="Toggle plagiarism check"
+          >
+            <Shield className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Originality</span>
+            {quickStats && quickStats.originalityScore > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] rounded-full ${
+                quickStats.originalityScore >= 80 ? 'bg-green-500/20 text-green-200' :
+                quickStats.originalityScore >= 60 ? 'bg-yellow-500/20 text-yellow-200' :
+                'bg-red-500/20 text-red-200'
+              }`}>
+                {quickStats.originalityScore}%
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Main content area with optional analysis panel */}
+      {/* Main content area with optional panels */}
       <div className="flex-1 flex overflow-hidden">
         {/* Editor with AI toolbar */}
-        <div className={`flex-1 flex flex-col overflow-hidden ${showAnalysis ? 'border-r border-border' : ''}`}>
+        <div className={`flex-1 flex flex-col overflow-hidden ${(showAnalysis || showPlagiarism) ? 'border-r border-border' : ''}`}>
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             <EditorContent editor={editor} />
           </div>
@@ -441,15 +489,34 @@ export function AcademicEditor({
           <AIWritingToolbar editor={editor} />
         </div>
 
-        {/* Analysis Panel */}
-        {showAnalysis && (
-          <div className="w-72 flex-shrink-0 overflow-hidden bg-card border-l border-border">
-            <AnalysisPanel
-              analysis={analysis}
-              isAnalyzing={isAnalyzing}
-              onRefresh={refreshAnalysis}
-              text={editor.getText()}
-            />
+        {/* Right sidebar with panels */}
+        {(showAnalysis || showPlagiarism) && (
+          <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden bg-card border-l border-border">
+            {/* Analysis Panel */}
+            {showAnalysis && (
+              <div className={`${showPlagiarism ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
+                <AnalysisPanel
+                  analysis={analysis}
+                  isAnalyzing={isAnalyzing}
+                  onRefresh={refreshAnalysis}
+                  text={editor.getText()}
+                />
+              </div>
+            )}
+
+            {/* Plagiarism Panel */}
+            {showPlagiarism && (
+              <div className={`${showAnalysis ? 'flex-1' : 'h-full'} overflow-hidden`}>
+                <PlagiarismPanel
+                  result={plagiarismResult}
+                  isChecking={isPlagiarismChecking}
+                  onCheck={() => checkPlagiarism(editor.getText())}
+                  onExcludeMatch={excludeMatch}
+                  onIncludeMatch={includeMatch}
+                  wordCount={editor.storage.characterCount?.words() || 0}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
