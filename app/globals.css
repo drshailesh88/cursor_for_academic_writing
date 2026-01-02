@@ -120,6 +120,32 @@
     content: attr(data-placeholder);
     @apply text-muted-foreground pointer-events-none float-left h-0;
   }
+
+  /* Bibliography styles */
+  .bibliography {
+    @apply mt-6 pt-6 border-t border-border;
+  }
+
+  .bibliography-entry {
+    @apply mb-4 pl-8 -indent-8 text-sm leading-relaxed;
+  }
+
+  .bibliography-entry em {
+    @apply italic;
+  }
+
+  .bibliography-entry strong {
+    @apply font-semibold;
+  }
+
+  /* Inline citation styles */
+  .citation {
+    @apply text-primary cursor-pointer hover:underline;
+  }
+
+  .citation[data-suppress-author="true"] {
+    @apply text-muted-foreground;
+  }
 }
 
 /* Custom scrollbar for academic aesthetic */

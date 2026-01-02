@@ -1,6 +1,6 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Link } from '@tiptap/extension-link';
 import { Table } from '@tiptap/extension-table';
@@ -9,21 +9,32 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
+import { BookOpen, List, ChevronDown } from 'lucide-react';
+import { CitationDialog, useCitationDialog } from '@/components/citations/citation-dialog';
+import type { CitationStyleId } from '@/lib/citations/csl-formatter';
+import { useCitations } from '@/lib/hooks/use-citations';
+import type { Reference } from '@/lib/citations/types';
+import type { CitationOptions } from '@/components/citations/citation-dialog';
 
 interface AcademicEditorProps {
   content?: string;
   onChange?: (content: string) => void;
   onSave?: () => void;
   placeholder?: string;
+  onEditorReady?: (editor: Editor) => void;
 }
 
 export function AcademicEditor({
   content = '',
   onChange,
   onSave,
-  placeholder = 'Start writing your academic paper...'
+  placeholder = 'Start writing your academic paper...',
+  onEditorReady,
 }: AcademicEditorProps) {
+  // Citation dialog state
+  const { isOpen: citationDialogOpen, open: openCitationDialog, close: closeCitationDialog } = useCitationDialog();
+
   // Handle Cmd+S / Ctrl+S for manual save
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if ((event.metaKey || event.ctrlKey) && event.key === 's') {
@@ -88,11 +99,53 @@ export function AcademicEditor({
     },
   });
 
+  // Notify parent when editor is ready
+  useEffect(() => {
+    if (editor) {
+      onEditorReady?.(editor);
+    }
+  }, [editor, onEditorReady]);
+
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
       editor.commands.setContent(content);
     }
   }, [content, editor]);
+
+  // Citations hook
+  const {
+    insertCitation,
+    citationCount,
+    uniqueReferenceCount,
+    insertBibliography,
+    citationStyle,
+    setCitationStyle,
+    availableStyles,
+  } = useCitations({ editor });
+
+  // Bibliography dropdown state
+  const [showBibDropdown, setShowBibDropdown] = useState(false);
+  const bibDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (bibDropdownRef.current && !bibDropdownRef.current.contains(event.target as Node)) {
+        setShowBibDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle citation insertion
+  const handleCitationInsert = useCallback(
+    (reference: Reference, options: CitationOptions, formatted: string) => {
+      insertCitation(reference, options, formatted);
+      closeCitationDialog();
+    },
+    [insertCitation, closeCitationDialog]
+  );
 
   if (!editor) {
     return null;
@@ -217,6 +270,74 @@ export function AcademicEditor({
 
         <div className="w-px h-6 bg-border mx-2" />
 
+        {/* Citation button */}
+        <button
+          onClick={() => openCitationDialog()}
+          className="px-3 py-1 text-sm rounded hover:bg-muted flex items-center gap-1"
+          title="Insert citation (Cmd+Shift+P)"
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Cite</span>
+          {citationCount > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-primary/20 text-primary">
+              {citationCount}
+            </span>
+          )}
+        </button>
+
+        {/* Bibliography dropdown */}
+        <div className="relative" ref={bibDropdownRef}>
+          <button
+            onClick={() => setShowBibDropdown(!showBibDropdown)}
+            className="px-3 py-1 text-sm rounded hover:bg-muted flex items-center gap-1"
+            title="Insert bibliography"
+            disabled={uniqueReferenceCount === 0}
+          >
+            <List className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Bibliography</span>
+            <ChevronDown className="h-3 w-3" />
+          </button>
+
+          {showBibDropdown && (
+            <div className="absolute top-full left-0 mt-1 w-56 bg-background border border-border rounded-lg shadow-lg z-20 py-1">
+              <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border">
+                Citation Style
+              </div>
+              {availableStyles.map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => {
+                    setCitationStyle(style.id);
+                    setShowBibDropdown(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center justify-between ${
+                    citationStyle === style.id ? 'bg-primary/10 text-primary' : ''
+                  }`}
+                >
+                  <span>{style.name}</span>
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {style.category.replace('-', ' ')}
+                  </span>
+                </button>
+              ))}
+              <div className="border-t border-border mt-1 pt-1">
+                <button
+                  onClick={() => {
+                    insertBibliography();
+                    setShowBibDropdown(false);
+                  }}
+                  disabled={uniqueReferenceCount === 0}
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted text-primary font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Insert Bibliography ({uniqueReferenceCount} refs)
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="w-px h-6 bg-border mx-2" />
+
         {/* Table controls */}
         <button
           onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
@@ -273,6 +394,13 @@ export function AcademicEditor({
 
       {/* Editor */}
       <EditorContent editor={editor} />
+
+      {/* Citation Dialog */}
+      <CitationDialog
+        isOpen={citationDialogOpen}
+        onClose={closeCitationDialog}
+        onInsert={handleCitationInsert}
+      />
     </div>
   );
 }
