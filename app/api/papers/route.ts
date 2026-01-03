@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserPapers, getUserPaperMetadata } from '@/lib/firebase/papers';
 
+// Force dynamic rendering (no static generation at build time)
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/papers
  * List papers for a user

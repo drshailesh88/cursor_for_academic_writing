@@ -5,6 +5,9 @@
 // Query → Cache Check → Hybrid Retrieve → Rerank → Model Select → LLM → Cache Store → Response
 
 import { NextRequest, NextResponse } from 'next/server';
+
+// Force dynamic rendering (no static generation at build time)
+export const dynamic = 'force-dynamic';
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';

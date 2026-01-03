@@ -2,7 +2,7 @@
 // Uses Firestore for persistent caching of RAG responses
 // Reduces costs by avoiding repeated LLM calls for similar queries
 
-import { db } from '@/lib/firebase/client';
+import { getFirebaseDb } from '@/lib/firebase/client';
 import {
   collection,
   doc,
@@ -50,7 +50,7 @@ export async function getCachedResponse(
 ): Promise<{ response: string; citations: Citation[] } | null> {
   try {
     const cacheKey = generateCacheKey(query, paperIds);
-    const cacheRef = doc(db, 'users', userId, CACHE_COLLECTION, cacheKey);
+    const cacheRef = doc(getFirebaseDb(), 'users', userId, CACHE_COLLECTION, cacheKey);
     const cacheDoc = await getDoc(cacheRef);
 
     if (!cacheDoc.exists()) {
@@ -101,7 +101,7 @@ export async function setCachedResponse(
 ): Promise<void> {
   try {
     const cacheKey = generateCacheKey(query, paperIds);
-    const cacheRef = doc(db, 'users', userId, CACHE_COLLECTION, cacheKey);
+    const cacheRef = doc(getFirebaseDb(), 'users', userId, CACHE_COLLECTION, cacheKey);
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
@@ -135,7 +135,7 @@ export async function setCachedResponse(
  */
 async function cleanupOldEntries(userId: string): Promise<void> {
   try {
-    const cacheRef = collection(db, 'users', userId, CACHE_COLLECTION);
+    const cacheRef = collection(getFirebaseDb(), 'users', userId, CACHE_COLLECTION);
     const q = query(cacheRef);
     const snapshot = await getDocs(q);
 
@@ -175,7 +175,7 @@ export async function invalidatePaperCache(
   paperIds: string[]
 ): Promise<void> {
   try {
-    const cacheRef = collection(db, 'users', userId, CACHE_COLLECTION);
+    const cacheRef = collection(getFirebaseDb(), 'users', userId, CACHE_COLLECTION);
     const snapshot = await getDocs(cacheRef);
 
     const toDelete: Promise<void>[] = [];
@@ -200,7 +200,7 @@ export async function invalidatePaperCache(
  */
 export async function clearUserCache(userId: string): Promise<void> {
   try {
-    const cacheRef = collection(db, 'users', userId, CACHE_COLLECTION);
+    const cacheRef = collection(getFirebaseDb(), 'users', userId, CACHE_COLLECTION);
     const snapshot = await getDocs(cacheRef);
 
     await Promise.all(snapshot.docs.map((doc) => deleteDoc(doc.ref)));
@@ -219,7 +219,7 @@ export async function getCacheStats(userId: string): Promise<{
   newestEntry: Date | null;
 }> {
   try {
-    const cacheRef = collection(db, 'users', userId, CACHE_COLLECTION);
+    const cacheRef = collection(getFirebaseDb(), 'users', userId, CACHE_COLLECTION);
     const snapshot = await getDocs(cacheRef);
 
     let totalHits = 0;

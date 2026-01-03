@@ -16,7 +16,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from './client';
+import { getFirebaseDb } from './client';
 import { COLLECTIONS, Document, DocumentMetadata, createNewDocument } from './schema';
 
 // Create a new document
@@ -25,7 +25,7 @@ export async function createDocument(
   title: string = 'Untitled Document'
 ): Promise<string> {
   try {
-    const docRef = doc(collection(db, COLLECTIONS.DOCUMENTS));
+    const docRef = doc(collection(getFirebaseDb(), COLLECTIONS.DOCUMENTS));
     const newDoc = {
       ...createNewDocument(userId, title),
       createdAt: serverTimestamp(),
@@ -43,7 +43,7 @@ export async function createDocument(
 // Get a document by ID
 export async function getDocument(documentId: string): Promise<Document | null> {
   try {
-    const docRef = doc(db, COLLECTIONS.DOCUMENTS, documentId);
+    const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
@@ -69,7 +69,7 @@ export async function updateDocument(
   updates: Partial<Document>
 ): Promise<void> {
   try {
-    const docRef = doc(db, COLLECTIONS.DOCUMENTS, documentId);
+    const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     await updateDoc(docRef, {
       ...updates,
       updatedAt: serverTimestamp(),
@@ -87,7 +87,7 @@ export async function saveDocumentContent(
   wordCount: number
 ): Promise<void> {
   try {
-    const docRef = doc(db, COLLECTIONS.DOCUMENTS, documentId);
+    const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     await updateDoc(docRef, {
       content,
       wordCount,
@@ -102,7 +102,7 @@ export async function saveDocumentContent(
 // Delete a document
 export async function deleteDocument(documentId: string): Promise<void> {
   try {
-    const docRef = doc(db, COLLECTIONS.DOCUMENTS, documentId);
+    const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     await deleteDoc(docRef);
   } catch (error) {
     console.error('Error deleting document:', error);
@@ -117,7 +117,7 @@ export async function getUserDocuments(
 ): Promise<DocumentMetadata[]> {
   try {
     const q = query(
-      collection(db, COLLECTIONS.DOCUMENTS),
+      collection(getFirebaseDb(), COLLECTIONS.DOCUMENTS),
       where('userId', '==', userId),
       orderBy('updatedAt', 'desc'),
       limit(limitCount)
@@ -158,7 +158,7 @@ export async function renameDocument(
   newTitle: string
 ): Promise<void> {
   try {
-    const docRef = doc(db, COLLECTIONS.DOCUMENTS, documentId);
+    const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     await updateDoc(docRef, {
       title: newTitle,
       updatedAt: serverTimestamp(),

@@ -1,5 +1,9 @@
 // Paper Detail API - Get, Update, Delete individual papers
 import { NextRequest, NextResponse } from 'next/server';
+
+// Force dynamic rendering (no static generation at build time)
+export const dynamic = 'force-dynamic';
+
 import {
   getPaper,
   updatePaper,

@@ -1,4 +1,5 @@
 // Firebase Client SDK Configuration
+// Uses lazy initialization to avoid build-time errors
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
@@ -13,22 +14,52 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase (only once)
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-let storage: FirebaseStorage;
+// Lazy initialization to avoid build-time errors
+let _app: FirebaseApp | undefined;
+let _auth: Auth | undefined;
+let _db: Firestore | undefined;
+let _storage: FirebaseStorage | undefined;
 
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
-} else {
-  app = getApps()[0];
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
+function initApp(): FirebaseApp {
+  if (_app) return _app;
+
+  if (!getApps().length) {
+    _app = initializeApp(firebaseConfig);
+  } else {
+    _app = getApps()[0];
+  }
+  return _app;
 }
 
-export { app, auth, db, storage };
+// Export getter functions for lazy initialization
+export function getFirebaseApp(): FirebaseApp {
+  return initApp();
+}
+
+export function getFirebaseAuth(): Auth {
+  if (!_auth) {
+    _auth = getAuth(initApp());
+  }
+  return _auth;
+}
+
+export function getFirebaseDb(): Firestore {
+  if (!_db) {
+    _db = getFirestore(initApp());
+  }
+  return _db;
+}
+
+export function getFirebaseStorage(): FirebaseStorage {
+  if (!_storage) {
+    _storage = getStorage(initApp());
+  }
+  return _storage;
+}
+
+// Legacy exports - only use in client-side code
+// For API routes, use the getter functions above
+export const app = initApp;
+export const auth = getFirebaseAuth;
+export const db = getFirebaseDb;
+export const storage = getFirebaseStorage;

@@ -1,8 +1,19 @@
 import { streamText, tool } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
+
+// Create OpenAI provider
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Create OpenRouter provider (OpenAI-compatible)
+const openrouter = createOpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 
 const MODEL_MAP = {
   // Premium models
@@ -11,56 +22,23 @@ const MODEL_MAP = {
   'google': google('gemini-2.0-flash-exp'),
 
   // Free OpenRouter models - Best Quality
-  'openrouter-hermes-405b': openai('nousresearch/hermes-3-llama-3.1-405b:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
-  'openrouter-llama-3.3-70b': openai('meta-llama/llama-3.3-70b-instruct:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
-  'openrouter-qwen': openai('qwen/qwen-2.5-72b-instruct:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
-  'openrouter-gemini-2-flash': openai('google/gemini-2.0-flash-exp:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
+  'openrouter-hermes-405b': openrouter('nousresearch/hermes-3-llama-3.1-405b:free'),
+  'openrouter-llama-3.3-70b': openrouter('meta-llama/llama-3.3-70b-instruct:free'),
+  'openrouter-qwen': openrouter('qwen/qwen-2.5-72b-instruct:free'),
+  'openrouter-gemini-2-flash': openrouter('google/gemini-2.0-flash-exp:free'),
 
   // Free OpenRouter models - Coding
-  'openrouter-deepseek-chat': openai('deepseek/deepseek-chat:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
-  'openrouter-qwen-coder': openai('qwen/qwen-2.5-coder-32b-instruct:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
+  'openrouter-deepseek-chat': openrouter('deepseek/deepseek-chat:free'),
+  'openrouter-qwen-coder': openrouter('qwen/qwen-2.5-coder-32b-instruct:free'),
 
   // Free OpenRouter models - Fast & Light
-  'openrouter-llama-3.2-3b': openai('meta-llama/llama-3.2-3b-instruct:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
-  'openrouter-mistral-7b': openai('mistralai/mistral-7b-instruct:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
-  'openrouter-phi-3-mini': openai('microsoft/phi-3-mini-128k-instruct:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
+  'openrouter-llama-3.2-3b': openrouter('meta-llama/llama-3.2-3b-instruct:free'),
+  'openrouter-mistral-7b': openrouter('mistralai/mistral-7b-instruct:free'),
+  'openrouter-phi-3-mini': openrouter('microsoft/phi-3-mini-128k-instruct:free'),
 
   // Free OpenRouter models - Other
-  'openrouter-mythomax-13b': openai('gryphe/mythomax-l2-13b:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
-  'openrouter-toppy-7b': openai('undi95/toppy-m-7b:free', {
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
+  'openrouter-mythomax-13b': openrouter('gryphe/mythomax-l2-13b:free'),
+  'openrouter-toppy-7b': openrouter('undi95/toppy-m-7b:free'),
 };
 
 const ACADEMIC_WRITING_SYSTEM_PROMPT = `You are an expert academic writing assistant specializing in medical and scientific literature.
@@ -111,7 +89,7 @@ export async function POST(req: Request) {
 
     const selectedModel = MODEL_MAP[model as keyof typeof MODEL_MAP] || MODEL_MAP.anthropic;
 
-    const result = streamText({
+    const result = await streamText({
       model: selectedModel,
       messages,
       system: ACADEMIC_WRITING_SYSTEM_PROMPT,
@@ -152,7 +130,7 @@ export async function POST(req: Request) {
       maxSteps: 5,
     });
 
-    return result.toAIStreamResponse();
+    return result.toDataStreamResponse();
   } catch (error) {
     console.error('Chat API error:', error);
     return new Response(JSON.stringify({ error: 'Failed to process chat request' }), {

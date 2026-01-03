@@ -16,7 +16,7 @@ import {
   Timestamp,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from './client';
+import { getFirebaseDb } from './client';
 import type {
   ResearchSession,
   ResearchMode,
@@ -64,7 +64,7 @@ export async function createResearchSession(
   mode: ResearchMode,
   config: ResearchConfig
 ): Promise<string> {
-  const sessionsRef = collection(db, RESEARCH_SESSIONS);
+  const sessionsRef = collection(getFirebaseDb(), RESEARCH_SESSIONS);
   const sessionDoc = doc(sessionsRef);
   const sessionId = sessionDoc.id;
 
@@ -92,7 +92,7 @@ export async function createResearchSession(
  * Get a research session by ID
  */
 export async function getResearchSession(sessionId: string): Promise<ResearchSessionDoc | null> {
-  const sessionRef = doc(db, RESEARCH_SESSIONS, sessionId);
+  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
   const snapshot = await getDoc(sessionRef);
 
   if (!snapshot.exists()) {
@@ -109,7 +109,7 @@ export async function getUserResearchSessions(
   userId: string,
   maxResults: number = 20
 ): Promise<ResearchSessionDoc[]> {
-  const sessionsRef = collection(db, RESEARCH_SESSIONS);
+  const sessionsRef = collection(getFirebaseDb(), RESEARCH_SESSIONS);
   const q = query(
     sessionsRef,
     where('userId', '==', userId),
@@ -129,7 +129,7 @@ export async function updateSessionStatus(
   status: ResearchStatus,
   progress: number
 ): Promise<void> {
-  const sessionRef = doc(db, RESEARCH_SESSIONS, sessionId);
+  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
 
   const updates: Partial<ResearchSessionDoc> = {
     status,
@@ -151,7 +151,7 @@ export async function addSessionClarifications(
   sessionId: string,
   clarifications: Clarification[]
 ): Promise<void> {
-  const sessionRef = doc(db, RESEARCH_SESSIONS, sessionId);
+  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
   await updateDoc(sessionRef, {
     clarifications,
     updatedAt: Timestamp.now(),
@@ -165,7 +165,7 @@ export async function addSessionPerspectives(
   sessionId: string,
   perspectives: Perspective[]
 ): Promise<void> {
-  const sessionRef = doc(db, RESEARCH_SESSIONS, sessionId);
+  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
   await updateDoc(sessionRef, {
     perspectives,
     updatedAt: Timestamp.now(),
@@ -183,7 +183,7 @@ export async function addSessionSources(
   if (!session) return;
 
   const updatedSources = [...session.sources, ...sources];
-  const sessionRef = doc(db, RESEARCH_SESSIONS, sessionId);
+  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
   await updateDoc(sessionRef, {
     sources: updatedSources,
     updatedAt: Timestamp.now(),
@@ -197,7 +197,7 @@ export async function setSessionSynthesis(
   sessionId: string,
   synthesis: SynthesisResult
 ): Promise<void> {
-  const sessionRef = doc(db, RESEARCH_SESSIONS, sessionId);
+  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
   await updateDoc(sessionRef, {
     synthesis,
     updatedAt: Timestamp.now(),
@@ -208,7 +208,7 @@ export async function setSessionSynthesis(
  * Delete a research session
  */
 export async function deleteResearchSession(sessionId: string): Promise<void> {
-  const sessionRef = doc(db, RESEARCH_SESSIONS, sessionId);
+  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
   await deleteDoc(sessionRef);
 }
 

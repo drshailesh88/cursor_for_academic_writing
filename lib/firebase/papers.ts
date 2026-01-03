@@ -22,7 +22,7 @@ import {
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage';
-import { db, storage } from './client';
+import { getFirebaseDb, getFirebaseStorage } from './client';
 import {
   COLLECTIONS,
   Paper,
@@ -47,7 +47,7 @@ export async function uploadPaperFile(
   fileName: string
 ): Promise<{ url: string; path: string }> {
   const storagePath = `papers/${userId}/${paperId}/${fileName}`;
-  const storageRef = ref(storage, storagePath);
+  const storageRef = ref(getFirebaseStorage(), storagePath);
 
   await uploadBytes(storageRef, file, {
     contentType: 'application/pdf',
@@ -68,7 +68,7 @@ export async function uploadPaperFile(
  */
 export async function deletePaperFile(storagePath: string): Promise<void> {
   try {
-    const storageRef = ref(storage, storagePath);
+    const storageRef = ref(getFirebaseStorage(), storagePath);
     await deleteObject(storageRef);
   } catch (error) {
     console.warn('Failed to delete paper file:', error);
@@ -109,7 +109,7 @@ export async function createPaper(
     updatedAt: now,
   };
 
-  const docRef = await addDoc(collection(db, COLLECTIONS.PAPERS), {
+  const docRef = await addDoc(collection(getFirebaseDb(), COLLECTIONS.PAPERS), {
     ...paperData,
     uploadedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -122,7 +122,7 @@ export async function createPaper(
  * Get a paper by ID
  */
 export async function getPaper(paperId: string): Promise<Paper | null> {
-  const docRef = doc(db, COLLECTIONS.PAPERS, paperId);
+  const docRef = doc(getFirebaseDb(), COLLECTIONS.PAPERS, paperId);
   const docSnap = await getDoc(docRef);
 
   if (!docSnap.exists()) {
@@ -153,7 +153,7 @@ export async function getUserPapers(
     tag?: string;
   }
 ): Promise<Paper[]> {
-  const papersRef = collection(db, COLLECTIONS.PAPERS);
+  const papersRef = collection(getFirebaseDb(), COLLECTIONS.PAPERS);
 
   let q = query(
     papersRef,
@@ -221,7 +221,7 @@ export async function updatePaper(
   paperId: string,
   updates: Partial<Omit<Paper, 'id' | 'userId' | 'uploadedAt'>>
 ): Promise<void> {
-  const docRef = doc(db, COLLECTIONS.PAPERS, paperId);
+  const docRef = doc(getFirebaseDb(), COLLECTIONS.PAPERS, paperId);
 
   await updateDoc(docRef, {
     ...updates,
@@ -250,7 +250,7 @@ export async function updatePaperStatus(
     updates.extractedAt = serverTimestamp();
   }
 
-  const docRef = doc(db, COLLECTIONS.PAPERS, paperId);
+  const docRef = doc(getFirebaseDb(), COLLECTIONS.PAPERS, paperId);
   await updateDoc(docRef, updates);
 }
 
@@ -273,7 +273,7 @@ export async function updatePaperMetadata(
     openAccess?: boolean;
   }
 ): Promise<void> {
-  const docRef = doc(db, COLLECTIONS.PAPERS, paperId);
+  const docRef = doc(getFirebaseDb(), COLLECTIONS.PAPERS, paperId);
 
   await updateDoc(docRef, {
     ...metadata,
@@ -296,14 +296,14 @@ export async function deletePaper(paperId: string): Promise<void> {
 
   // Delete paper content
   try {
-    const contentRef = doc(db, COLLECTIONS.PAPER_CONTENTS, paperId);
+    const contentRef = doc(getFirebaseDb(), COLLECTIONS.PAPER_CONTENTS, paperId);
     await deleteDoc(contentRef);
   } catch {
     // Content might not exist
   }
 
   // Delete paper document
-  const docRef = doc(db, COLLECTIONS.PAPERS, paperId);
+  const docRef = doc(getFirebaseDb(), COLLECTIONS.PAPERS, paperId);
   await deleteDoc(docRef);
 }
 
@@ -357,7 +357,7 @@ export async function savePaperContent(
   userId: string,
   content: Omit<PaperContent, 'paperId' | 'userId' | 'extractedAt' | 'updatedAt'>
 ): Promise<void> {
-  const contentRef = doc(db, COLLECTIONS.PAPER_CONTENTS, paperId);
+  const contentRef = doc(getFirebaseDb(), COLLECTIONS.PAPER_CONTENTS, paperId);
 
   await updateDoc(contentRef, {
     paperId,
@@ -382,7 +382,7 @@ export async function savePaperContent(
  * Get paper content by paper ID
  */
 export async function getPaperContent(paperId: string): Promise<PaperContent | null> {
-  const contentRef = doc(db, COLLECTIONS.PAPER_CONTENTS, paperId);
+  const contentRef = doc(getFirebaseDb(), COLLECTIONS.PAPER_CONTENTS, paperId);
   const docSnap = await getDoc(contentRef);
 
   if (!docSnap.exists()) {
@@ -443,7 +443,7 @@ export async function getPapersByIds(paperIds: string[]): Promise<Paper[]> {
  * Get user's favorite papers
  */
 export async function getFavoritePapers(userId: string): Promise<Paper[]> {
-  const papersRef = collection(db, COLLECTIONS.PAPERS);
+  const papersRef = collection(getFirebaseDb(), COLLECTIONS.PAPERS);
 
   const q = query(
     papersRef,

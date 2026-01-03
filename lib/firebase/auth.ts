@@ -9,7 +9,7 @@ import {
   onAuthStateChanged,
   User,
 } from 'firebase/auth';
-import { auth, db } from './client';
+import { getFirebaseAuth, getFirebaseDb } from './client';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { COLLECTIONS, UserProfile } from './schema';
 
@@ -17,10 +17,10 @@ import { COLLECTIONS, UserProfile } from './schema';
 export async function signInWithGoogle() {
   try {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(getFirebaseAuth(), provider);
 
     // Create/update user profile in Firestore
-    const userRef = doc(db, COLLECTIONS.USERS, result.user.uid);
+    const userRef = doc(getFirebaseDb(), COLLECTIONS.USERS, result.user.uid);
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
@@ -62,7 +62,7 @@ export async function signInWithGoogle() {
 // Sign Out
 export async function signOut() {
   try {
-    await firebaseSignOut(auth);
+    await firebaseSignOut(getFirebaseAuth());
   } catch (error) {
     console.error('Error signing out:', error);
     throw error;
@@ -77,7 +77,7 @@ export function useAuth() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
-      auth,
+      getFirebaseAuth(),
       (user) => {
         setUser(user);
         setLoading(false);
@@ -97,7 +97,7 @@ export function useAuth() {
 // Get user profile from Firestore
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
-    const userRef = doc(db, COLLECTIONS.USERS, uid);
+    const userRef = doc(getFirebaseDb(), COLLECTIONS.USERS, uid);
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
