@@ -17,8 +17,10 @@ import {
   CheckCircle,
   AlertCircle,
   HelpCircle,
+  Network,
 } from 'lucide-react';
 import type { ResearchSource, CitationType } from '@/lib/deep-research/types';
+import { useCitationExplorer } from './citation-explorer';
 
 interface SourceCardProps {
   source: ResearchSource;
@@ -61,6 +63,14 @@ const citationTypeConfig: Record<CitationType, {
 
 export function SourceCard({ source, index = 0, compact = false, onSelect }: SourceCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Optional citation explorer - may not be available in all contexts
+  let citationExplorer: ReturnType<typeof useCitationExplorer> | null = null;
+  try {
+    citationExplorer = useCitationExplorer();
+  } catch {
+    // Not within CitationExplorerProvider, that's okay
+  }
 
   const typeConfig = citationTypeConfig[source.citationType];
   const TypeIcon = typeConfig.icon;
@@ -184,25 +194,37 @@ export function SourceCard({ source, index = 0, compact = false, onSelect }: Sou
 
       {/* Footer actions */}
       <div className="px-5 py-3 bg-muted/30 border-t border-border rounded-b-2xl flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {source.doi && (
-            <span className="text-xs text-muted-foreground font-mono">
+            <span className="text-xs text-muted-foreground font-mono truncate max-w-[120px]">
               {source.doi}
             </span>
           )}
+          {citationExplorer && (
+            <button
+              onClick={() => citationExplorer!.openExplorer(source)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground
+                       hover:text-primary transition-colors"
+            >
+              <Network className="w-3 h-3" />
+              Explore
+            </button>
+          )}
         </div>
-        {source.url && (
-          <a
-            href={source.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80
-                       font-medium transition-colors"
-          >
-            View source
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        )}
+        <div className="flex items-center gap-3">
+          {source.url && (
+            <a
+              href={source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80
+                         font-medium transition-colors"
+            >
+              View
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
       </div>
     </motion.div>
   );

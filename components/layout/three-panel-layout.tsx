@@ -12,7 +12,13 @@ import { AuthButton } from '@/components/auth/auth-button';
 import { useDocument } from '@/lib/hooks/use-document';
 import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
-import { ResearchProvider, ResearchTrigger, ResearchPanel } from '@/components/research';
+import {
+  ResearchProvider,
+  ResearchTrigger,
+  ResearchPanel,
+  CitationExplorerProvider,
+  CitationExplorer,
+} from '@/components/research';
 
 export function ThreePanelLayout() {
   const { user } = useAuth();
@@ -66,9 +72,13 @@ export function ThreePanelLayout() {
 
   return (
     <ResearchProvider>
+      <CitationExplorerProvider>
       <div className="h-screen w-screen bg-background flex flex-col">
         {/* Deep Research Panel (modal overlay) */}
         <ResearchPanel />
+
+        {/* Citation Explorer (modal overlay) */}
+        <CitationExplorer />
 
         {/* Top bar with auth and save status */}
         <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-card">
@@ -218,6 +228,7 @@ export function ThreePanelLayout() {
         </PanelGroup>
       </div>
     </div>
+      </CitationExplorerProvider>
     </ResearchProvider>
   );
 }

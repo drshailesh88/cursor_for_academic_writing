@@ -11,3 +11,10 @@ export {
   CitationRef,
   ExpandableSection,
 } from './synthesis-preview';
+
+// Citation Explorer
+export {
+  CitationExplorerProvider,
+  useCitationExplorer,
+  CitationExplorer,
+} from './citation-explorer';

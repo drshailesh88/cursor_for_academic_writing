@@ -13,6 +13,9 @@ export * from './sources';
 // Engine (orchestration)
 export * from './engine';
 
+// Citation Graph
+export * from './citation-graph';
+
 // Tree exploration - to be implemented
 // export * from './tree';
 
