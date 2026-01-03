@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "stop": [
+      {
+        "type": "command",
+        "command": ".claude/hooks/stop.sh"
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "TodoWrite"
+    ]
+  }
+}
