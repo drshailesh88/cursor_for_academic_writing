@@ -103,6 +103,11 @@ export abstract class BaseAgent {
       description: this.config.description,
     };
   }
+
+  // Get agent type
+  getType(): AgentType {
+    return this.config.type;
+  }
 }
 
 // Type for agent constructor

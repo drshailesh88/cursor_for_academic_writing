@@ -323,7 +323,32 @@ export interface SynthesisSection {
   id: string;
   title: string;
   content: string;
-  sources: string[]; // Source IDs
+  evidence: EvidenceItem[];
+  sourceIds: string[];
+  order: number;
+}
+
+export interface EvidenceItem {
+  id: string;
+  claim: string;
+  sourceIds: string[];
+  type: 'finding' | 'statistic' | 'quote' | 'conclusion';
+  strength: number; // 0-1
+  quote?: string;
+}
+
+export interface ConflictingEvidence {
+  id: string;
+  topic: string;
+  positionA: {
+    claim: string;
+    sourceIds: string[];
+  };
+  positionB: {
+    claim: string;
+    sourceIds: string[];
+  };
+  resolution?: string;
 }
 
 export interface ReviewFeedback {
@@ -468,4 +493,52 @@ export interface ResearchError {
   message: string;
   details?: Record<string, unknown>;
   recoverable: boolean;
+}
+
+// ============================================================================
+// Quality Metrics
+// ============================================================================
+
+export interface QualityMetrics {
+  sourceCoverage: number; // 0-1
+  citationAccuracy: number; // 0-1
+  narrativeCoherence: number; // 0-1
+  evidenceStrength: number; // 0-1
+  overallQuality: number; // 0-1
+}
+
+// ============================================================================
+// Research Report
+// ============================================================================
+
+export interface ResearchReport {
+  id: string;
+  sessionId: string;
+  title: string;
+  abstract?: string;
+  keywords?: string[];
+  sections: ReportSection[];
+  references: Reference[];
+  generatedAt: Timestamp;
+  citationStyle: 'apa' | 'vancouver' | 'harvard' | 'chicago';
+}
+
+export interface ReportSection {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+}
+
+export interface Reference {
+  id: string;
+  number: number;
+  authors: Author[];
+  year: number;
+  title: string;
+  journal?: string;
+  doi?: string;
+  pmid?: string;
+  url?: string;
+  formatted: string;
 }
