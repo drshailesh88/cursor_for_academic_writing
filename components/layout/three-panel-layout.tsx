@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   Share2,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChatInterface } from '@/components/chat/chat-interface';
@@ -27,6 +28,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { KeyboardShortcuts, useKeyboardShortcuts } from '@/components/ui/keyboard-shortcuts';
 import { CommentsSidebar } from '@/components/collaboration/comments-sidebar';
 import { ShareDialog, useShareDialog } from '@/components/collaboration/share-dialog';
+import { SettingsDialog } from '@/components/settings/settings-dialog';
 import { useDocument } from '@/lib/hooks/use-document';
 import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
@@ -60,6 +62,7 @@ export function ThreePanelLayout() {
   const [mobileView, setMobileView] = useState<MobileView>('editor');
   const [rightPanelView, setRightPanelView] = useState<RightPanelView>('chat');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { isOpen: shortcutsOpen, setIsOpen: setShortcutsOpen } = useKeyboardShortcuts();
   const { isOpen: shareDialogOpen, documentId: shareDocumentId, open: openShareDialog, close: closeShareDialog } = useShareDialog();
 
@@ -179,12 +182,17 @@ export function ThreePanelLayout() {
     />
   ) : null;
 
+  const settingsDialog = (
+    <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+  );
+
   // Mobile Layout
   if (isMobile) {
     return (
       <div className="h-screen w-screen bg-background flex flex-col">
         {shortcutsModal}
         {shareDialog}
+        {settingsDialog}
         {/* Mobile Top Bar */}
         <div className="h-14 border-b border-border flex items-center justify-between px-3 bg-card">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -215,6 +223,14 @@ export function ThreePanelLayout() {
           <div className="flex items-center gap-1">
             {user && saving && <Save className="w-4 h-4 animate-pulse text-muted-foreground" />}
             {user && !saving && lastSaved && <CheckCircle className="w-4 h-4 text-green-600" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              title="Settings"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
             <ThemeToggle />
             <AuthButton />
           </div>
@@ -351,6 +367,7 @@ export function ThreePanelLayout() {
     <div className="h-screen w-screen bg-background flex flex-col">
       {shortcutsModal}
       {shareDialog}
+      {settingsDialog}
       {/* Top bar with auth and save status */}
       <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-card">
         <div className="flex items-center gap-4">
@@ -401,6 +418,14 @@ export function ThreePanelLayout() {
             {user && (
               <ExportButtons title={document?.title} content={content} />
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              title="Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <ThemeToggle />
             <AuthButton />
           </div>
