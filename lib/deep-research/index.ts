@@ -10,6 +10,9 @@ export * from './agents';
 // Sources
 export * from './sources';
 
+// Engine (orchestration)
+export * from './engine';
+
 // Tree exploration - to be implemented
 // export * from './tree';
 
