@@ -1,5 +1,5 @@
 // Paper Chat Interface
-// Multi-paper AI chat with citations
+// Multi-paper AI chat with citations and RAG
 
 'use client';
 
@@ -12,24 +12,30 @@ import {
   Loader2,
   MessageSquare,
   Plus,
-  ChevronDown,
-  BookOpen,
   Quote,
   Sparkles,
   RotateCcw,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
 } from 'lucide-react';
 import { usePaperLibrary } from './paper-library-context';
+
+interface Citation {
+  paperId: string;
+  paperTitle: string;
+  authors?: string;
+  year?: number;
+  section?: string;
+  quote: string;
+  pageNumber?: number;
+}
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  citations?: Array<{
-    paperId: string;
-    paperTitle: string;
-    quote?: string;
-    pageNumber?: number;
-  }>;
+  citations?: Citation[];
   timestamp: Date;
 }
 
@@ -52,6 +58,7 @@ export function PaperChat({ userId }: PaperChatProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPaperSelector, setShowPaperSelector] = useState(false);
+  const [expandedCitations, setExpandedCitations] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -73,7 +80,21 @@ export function PaperChat({ userId }: PaperChatProps) {
     }
   }, [isChatOpen]);
 
-  // Send message
+  // Toggle citation expansion
+  const toggleCitation = (messageId: string, citationIndex: number) => {
+    const key = `${messageId}-${citationIndex}`;
+    setExpandedCitations((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  // Send message with streaming
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isLoading || selectedPapers.length === 0) return;
 
@@ -88,9 +109,20 @@ export function PaperChat({ userId }: PaperChatProps) {
     setInput('');
     setIsLoading(true);
 
+    // Create placeholder for assistant message
+    const assistantMessageId = `msg_${Date.now() + 1}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        citations: [],
+        timestamp: new Date(),
+      },
+    ]);
+
     try {
-      // TODO: Replace with actual API call to paper chat endpoint
-      // For now, simulate a response
       const response = await fetch('/api/papers/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,31 +134,77 @@ export function PaperChat({ userId }: PaperChatProps) {
             content: m.content,
           })),
         }),
-      }).catch(() => null);
+      });
 
-      // Simulate response if API not available
-      const assistantMessage: Message = {
-        id: `msg_${Date.now() + 1}`,
-        role: 'assistant',
-        content: response
-          ? (await response.json()).content
-          : `Based on the ${selectedPapers.length} paper(s) in your library, I can help answer questions about ${selectedPapers.map((p) => `"${p.title}"`).join(', ')}. Please note that the chat API endpoint is still being implemented. Once complete, I'll be able to provide detailed answers with citations from your papers.`,
-        citations: [],
-        timestamp: new Date(),
-      };
+      if (!response.ok) {
+        throw new Error('Chat request failed');
+      }
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      // Get citations from header
+      const citationsHeader = response.headers.get('X-Citations');
+      const citations: Citation[] = citationsHeader
+        ? JSON.parse(citationsHeader)
+        : [];
+
+      // Stream the response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+
+          // Parse SSE data chunks
+          const lines = chunk.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('0:')) {
+              // Text chunk from Vercel AI SDK
+              try {
+                const text = JSON.parse(line.slice(2));
+                fullContent += text;
+
+                // Update message content
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMessageId
+                      ? { ...m, content: fullContent, citations }
+                      : m
+                  )
+                );
+              } catch {
+                // Not JSON, might be raw text
+                fullContent += line.slice(2);
+              }
+            }
+          }
+        }
+      }
+
+      // Finalize message with citations
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMessageId
+            ? { ...m, content: fullContent || 'I couldn\'t generate a response. Please try again.', citations }
+            : m
+        )
+      );
+
     } catch (error) {
       console.error('Chat error:', error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `msg_${Date.now() + 1}`,
-          role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again.',
-          timestamp: new Date(),
-        },
-      ]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMessageId
+            ? {
+                ...m,
+                content: 'Sorry, I encountered an error. Please make sure the papers are fully processed and try again.',
+              }
+            : m
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -143,6 +221,28 @@ export function PaperChat({ userId }: PaperChatProps) {
   // Clear chat
   const clearChat = () => {
     setMessages([]);
+    setExpandedCitations(new Set());
+  };
+
+  // Render message content with highlighted citations
+  const renderMessageContent = (content: string) => {
+    // Highlight citation markers like [1], [2], etc.
+    const parts = content.split(/(\[\d+(?:,\s*\d+)*\])/g);
+
+    return parts.map((part, i) => {
+      if (/^\[\d+(?:,\s*\d+)*\]$/.test(part)) {
+        return (
+          <span
+            key={i}
+            className="inline-flex items-center px-1.5 py-0.5 mx-0.5 bg-primary/20 text-primary rounded text-xs font-medium cursor-help"
+            title="Click Sources below to see this reference"
+          >
+            {part}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
   };
 
   if (!isChatOpen) return null;
@@ -153,7 +253,7 @@ export function PaperChat({ userId }: PaperChatProps) {
         initial={{ opacity: 0, x: 100 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 100 }}
-        className="fixed right-4 top-4 bottom-4 w-[450px] bg-background rounded-2xl border border-border shadow-2xl flex flex-col z-50"
+        className="fixed right-4 top-4 bottom-4 w-[480px] bg-background rounded-2xl border border-border shadow-2xl flex flex-col z-50"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -164,7 +264,7 @@ export function PaperChat({ userId }: PaperChatProps) {
             <div>
               <h3 className="font-semibold text-sm">Paper Chat</h3>
               <p className="text-xs text-muted-foreground">
-                {selectedPapers.length} paper{selectedPapers.length !== 1 ? 's' : ''} selected
+                {selectedPapers.length} paper{selectedPapers.length !== 1 ? 's' : ''} • RAG-powered
               </p>
             </div>
           </div>
@@ -195,7 +295,7 @@ export function PaperChat({ userId }: PaperChatProps) {
                 className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-lg text-xs"
               >
                 <FileText className="w-3 h-3 text-primary" />
-                <span className="max-w-[150px] truncate">{paper.title}</span>
+                <span className="max-w-[120px] truncate">{paper.title}</span>
                 <button
                   onClick={() => removePaperFromChat(paper.id)}
                   className="p-0.5 hover:bg-primary/20 rounded"
@@ -212,7 +312,7 @@ export function PaperChat({ userId }: PaperChatProps) {
                 className="flex items-center gap-1 px-2 py-1 border border-dashed border-border rounded-lg text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors"
               >
                 <Plus className="w-3 h-3" />
-                Add paper
+                Add
               </button>
 
               {/* Paper Selector Dropdown */}
@@ -246,8 +346,7 @@ export function PaperChat({ userId }: PaperChatProps) {
               </div>
               <h4 className="font-medium mb-2">Ask about your papers</h4>
               <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                I can help you understand, compare, and synthesize insights from
-                your research papers.
+                I'll search through your papers and cite my sources.
               </p>
 
               {/* Suggested Questions */}
@@ -255,8 +354,9 @@ export function PaperChat({ userId }: PaperChatProps) {
                 <p className="text-xs text-muted-foreground">Try asking:</p>
                 {[
                   'What are the main findings?',
-                  'Compare the methodologies used',
-                  'What are the limitations discussed?',
+                  'Compare the methodologies',
+                  'What limitations are discussed?',
+                  'Summarize the key contributions',
                 ].map((q) => (
                   <button
                     key={q}
@@ -275,33 +375,87 @@ export function PaperChat({ userId }: PaperChatProps) {
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                  className={`max-w-[90%] rounded-2xl px-4 py-3 ${
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                    {message.role === 'assistant'
+                      ? renderMessageContent(message.content)
+                      : message.content}
+                  </div>
 
-                  {/* Citations */}
+                  {/* Citations Panel */}
                   {message.citations && message.citations.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-border/20 space-y-2">
-                      <p className="text-xs opacity-70 flex items-center gap-1">
+                    <div className="mt-3 pt-3 border-t border-border/30">
+                      <p className="text-xs font-medium opacity-70 flex items-center gap-1 mb-2">
                         <Quote className="w-3 h-3" />
-                        Sources
+                        Sources ({message.citations.length})
                       </p>
-                      {message.citations.map((citation, i) => (
-                        <button
-                          key={i}
-                          onClick={() => selectPaper(citation.paperId)}
-                          className="block text-left w-full px-2 py-1.5 bg-background/50 rounded-lg text-xs hover:bg-background transition-colors"
-                        >
-                          <span className="font-medium">{citation.paperTitle}</span>
-                          {citation.pageNumber && (
-                            <span className="opacity-70"> (p. {citation.pageNumber})</span>
-                          )}
-                        </button>
-                      ))}
+                      <div className="space-y-2">
+                        {message.citations.map((citation, i) => {
+                          const isExpanded = expandedCitations.has(`${message.id}-${i}`);
+                          return (
+                            <div
+                              key={i}
+                              className="bg-background/60 rounded-lg overflow-hidden"
+                            >
+                              <button
+                                onClick={() => toggleCitation(message.id, i)}
+                                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-background/80 transition-colors"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="flex-shrink-0 w-5 h-5 rounded bg-primary/20 text-primary text-xs font-medium flex items-center justify-center">
+                                    {i + 1}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium truncate">
+                                      {citation.paperTitle}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {citation.authors?.split(',')[0]}
+                                      {citation.year && `, ${citation.year}`}
+                                      {citation.section && ` • ${citation.section}`}
+                                    </p>
+                                  </div>
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                )}
+                              </button>
+
+                              {/* Expanded citation quote */}
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="border-t border-border/30"
+                                  >
+                                    <div className="px-3 py-2">
+                                      <p className="text-xs text-muted-foreground italic leading-relaxed">
+                                        "{citation.quote}"
+                                      </p>
+                                      <button
+                                        onClick={() => selectPaper(citation.paperId)}
+                                        className="mt-2 flex items-center gap-1 text-[10px] text-primary hover:underline"
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        View in paper
+                                      </button>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -310,12 +464,12 @@ export function PaperChat({ userId }: PaperChatProps) {
           )}
 
           {/* Loading indicator */}
-          {isLoading && (
+          {isLoading && messages[messages.length - 1]?.content === '' && (
             <div className="flex justify-start">
               <div className="bg-muted rounded-2xl px-4 py-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Thinking...
+                  Searching papers...
                 </div>
               </div>
             </div>
