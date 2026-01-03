@@ -2,24 +2,23 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useAuth, signInWithGoogle, signOut } from '@/lib/firebase/auth';
-import { LogIn, LogOut, User } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useAuth, signOut } from '@/lib/firebase/auth';
+import { LogIn, LogOut, User, ChevronDown } from 'lucide-react';
+import { AuthDialog } from './auth-dialog';
+import { PasswordResetDialog } from './password-reset-dialog';
 
 export function AuthButton() {
   const { user, loading } = useAuth();
-  const [signingIn, setSigningIn] = useState(false);
-
-  const handleSignIn = async () => {
-    try {
-      setSigningIn(true);
-      await signInWithGoogle();
-    } catch (error) {
-      console.error('Sign in failed:', error);
-      alert('Failed to sign in. Please try again.');
-    } finally {
-      setSigningIn(false);
-    }
-  };
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [passwordResetDialogOpen, setPasswordResetDialogOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -28,6 +27,11 @@ export function AuthButton() {
       console.error('Sign out failed:', error);
       alert('Failed to sign out. Please try again.');
     }
+  };
+
+  const handlePasswordResetClick = () => {
+    setAuthDialogOpen(false);
+    setPasswordResetDialogOpen(true);
   };
 
   if (loading) {
@@ -40,38 +44,68 @@ export function AuthButton() {
 
   if (user) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 text-sm">
-          {user.photoURL ? (
-            <img
-              src={user.photoURL}
-              alt={user.displayName || 'User'}
-              className="w-8 h-8 rounded-full"
-            />
-          ) : (
-            <User className="w-8 h-8 p-1 rounded-full bg-muted" />
-          )}
-          <span className="hidden md:inline text-muted-foreground">
-            {user.displayName || user.email}
-          </span>
-        </div>
-        <Button variant="ghost" size="sm" onClick={handleSignOut}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
-      </div>
+      <>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-2">
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName || 'User'}
+                  className="w-6 h-6 rounded-full"
+                />
+              ) : (
+                <User className="w-6 h-6 p-1 rounded-full bg-muted" />
+              )}
+              <span className="hidden md:inline">
+                {user.displayName || user.email}
+              </span>
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">
+                  {user.displayName || 'User'}
+                </p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </>
     );
   }
 
   return (
-    <Button
-      variant="default"
-      size="sm"
-      onClick={handleSignIn}
-      disabled={signingIn}
-    >
-      <LogIn className="w-4 h-4 mr-2" />
-      {signingIn ? 'Signing in...' : 'Sign in with Google'}
-    </Button>
+    <>
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => setAuthDialogOpen(true)}
+      >
+        <LogIn className="w-4 h-4 mr-2" />
+        Sign In
+      </Button>
+
+      <AuthDialog
+        open={authDialogOpen}
+        onOpenChange={setAuthDialogOpen}
+        onPasswordResetClick={handlePasswordResetClick}
+      />
+
+      <PasswordResetDialog
+        open={passwordResetDialogOpen}
+        onOpenChange={setPasswordResetDialogOpen}
+      />
+    </>
   );
 }
