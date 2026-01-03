@@ -12,6 +12,7 @@ import { AuthButton } from '@/components/auth/auth-button';
 import { useDocument } from '@/lib/hooks/use-document';
 import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
+import { ResearchProvider, ResearchTrigger, ResearchPanel } from '@/components/research';
 
 export function ThreePanelLayout() {
   const { user } = useAuth();
@@ -64,11 +65,15 @@ export function ThreePanelLayout() {
   };
 
   return (
-    <div className="h-screen w-screen bg-background flex flex-col">
-      {/* Top bar with auth and save status */}
-      <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-card">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold">Academic Writing</h1>
+    <ResearchProvider>
+      <div className="h-screen w-screen bg-background flex flex-col">
+        {/* Deep Research Panel (modal overlay) */}
+        <ResearchPanel />
+
+        {/* Top bar with auth and save status */}
+        <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-card">
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg font-semibold">Academic Writing</h1>
           {document && (
             <input
               type="text"
@@ -100,7 +105,9 @@ export function ThreePanelLayout() {
             </div>
           )}
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Deep Research trigger */}
+              {user && <ResearchTrigger />}
               {user && (
                 <ExportButtons title={document?.title} content={content} />
               )}
@@ -211,5 +218,6 @@ export function ThreePanelLayout() {
         </PanelGroup>
       </div>
     </div>
+    </ResearchProvider>
   );
 }

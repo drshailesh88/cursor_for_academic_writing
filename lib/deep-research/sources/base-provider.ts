@@ -188,13 +188,12 @@ export abstract class BaseProvider implements SearchProvider {
   /**
    * Parse author name into parts
    */
-  protected parseAuthorName(name: string): { name: string; firstName?: string; lastName?: string } {
+  protected parseAuthorName(name: string): { firstName?: string; lastName?: string } {
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) {
-      return { name, lastName: parts[0] };
+      return { lastName: parts[0] };
     }
     return {
-      name,
       firstName: parts.slice(0, -1).join(' '),
       lastName: parts[parts.length - 1],
     };
