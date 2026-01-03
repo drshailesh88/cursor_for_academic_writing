@@ -19,6 +19,33 @@ import {
   CitationExplorerProvider,
   CitationExplorer,
 } from '@/components/research';
+import {
+  PaperLibraryProvider,
+  PaperLibrary,
+  PaperChat,
+  usePaperLibrary,
+} from '@/components/papers';
+import { Library } from 'lucide-react';
+
+// Paper Library trigger button (must be inside PaperLibraryProvider)
+function PaperLibraryTrigger() {
+  const { openLibrary, papers } = usePaperLibrary();
+
+  return (
+    <button
+      onClick={openLibrary}
+      className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+    >
+      <Library className="w-4 h-4" />
+      Papers
+      {papers.length > 0 && (
+        <span className="px-1.5 py-0.5 text-xs bg-muted rounded-full">
+          {papers.length}
+        </span>
+      )}
+    </button>
+  );
+}
 
 export function ThreePanelLayout() {
   const { user } = useAuth();
@@ -73,12 +100,113 @@ export function ThreePanelLayout() {
   return (
     <ResearchProvider>
       <CitationExplorerProvider>
+        {user ? (
+          <PaperLibraryProvider userId={user.uid}>
+            <ThreePanelContent
+              user={user}
+              isHistoryCollapsed={isHistoryCollapsed}
+              setIsHistoryCollapsed={setIsHistoryCollapsed}
+              isChatCollapsed={isChatCollapsed}
+              setIsChatCollapsed={setIsChatCollapsed}
+              currentDocumentId={currentDocumentId}
+              setCurrentDocumentId={setCurrentDocumentId}
+              document={document}
+              content={content}
+              setContent={setContent}
+              loading={loading}
+              saving={saving}
+              lastSaved={lastSaved}
+              createNew={createNew}
+              updateTitle={updateTitle}
+            />
+          </PaperLibraryProvider>
+        ) : (
+          <ThreePanelContent
+            user={user}
+            isHistoryCollapsed={isHistoryCollapsed}
+            setIsHistoryCollapsed={setIsHistoryCollapsed}
+            isChatCollapsed={isChatCollapsed}
+            setIsChatCollapsed={setIsChatCollapsed}
+            currentDocumentId={currentDocumentId}
+            setCurrentDocumentId={setCurrentDocumentId}
+            document={document}
+            content={content}
+            setContent={setContent}
+            loading={loading}
+            saving={saving}
+            lastSaved={lastSaved}
+            createNew={createNew}
+            updateTitle={updateTitle}
+          />
+        )}
+      </CitationExplorerProvider>
+    </ResearchProvider>
+  );
+}
+
+// Separate component to use paper library hooks inside provider
+interface ThreePanelContentProps {
+  user: any;
+  isHistoryCollapsed: boolean;
+  setIsHistoryCollapsed: (v: boolean) => void;
+  isChatCollapsed: boolean;
+  setIsChatCollapsed: (v: boolean) => void;
+  currentDocumentId: string | undefined;
+  setCurrentDocumentId: (id: string | undefined) => void;
+  document: any;
+  content: string;
+  setContent: (v: string) => void;
+  loading: boolean;
+  saving: boolean;
+  lastSaved: Date | null;
+  createNew: (title: string) => Promise<string>;
+  updateTitle: (title: string) => void;
+}
+
+function ThreePanelContent({
+  user,
+  isHistoryCollapsed,
+  setIsHistoryCollapsed,
+  isChatCollapsed,
+  setIsChatCollapsed,
+  currentDocumentId,
+  setCurrentDocumentId,
+  document,
+  content,
+  setContent,
+  loading,
+  saving,
+  lastSaved,
+  createNew,
+  updateTitle,
+}: ThreePanelContentProps) {
+  const handleDocumentSelect = (documentId: string) => {
+    setCurrentDocumentId(documentId);
+  };
+
+  const handleCreateNew = async () => {
+    try {
+      const newDocId = await createNew('Untitled Document');
+      setCurrentDocumentId(newDocId);
+    } catch (error) {
+      console.error('Failed to create new document:', error);
+      alert('Failed to create new document');
+    }
+  };
+
+  return (
       <div className="h-screen w-screen bg-background flex flex-col">
         {/* Deep Research Panel (modal overlay) */}
         <ResearchPanel />
 
         {/* Citation Explorer (modal overlay) */}
         <CitationExplorer />
+
+        {/* Paper Library (modal overlay) */}
+        {user && <PaperLibrary userId={user.uid} />}
+
+        {/* Paper Chat (slide-in panel) */}
+        {user && <PaperChat userId={user.uid} />}
 
         {/* Top bar with auth and save status */}
         <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-card">
@@ -116,6 +244,8 @@ export function ThreePanelLayout() {
           )}
 
             <div className="flex items-center gap-3">
+              {/* Paper Library trigger */}
+              {user && <PaperLibraryTrigger />}
               {/* Deep Research trigger */}
               {user && <ResearchTrigger />}
               {user && (
@@ -228,7 +358,5 @@ export function ThreePanelLayout() {
         </PanelGroup>
       </div>
     </div>
-      </CitationExplorerProvider>
-    </ResearchProvider>
   );
 }
