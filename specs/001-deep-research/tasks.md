@@ -1,226 +1,453 @@
-# Tasks: Deep Research Agent
+# Tasks: Deep Research Agent (Best-in-Class)
 
 **Input**: Design documents from `/specs/001-deep-research/`
-**Prerequisites**: plan.md (complete), spec.md (complete)
+**Prerequisites**: Enhanced plan.md incorporating GPT Researcher, STORM, dzhng, LangChain, and Local Deep Research features
 
-## Format: `[ID] [P?] [Story] Description`
-
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (US1, US2, US3)
+## Total Scope: ~75 tasks across 8 phases
 
 ---
 
-## Phase 1: Setup (Shared Infrastructure)
+## Phase 1: Setup & Dependencies
 
-**Purpose**: Create directory structure and type definitions
+**Purpose**: Install dependencies and create directory structure
 
-- [ ] T001 [P] Create `lib/research/` directory structure
-- [ ] T002 [P] Create `components/research/` directory structure
-- [ ] T003 [P] Create `app/api/research/` directory structure
-- [ ] T004 Create research types in `lib/research/research-types.ts`
+- [ ] T001 [P] Install new dependencies: `npm install --legacy-peer-deps eventsource-parser fast-xml-parser string-similarity`
+- [ ] T002 [P] Create `lib/research/agents/` directory
+- [ ] T003 [P] Create `lib/research/sources/` directory
+- [ ] T004 [P] Create `lib/research/tree/` directory
+- [ ] T005 [P] Create `lib/research/perspectives/` directory
+- [ ] T006 [P] Create `components/research/` directory
+- [ ] T007 [P] Create `app/api/research/` directory
+- [ ] T008 Create comprehensive types in `lib/research/types.ts`
 
----
-
-## Phase 2: Foundational (Firebase Schema)
-
-**Purpose**: Extend Firebase schema for research sessions
-
-- [ ] T005 Add ResearchSession interface to `lib/firebase/schema.ts`
-- [ ] T006 Add ResearchSource interface to `lib/firebase/schema.ts`
-- [ ] T007 Add research session CRUD operations to `lib/firebase/documents.ts`:
-  - saveResearchSession()
-  - getUserResearchSessions()
-  - getResearchSession()
-  - deleteResearchSession()
-
-**Checkpoint**: Firebase ready for research data storage
+**Checkpoint**: Directory structure ready
 
 ---
 
-## Phase 3: User Story 1 - Start a Deep Research Session (Priority: P1) 🎯 MVP
+## Phase 2: Multi-Source Academic Search
 
-**Goal**: User enters a topic and receives a synthesized research report with 10+ cited sources
+**Purpose**: Search PubMed, arXiv, and Semantic Scholar with deduplication
 
-**Independent Test**: Enter research topic → Receive report with PubMed citations
+### 2.1 arXiv Client
+- [ ] T009 [US5] Create arXiv client in `lib/research/sources/arxiv.ts`:
+  - searchArxiv() function
+  - XML response parsing with fast-xml-parser
+  - Category filtering (cs.AI, cs.LG, q-bio, etc.)
+  - Rate limiting (1 req/3 sec)
 
-### Implementation for User Story 1
+- [ ] T010 [US5] Create arXiv API route in `app/api/research/sources/arxiv/route.ts`
 
-- [ ] T008 [US1] Create research agent in `lib/research/research-agent.ts`:
-  - Accept topic as input
-  - Use existing PubMed client for search
-  - Orchestrate multi-step research process
-  - Return structured sources and synthesis
+### 2.2 Semantic Scholar Client
+- [ ] T011 [US5] Create S2 client in `lib/research/sources/semantic-scholar.ts`:
+  - searchSemanticScholar() function
+  - Paper details fetching
+  - Citation/reference retrieval
+  - API key handling
 
-- [ ] T009 [US1] Create research synthesizer in `lib/research/research-synthesizer.ts`:
-  - Accept sources array
-  - Build synthesis prompt with academic style
-  - Generate cohesive narrative with citations
-  - Support streaming output
+- [ ] T012 [US5] Create S2 API route in `app/api/research/sources/semantic-scholar/route.ts`
 
-- [ ] T010 [US1] Create research API endpoint in `app/api/research/route.ts`:
-  - POST endpoint with topic, model, parameters
-  - Validate input
-  - Call research agent
-  - Stream synthesis response
-  - Return sources alongside synthesis
+### 2.3 Cross-Source Deduplication
+- [ ] T013 [US5] Create deduplicator in `lib/research/sources/deduplicator.ts`:
+  - DOI-based matching
+  - Title similarity matching (string-similarity)
+  - Metadata merging
+  - Source origin tracking
 
-- [ ] T011 [P] [US1] Create research progress component in `components/research/research-progress.tsx`:
-  - Display current step (Searching, Analyzing, Synthesizing)
-  - Show paper count as discovered
-  - Animate between states
+- [ ] T014 [US5] Create unified search function that queries all sources and deduplicates
 
-- [ ] T012 [P] [US1] Create research results component in `components/research/research-results.tsx`:
-  - Display synthesized report
-  - Collapsible source list with citations
+- [ ] T015 [P] [US5] Create source badge component in `components/research/source-badges.tsx`
+
+**Checkpoint**: Multi-source search operational with 3 databases
+
+---
+
+## Phase 3: Multi-Agent Architecture
+
+**Purpose**: Implement specialized agents with clear responsibilities
+
+### 3.1 Base Agent Infrastructure
+- [ ] T016 Define Agent interface in `lib/research/types.ts`
+- [ ] T017 Create AgentContext type for shared state
+
+### 3.2 Clarifier Agent
+- [ ] T018 [US2] Create clarifier in `lib/research/agents/clarifier.ts`:
+  - Analyze topic for ambiguity
+  - Generate 2-3 clarifying questions
+  - Parse user responses
+
+- [ ] T019 [P] [US2] Create clarification dialog in `components/research/clarification-dialog.tsx`
+
+### 3.3 Planner Agent
+- [ ] T020 [US2] Create planner in `lib/research/agents/planner.ts`:
+  - Topic decomposition
+  - Perspective identification (STORM-style)
+  - Exploration tree generation
+  - Source assignment per branch
+
+### 3.4 Researcher Agent
+- [ ] T021 [US2] Create researcher in `lib/research/agents/researcher.ts`:
+  - Execute searches on assigned sources
+  - Iterative refinement within branch
+  - Learning accumulation (dzhng-style)
+  - Findings extraction
+
+### 3.5 Reviewer Agent
+- [ ] T022 [US6] Create reviewer in `lib/research/agents/reviewer.ts`:
+  - Gap detection
+  - Contradiction identification
+  - Quality scoring
+  - Improvement suggestions
+
+### 3.6 Synthesizer Agent
+- [ ] T023 [US2] Create synthesizer in `lib/research/agents/synthesizer.ts`:
+  - Cross-branch merging
+  - Perspective organization
+  - Conflict resolution
+
+### 3.7 Writer Agent
+- [ ] T024 [US2] Create writer in `lib/research/agents/writer.ts`:
+  - Academic prose generation
+  - Citation formatting (author-year)
+  - Section structuring
+
+### 3.8 Orchestrator Agent
+- [ ] T025 [US2] Create orchestrator in `lib/research/agents/orchestrator.ts`:
+  - Agent coordination
+  - State management
+  - Progress tracking
+  - Error handling
+
+**Checkpoint**: All 7 agents implemented and tested individually
+
+---
+
+## Phase 4: Multi-Perspective Research (STORM-Inspired)
+
+**Purpose**: Identify and explore multiple expert viewpoints
+
+- [ ] T026 [US3] Create perspective identifier in `lib/research/perspectives/perspective-identifier.ts`:
+  - Analyze topic for relevant viewpoints
+  - Generate 3-5 perspectives (clinician, researcher, patient, policy-maker, etc.)
+  - Domain-specific perspective mapping
+
+- [ ] T027 [US3] Create perspective questions in `lib/research/perspectives/perspective-questions.ts`:
+  - Generate unique questions per perspective
+  - Question prioritization
+  - Cross-perspective question deduplication
+
+- [ ] T028 [P] [US3] Create perspective cards in `components/research/perspective-cards.tsx`:
+  - Visual display of active perspectives
+  - Progress per perspective
+  - Expand to see perspective details
+
+**Checkpoint**: Multi-perspective research working
+
+---
+
+## Phase 5: Tree Exploration Engine
+
+**Purpose**: Implement recursive tree exploration with visual progress
+
+### 5.1 Tree Structure
+- [ ] T029 [US2] Create tree builder in `lib/research/tree/tree-builder.ts`:
+  - Generate exploration tree from topic + perspectives
+  - Configurable depth and breadth
+  - Branch metadata
+
+- [ ] T030 [US2] Create branch executor in `lib/research/tree/branch-executor.ts`:
+  - Execute single branch with iterative refinement
+  - Spawn sub-branches based on discoveries
+  - Yield progress updates
+  - Context accumulation
+
+- [ ] T031 [US2] Create tree merger in `lib/research/tree/tree-merger.ts`:
+  - Merge findings from all branches
+  - Deduplicate sources
+  - Organize by perspective
+
+### 5.2 Iterative Refinement (dzhng-inspired)
+- [ ] T032 [US4] Implement iteration loop in branch executor:
+  - Extract learnings from each iteration
+  - Identify new research directions
+  - Accumulate context
+  - Yield learnings for display
+
+- [ ] T033 [P] [US4] Create iteration progress in `components/research/iteration-progress.tsx`:
+  - Display learnings per iteration
+  - Show new directions discovered
+  - Running summary
+
+### 5.3 Visual Tree
+- [ ] T034 [US2] Create exploration tree component in `components/research/exploration-tree.tsx`:
+  - Tree visualization (consider D3.js or react-flow)
+  - Real-time branch updates
+  - Color coding (pending, active, complete)
+  - Click to expand details
+
+**Checkpoint**: Tree exploration with visual progress working
+
+---
+
+## Phase 6: Research Modes & Configuration
+
+**Purpose**: Implement Quick/Standard/Deep/Exhaustive modes
+
+### 6.1 Mode Configurations
+- [ ] T035 [US7] Create mode configurations in `lib/research/types.ts`:
+  - Quick: depth=1, breadth=2, 10 sources, 2 min
+  - Standard: depth=2, breadth=3, 20 sources, 5 min
+  - Deep: depth=3, breadth=4, 30 sources, 10 min
+  - Exhaustive: depth=4, breadth=5, 50 sources, 30 min
+
+- [ ] T036 [P] [US7] Create mode selector in `components/research/mode-selector.tsx`:
+  - Visual mode cards
+  - Time/depth/breadth indicators
+  - Selection state
+
+- [ ] T037 [P] [US7] Create research settings in `components/research/research-settings.tsx`:
+  - Depth slider (1-5)
+  - Breadth slider (2-6)
+  - Source checkboxes
+  - Date range picker
+  - Article type filters
+
+### 6.2 Quick Mode Implementation
+- [ ] T038 [US1] Implement quick mode path:
+  - Skip clarification
+  - Single perspective
+  - Minimal iteration
+  - Fast synthesis
+
+**Checkpoint**: All 4 research modes working
+
+---
+
+## Phase 7: Review-Revision Quality Cycles
+
+**Purpose**: Implement quality assurance with gap-filling
+
+- [ ] T039 [US6] Create review process:
+  - Run reviewer agent on synthesis
+  - Generate ReviewResult with gaps, contradictions, claims
+  - Calculate quality score
+
+- [ ] T040 [US6] Create revision process:
+  - Generate targeted searches for gaps
+  - Execute additional searches
+  - Merge new findings
+  - Re-synthesize
+
+- [ ] T041 [US6] Implement review-revision loop:
+  - Run up to 2 revision cycles
+  - Track quality score improvement
+  - Stop when quality threshold met
+
+- [ ] T042 [P] [US6] Create quality score component in `components/research/quality-score.tsx`:
+  - Score display (0-100)
+  - Before/after comparison
+  - Gap indicators
+
+**Checkpoint**: Review-revision cycles improving output quality
+
+---
+
+## Phase 8: API & Progress Streaming
+
+**Purpose**: Create main API with real-time progress updates
+
+### 8.1 Main Research API
+- [ ] T043 Create main research route in `app/api/research/route.ts`:
+  - Accept topic, mode, config, clarifications
+  - Initialize orchestrator
+  - Return SSE stream
+
+- [ ] T044 Create clarify route in `app/api/research/clarify/route.ts`:
+  - Generate clarifying questions
+  - Return questions for UI
+
+- [ ] T045 Implement SSE streaming in `app/api/research/stream/route.ts`:
+  - Progress events for each stage
+  - Branch updates
+  - Iteration learnings
+  - Synthesis streaming
+
+### 8.2 Progress UI
+- [ ] T046 Create progress display in research panel:
+  - Stage indicators
+  - Percentage complete
+  - Current activity text
+
+**Checkpoint**: Full research flow working end-to-end
+
+---
+
+## Phase 9: Research Panel UI
+
+**Purpose**: Create polished main research UI
+
+- [ ] T047 Create research panel in `components/research/research-panel.tsx`:
+  - Topic input
+  - Mode selector integration
+  - Settings panel integration
+  - Progress display
+  - Results display
+
+- [ ] T048 Create research results in `components/research/research-results.tsx`:
+  - Full report display
+  - Source list with badges
+  - Quality score
+  - Export options
   - "Insert into Document" button
-  - Copy to clipboard option
 
-- [ ] T013 [US1] Create deep research panel in `components/research/deep-research-panel.tsx`:
-  - Topic input field
-  - Model selector (reuse from chat)
-  - Start Research button
-  - Progress and results integration
-  - State management for research flow
+- [ ] T049 Add research panel to three-panel layout:
+  - Add "Research" tab
+  - Panel state management
+  - Maintain research context
 
-- [ ] T014 [US1] Add research panel toggle to `components/layout/three-panel-layout.tsx`:
-  - Add "Research" tab alongside "Chat"
-  - Conditional rendering of research vs chat panel
-  - Maintain panel state
+- [ ] T050 Implement "Insert into Document":
+  - Format for TipTap
+  - Preserve citations
+  - Insert at cursor
 
-- [ ] T015 [US1] Implement "Insert into Document" functionality:
-  - Interface with TipTap editor
-  - Insert HTML content at cursor
-  - Preserve formatting and citations
-
-**Checkpoint**: User Story 1 complete - basic deep research works end-to-end
+**Checkpoint**: Research UI fully functional
 
 ---
 
-## Phase 4: User Story 2 - Configure Research Parameters (Priority: P2)
+## Phase 10: History & Persistence
 
-**Goal**: User can customize date ranges and source types for research
+**Purpose**: Session management with continue/branch
 
-**Independent Test**: Set filters → Results match filter criteria
+### 10.1 Firebase Schema
+- [ ] T051 [US8] Add ResearchSession to Firebase schema
+- [ ] T052 [US8] Add ResearchBranch to Firebase schema
+- [ ] T053 [US8] Add ResearchIteration to Firebase schema
 
-### Implementation for User Story 2
+### 10.2 Session CRUD
+- [ ] T054 [US8] Create session operations:
+  - saveResearchSession()
+  - getResearchSession()
+  - getUserResearchSessions()
+  - updateSessionStatus()
 
-- [ ] T016 [P] [US2] Create research settings component in `components/research/research-settings.tsx`:
-  - Date range picker (start year, end year)
-  - Source type checkboxes (clinical trials, reviews, meta-analyses)
-  - Focus area tags input
-  - Collapsible/expandable panel
+### 10.3 History UI
+- [ ] T055 [P] [US8] Create research history in `components/research/research-history.tsx`:
+  - Session list with metadata
+  - Quality scores
+  - Mode indicators
 
-- [ ] T017 [US2] Enhance PubMed search in `lib/pubmed/client.ts`:
-  - Add date range parameters to searchPubMed()
-  - Add publication type filter support
-  - Update PubMedSearchOptions interface
+- [ ] T056 [US8] Implement continue functionality:
+  - Load session state
+  - Resume from checkpoint
+  - Preserve context
 
-- [ ] T018 [US2] Update research agent to accept parameters in `lib/research/research-agent.ts`:
-  - Pass dateRange to PubMed search
-  - Pass sourceTypes to PubMed search
-  - Validate parameters
+- [ ] T057 [US8] Implement branch functionality:
+  - Create new session
+  - Inherit findings
+  - New exploration path
 
-- [ ] T019 [US2] Update API endpoint to accept parameters in `app/api/research/route.ts`:
-  - Extend request body schema
-  - Pass parameters to research agent
-
-- [ ] T020 [US2] Integrate settings into research panel in `components/research/deep-research-panel.tsx`:
-  - Add settings panel before topic input
-  - Pass settings to research API
-
-**Checkpoint**: User Story 2 complete - research filtering works
-
----
-
-## Phase 5: User Story 3 - Track Research History (Priority: P3)
-
-**Goal**: User can view and revisit past research sessions
-
-**Independent Test**: Complete research → See in history → Click to view
-
-### Implementation for User Story 3
-
-- [ ] T021 [P] [US3] Create research history component in `components/research/research-history.tsx`:
-  - List of past sessions with topic and date
-  - Click to view full report
-  - "Continue Research" button
-  - Delete session option
-
-- [ ] T022 [US3] Add session saving to research flow in `lib/research/research-agent.ts`:
-  - Save session after synthesis complete
-  - Include all sources and parameters
-  - Store user ID and timestamps
-
-- [ ] T023 [US3] Create session loading functionality:
-  - Load session by ID
-  - Display in research results component
-  - Pre-fill parameters for "Continue Research"
-
-- [ ] T024 [US3] Add history view toggle to research panel:
-  - Toggle between "New Research" and "History"
-  - Show history list when selected
-  - Smooth transition between views
-
-- [ ] T025 [US3] Implement "Continue Research" feature:
-  - Load previous session
-  - Pre-fill topic and parameters
-  - Append new findings to existing session
-
-**Checkpoint**: User Story 3 complete - full research history functionality
+**Checkpoint**: Full history management working
 
 ---
 
-## Phase 6: Polish & Integration
+## Phase 11: Polish & Edge Cases
 
-**Purpose**: Final improvements and quality checks
+**Purpose**: Handle edge cases and optimize
 
-- [ ] T026 [P] Add loading states and error handling throughout
-- [ ] T027 [P] Add keyboard shortcuts (Enter to start research)
-- [ ] T028 [P] Responsive design for research panel
-- [ ] T029 Test with various research topics
-- [ ] T030 Performance optimization (caching, debouncing)
-- [ ] T031 Update HANDOVER.md with feature documentation
+- [ ] T058 [P] Handle topic too broad:
+  - Detect broad topics
+  - Suggest narrowing via clarifier
+
+- [ ] T059 [P] Handle no sources found:
+  - Expand to additional databases
+  - Suggest query modifications
+
+- [ ] T060 [P] Handle research timeout:
+  - Save partial results
+  - Resume checkpoint
+
+- [ ] T061 [P] Handle conflicting sources:
+  - Detect contradictions
+  - Present both sides
+
+- [ ] T062 [P] Handle rate limiting:
+  - Queue management
+  - Estimated wait time
+  - Cache utilization
+
+- [ ] T063 [P] Handle context overflow:
+  - Context isolation
+  - Pruning strategies
+
+- [ ] T064 Add loading states throughout
+- [ ] T065 Add error handling throughout
+- [ ] T066 Responsive design
+- [ ] T067 Keyboard shortcuts
+- [ ] T068 Update HANDOVER.md
 
 ---
 
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
-
-- **Setup (Phase 1)**: No dependencies
-- **Foundational (Phase 2)**: Depends on Setup
-- **User Story 1 (Phase 3)**: Depends on Foundational - MVP priority
-- **User Story 2 (Phase 4)**: Depends on User Story 1
-- **User Story 3 (Phase 5)**: Depends on Foundational
-- **Polish (Phase 6)**: Depends on all user stories
+```
+Phase 1 (Setup) → no dependencies
+Phase 2 (Multi-Source) → Phase 1
+Phase 3 (Agents) → Phase 1, Phase 2
+Phase 4 (Perspectives) → Phase 3
+Phase 5 (Tree) → Phase 3, Phase 4
+Phase 6 (Modes) → Phase 5
+Phase 7 (Review) → Phase 3
+Phase 8 (API) → Phase 3, Phase 5, Phase 7
+Phase 9 (UI) → Phase 8
+Phase 10 (History) → Phase 8, Phase 9
+Phase 11 (Polish) → All phases
+```
 
 ### Parallel Opportunities
-
-```bash
-# Phase 1 - all parallel:
-T001, T002, T003, T004
-
-# Phase 3 - parallel after T008-T010:
-T011, T012 (then T013-T015 sequential)
-
-# Phase 4:
-T016 parallel with T017-T020
-
-# Phase 5:
-T021 can start while T022-T025 are sequential
-```
+- T001-T008 can all run in parallel
+- T009-T012 (source clients) can run in parallel
+- T018-T025 (agents) mostly parallel after T016-T017
+- T034, T033 (UI components) parallel with T029-T032
 
 ---
 
 ## MVP Strategy
 
-**Minimum Viable: User Story 1 only**
+### MVP 1: Quick Research (Phases 1-3, 6.1, 8, 9 partial)
+- Single source (PubMed)
+- No clarification
+- Single perspective
+- Basic synthesis
+- Simple UI
 
-1. Complete Phases 1-2 (Setup + Foundational)
-2. Complete Phase 3 (User Story 1)
-3. Test: Enter topic → Get research report → Insert into document
-4. Ship MVP
+### MVP 2: Full Research (Add Phases 4, 5, 6.2)
+- Multi-source
+- Clarification
+- Multi-perspective
+- Tree exploration
+- Mode selection
 
-**Incremental additions**:
-- Add User Story 2 for filtering capability
-- Add User Story 3 for history tracking
+### MVP 3: Quality & History (Add Phases 7, 10)
+- Review-revision
+- Quality scoring
+- Session history
+- Continue/branch
+
+### MVP 4: Polish (Phase 11)
+- Edge cases
+- Performance
+- UX polish
+
+---
+
+## Competitive Advantage Summary
+
+When complete, this system will be the ONLY tool that combines:
+1. ✅ Tree exploration (GPT Researcher)
+2. ✅ Multi-perspective (STORM)
+3. ✅ Iterative learning (dzhng)
+4. ✅ Multi-source academic (Local Deep Research)
+5. ✅ Review-revision (GPT Researcher)
+6. ✅ Visual progress (UNIQUE)
+7. ✅ Research modes (UNIQUE)
+8. ✅ Academic prose focus (UNIQUE)
