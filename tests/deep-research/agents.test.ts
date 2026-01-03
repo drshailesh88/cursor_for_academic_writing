@@ -354,7 +354,7 @@ describe('ResearcherAgent', () => {
   let session: ResearchSession;
 
   beforeEach(() => {
-    researcher = new ResearcherAgent('test-session');
+    researcher = new ResearcherAgent('test-session', true); // Use mock mode
     session = createMockSession();
   });
 

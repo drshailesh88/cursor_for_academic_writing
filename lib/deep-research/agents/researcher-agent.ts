@@ -15,6 +15,7 @@ import type {
   DataPoint,
   Author,
 } from '../types';
+import { searchService, type SearchPaper } from '../sources';
 
 /**
  * Researcher Agent Configuration
@@ -109,30 +110,90 @@ interface ResearcherResult {
 export class ResearcherAgent extends BaseAgent {
   private searchResults: SearchExecutionResult[] = [];
   private selectedSources: ResearchSource[] = [];
+  private useMockSearch: boolean = false;
 
-  constructor(sessionId: string) {
+  constructor(sessionId: string, useMockSearch: boolean = false) {
     super(RESEARCHER_CONFIG, sessionId);
+    this.useMockSearch = useMockSearch;
   }
 
   /**
-   * Simulate search execution (would call actual APIs in production)
+   * Enable mock search mode for testing
+   */
+  setMockMode(enabled: boolean): void {
+    this.useMockSearch = enabled;
+  }
+
+  /**
+   * Execute search using the real search service or mock mode
    */
   private async executeSearch(
     database: DatabaseSource,
     query: string,
     limit: number
   ): Promise<SearchExecutionResult> {
-    // In production, this would call the actual search providers
-    // For now, return simulated structure
     this.addMessage('assistant', `Searching ${database} with query: ${query.substring(0, 50)}...`);
 
+    // Use mock data for testing
+    if (this.useMockSearch) {
+      return {
+        database,
+        query,
+        totalFound: 0,
+        retrieved: 0,
+        papers: [],
+        executedAt: new Date(),
+      };
+    }
+
+    try {
+      const results = await searchService.searchSource(
+        database,
+        query,
+        {}, // Use default filters for now
+        limit,
+        0
+      );
+
+      const papers: RawPaper[] = results.papers.map(this.convertSearchPaper);
+
+      return {
+        database,
+        query,
+        totalFound: results.totalResults,
+        retrieved: papers.length,
+        papers,
+        executedAt: results.executedAt,
+      };
+    } catch (error) {
+      this.addMessage('assistant', `Search failed for ${database}: ${error}`);
+      return {
+        database,
+        query,
+        totalFound: 0,
+        retrieved: 0,
+        papers: [],
+        executedAt: new Date(),
+      };
+    }
+  }
+
+  /**
+   * Convert SearchPaper to RawPaper format
+   */
+  private convertSearchPaper(paper: SearchPaper): RawPaper {
     return {
-      database,
-      query,
-      totalFound: 0, // Would be populated by actual search
-      retrieved: 0,
-      papers: [],
-      executedAt: new Date(),
+      id: paper.id,
+      source: paper.source,
+      externalId: paper.externalId,
+      title: paper.title,
+      authors: paper.authors.map(a => a.name),
+      year: paper.year,
+      abstract: paper.abstract,
+      journal: paper.journal,
+      doi: paper.doi,
+      citationCount: paper.citationCount,
+      url: paper.url,
     };
   }
 
