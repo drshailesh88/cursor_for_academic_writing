@@ -1,27 +1,26 @@
-// Paper Chat API
-// RAG-powered chat across multiple papers with citation highlighting
+// Paper Chat API - Sophisticated RAG
+// Hybrid retrieval (BM25 + Dense + RRF) with smart model routing and caching
 //
-// Architecture (compatible with portable-rag-system):
-// Query → Retrieve relevant chunks → Rerank → LLM Synthesis → Response with citations
+// Architecture:
+// Query → Cache Check → Hybrid Retrieve → Rerank → Model Select → LLM → Cache Store → Response
 
 import { NextRequest, NextResponse } from 'next/server';
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 import { getPaperContent, getPaper } from '@/lib/firebase/papers';
-import type { PaperContent, PaperParagraph, Paper } from '@/lib/firebase/schema';
-
-// Types for RAG pipeline
-interface RetrievedChunk {
-  paperId: string;
-  paperTitle: string;
-  authors: string;
-  year?: number;
-  section: string;
-  text: string;
-  score: number;
-  paragraphId: string;
-  pageNumber?: number;
-}
+import type { PaperContent, Paper } from '@/lib/firebase/schema';
+import {
+  hybridRetrieve,
+  papersToChunks,
+  buildContext,
+  selectModel,
+  getCachedResponse,
+  setCachedResponse,
+  Citation,
+  RetrievalConfig,
+  DEFAULT_RETRIEVAL_CONFIG,
+} from '@/lib/rag';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -32,29 +31,35 @@ interface ChatRequest {
   userId: string;
   paperIds: string[];
   messages: ChatMessage[];
-  model?: string;
-}
-
-interface Citation {
-  paperId: string;
-  paperTitle: string;
-  authors: string;
-  year?: number;
-  section: string;
-  quote: string;
-  pageNumber?: number;
+  model?: string; // Override model selection
+  config?: Partial<RetrievalConfig>; // Override retrieval settings
+  useCache?: boolean; // Enable/disable caching (default: true)
+  useDenseRetrieval?: boolean; // Enable/disable embeddings (default: true)
 }
 
 /**
  * POST /api/papers/chat
  *
- * RAG-powered multi-paper chat with citations
+ * Sophisticated RAG-powered multi-paper chat with:
+ * - Hybrid retrieval (BM25 + Dense + RRF fusion)
+ * - Optional Cohere reranking
+ * - Smart model routing for cost optimization
+ * - Response caching to reduce LLM costs
  */
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json();
-    const { userId, paperIds, messages, model = 'gpt-4o-mini' } = body;
+    const {
+      userId,
+      paperIds,
+      messages,
+      model: modelOverride,
+      config: configOverride,
+      useCache = true,
+      useDenseRetrieval = true,
+    } = body;
 
+    // Validation
     if (!userId || !paperIds || paperIds.length === 0) {
       return NextResponse.json(
         { error: 'userId and paperIds are required' },
@@ -69,7 +74,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the latest user message
     const userQuery = messages[messages.length - 1]?.content;
     if (!userQuery) {
       return NextResponse.json(
@@ -78,7 +82,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Load paper contents
+    // Step 1: Check cache (if enabled)
+    if (useCache) {
+      const cached = await getCachedResponse(userId, userQuery, paperIds);
+      if (cached) {
+        // Return cached response as non-streaming
+        return NextResponse.json({
+          content: cached.response,
+          citations: cached.citations,
+          cached: true,
+          costs: { embeddingTokens: 0, llmInputTokens: 0, llmOutputTokens: 0, estimatedCost: 0 },
+        });
+      }
+    }
+
+    // Step 2: Load paper contents
     const papersWithContent = await loadPapersWithContent(paperIds);
 
     if (papersWithContent.length === 0) {
@@ -88,22 +106,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 2: Retrieve relevant chunks (simplified - in production, use your RAG retriever)
-    const retrievedChunks = await retrieveRelevantChunks(
-      userQuery,
-      papersWithContent,
-      10 // top_k
+    // Step 3: Convert to chunks for retrieval
+    const chunks = papersToChunks(
+      papersWithContent.map(({ paper, content }) => ({
+        paper: {
+          id: paper.id,
+          title: paper.title,
+          authors: paper.authors.map((a) => a.name),
+          year: paper.year,
+        },
+        content: {
+          paragraphs: content.paragraphs.map((p) => ({
+            text: p.text,
+            section: p.section,
+            pageNumber: p.pageNumber,
+          })),
+        },
+      }))
     );
 
-    // Step 3: Build context with citations
-    const { context, citations } = buildContextWithCitations(retrievedChunks);
+    // Step 4: Hybrid retrieval with RRF fusion
+    const retrievalConfig: Partial<RetrievalConfig> = {
+      ...configOverride,
+      useDenseRetrieval: useDenseRetrieval && !!process.env.OPENAI_API_KEY,
+      useBM25: true,
+      useReranking: !!process.env.COHERE_API_KEY,
+    };
 
-    // Step 4: Build system prompt
-    const systemPrompt = buildSystemPrompt(papersWithContent, citations);
+    const retrievalResult = await hybridRetrieve(userQuery, chunks, retrievalConfig);
+    const { results, citations, stats } = retrievalResult;
 
-    // Step 5: Stream response from LLM
+    // Step 5: Build context from retrieved chunks
+    const context = buildContext(results);
+    const contextLength = context.length;
+
+    // Step 6: Smart model selection (unless overridden)
+    let selectedModelId = modelOverride || 'gpt-4o-mini';
+    let modelReason = 'User specified';
+
+    if (!modelOverride) {
+      const selection = selectModel(userQuery, contextLength);
+      selectedModelId = selection.model.id;
+      modelReason = selection.reason;
+    }
+
+    // Step 7: Build system prompt
+    const systemPrompt = buildSystemPrompt(papersWithContent);
+
+    // Step 8: Get appropriate model provider
+    const modelProvider = getModelForId(selectedModelId);
+
+    // Step 9: Stream response from LLM
     const result = await streamText({
-      model: openai(model),
+      model: modelProvider,
       system: systemPrompt,
       messages: [
         // Include conversation history (last 5 exchanges)
@@ -112,22 +167,30 @@ export async function POST(request: NextRequest) {
           content: m.content,
         })),
       ],
-      // Append context to the latest user message
       prompt: `Context from papers:\n\n${context}\n\nUser question: ${userQuery}`,
+      onFinish: async ({ text }) => {
+        // Cache the response (fire and forget)
+        if (useCache && text) {
+          setCachedResponse(userId, userQuery, paperIds, text, citations).catch(() => {});
+        }
+      },
     });
 
-    // Return streaming response with citations in header
+    // Return streaming response with metadata in headers
     const response = result.toDataStreamResponse();
 
-    // Add citations to response headers (client can parse these)
+    // Add metadata headers
     response.headers.set('X-Citations', JSON.stringify(citations));
+    response.headers.set('X-Model-Used', selectedModelId);
+    response.headers.set('X-Model-Reason', modelReason);
+    response.headers.set('X-Retrieval-Stats', JSON.stringify(stats));
+    response.headers.set('X-Cached', 'false');
 
     return response;
-
   } catch (error) {
     console.error('Paper chat error:', error);
     return NextResponse.json(
-      { error: 'Chat failed' },
+      { error: error instanceof Error ? error.message : 'Chat failed' },
       { status: 500 }
     );
   }
@@ -158,106 +221,27 @@ async function loadPapersWithContent(
 }
 
 /**
- * Retrieve relevant chunks using simple keyword + semantic matching
- *
- * In production, replace this with your portable-rag-system retriever:
- * - Dense retrieval (vector similarity)
- * - Sparse retrieval (BM25)
- * - RRF fusion
- * - Cohere reranking
+ * Get model instance for Vercel AI SDK
  */
-async function retrieveRelevantChunks(
-  query: string,
-  papersWithContent: Array<{ paper: Paper; content: PaperContent }>,
-  topK: number
-): Promise<RetrievedChunk[]> {
-  const allChunks: RetrievedChunk[] = [];
-  const queryTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
-
-  for (const { paper, content } of papersWithContent) {
-    const authorStr = paper.authors.map(a => a.name).join(', ') || 'Unknown';
-
-    for (const paragraph of content.paragraphs) {
-      // Simple BM25-like scoring (term frequency)
-      const textLower = paragraph.text.toLowerCase();
-      let score = 0;
-
-      for (const term of queryTerms) {
-        const termCount = (textLower.match(new RegExp(term, 'g')) || []).length;
-        score += termCount * (1 / Math.log(paragraph.text.length + 1));
-      }
-
-      // Boost certain sections
-      if (paragraph.section === 'abstract') score *= 1.5;
-      if (paragraph.section === 'results') score *= 1.3;
-      if (paragraph.section === 'conclusion') score *= 1.2;
-
-      if (score > 0 || paragraph.section === 'abstract') {
-        allChunks.push({
-          paperId: paper.id,
-          paperTitle: paper.title,
-          authors: authorStr,
-          year: paper.year,
-          section: paragraph.section,
-          text: paragraph.text,
-          score: score || 0.1, // Give abstracts a minimum score
-          paragraphId: paragraph.id,
-          pageNumber: paragraph.pageNumber,
-        });
-      }
-    }
+function getModelForId(modelId: string) {
+  switch (modelId) {
+    case 'gemini-1.5-flash':
+      return google('gemini-1.5-flash');
+    case 'gemini-1.5-pro':
+      return google('gemini-1.5-pro');
+    case 'gpt-4o':
+      return openai('gpt-4o');
+    case 'gpt-4o-mini':
+    default:
+      return openai('gpt-4o-mini');
   }
-
-  // Sort by score and take top K
-  allChunks.sort((a, b) => b.score - a.score);
-  return allChunks.slice(0, topK);
-}
-
-/**
- * Build context string with citation markers
- */
-function buildContextWithCitations(
-  chunks: RetrievedChunk[]
-): { context: string; citations: Citation[] } {
-  const citations: Citation[] = [];
-  const contextParts: string[] = [];
-
-  chunks.forEach((chunk, index) => {
-    const citationNum = index + 1;
-
-    // Add citation
-    citations.push({
-      paperId: chunk.paperId,
-      paperTitle: chunk.paperTitle,
-      authors: chunk.authors,
-      year: chunk.year,
-      section: chunk.section,
-      quote: chunk.text.slice(0, 200) + (chunk.text.length > 200 ? '...' : ''),
-      pageNumber: chunk.pageNumber,
-    });
-
-    // Format context with citation marker
-    const authorYear = chunk.year
-      ? `${chunk.authors.split(',')[0].split(' ').pop()}, ${chunk.year}`
-      : chunk.authors.split(',')[0];
-
-    contextParts.push(
-      `[${citationNum}] (${authorYear}) - ${chunk.section}:\n"${chunk.text}"\n`
-    );
-  });
-
-  return {
-    context: contextParts.join('\n'),
-    citations,
-  };
 }
 
 /**
  * Build system prompt for academic paper Q&A
  */
 function buildSystemPrompt(
-  papersWithContent: Array<{ paper: Paper; content: PaperContent }>,
-  citations: Citation[]
+  papersWithContent: Array<{ paper: Paper; content: PaperContent }>
 ): string {
   const paperList = papersWithContent
     .map((p) => `- "${p.paper.title}" (${p.paper.year || 'n.d.'})`)
