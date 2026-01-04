@@ -121,53 +121,61 @@ function parseBibtexDate(year?: string, month?: string): ReferenceDate {
 }
 
 /**
- * Clean BibTeX field value (remove braces, etc.)
+ * Clean BibTeX field value (remove braces, convert LaTeX)
  */
 function cleanBibtexValue(value: string): string {
   if (!value) return '';
 
+  // LaTeX escape sequences - MUST apply before removing braces
+  const latexMap: Record<string, string> = {
+    '\\&': '&',
+    '\\_': '_',
+    '\\%': '%',
+    '\\#': '#',
+    '\\$': '$',
+    '\\textendash': '–',
+    '\\textemdash': '—',
+    // Accents with braces
+    "\\'{a}": 'á', "\\'{e}": 'é', "\\'{i}": 'í', "\\'{o}": 'ó', "\\'{u}": 'ú', "\\'{E}": 'É',
+    '\\"{a}': 'ä', '\\"{e}': 'ë', '\\"{i}': 'ï', '\\"{o}': 'ö', '\\"{u}': 'ü',
+    '\\`{a}': 'à', '\\`{e}': 'è', '\\`{i}': 'ì', '\\`{o}': 'ò', '\\`{u}': 'ù',
+    '\\^{a}': 'â', '\\^{e}': 'ê', '\\^{i}': 'î', '\\^{o}': 'ô', '\\^{u}': 'û',
+    // Accents without braces
+    "\\'a": 'á', "\\'e": 'é', "\\'i": 'í', "\\'o": 'ó', "\\'u": 'ú', "\\'E": 'É',
+    '\\"a': 'ä', '\\"e': 'ë', '\\"i': 'ï', '\\"o': 'ö', '\\"u': 'ü',
+    '\\`a': 'à', '\\`e': 'è', '\\`i': 'ì', '\\`o': 'ò', '\\`u': 'ù',
+    '\\^a': 'â', '\\^e': 'ê', '\\^i': 'î', '\\^o': 'ô', '\\^u': 'û',
+    // Cedilla and other special chars
+    '\\c{c}': 'ç', '\\c{C}': 'Ç', '\\c c': 'ç',
+    '\\~{n}': 'ñ', '\\~{a}': 'ã', '\\~{o}': 'õ', '\\~{N}': 'Ñ',
+    '\\~n': 'ñ', '\\~a': 'ã', '\\~o': 'õ', '\\~N': 'Ñ',
+    '\\ss{}': 'ß', '\\ss': 'ß',
+    '\\o{}': 'ø', '\\O{}': 'Ø', '\\o ': 'ø ', '\\O ': 'Ø ',
+    '\\ae{}': 'æ', '\\AE{}': 'Æ', '\\ae': 'æ', '\\AE': 'Æ',
+    '\\aa{}': 'å', '\\AA{}': 'Å', '\\aa': 'å', '\\AA': 'Å',
+  };
+
+  // Apply LaTeX conversions FIRST (before brace removal)
+  for (const [latex, char] of Object.entries(latexMap)) {
+    value = value.split(latex).join(char);
+  }
+
+  // Handle \o at word boundaries (special case - standalone character)
+  value = value.replace(/\\o\b/g, 'ø');
+  value = value.replace(/\\O\b/g, 'Ø');
+
+  // Handle standalone tilde
+  value = value.replace(/\\~/g, '~');
+
   // Remove outer braces
   value = value.replace(/^\{|\}$/g, '');
 
-  // Process iteratively: remove one layer of braces, apply conversions, repeat
-  // This handles nested patterns like {\\c{c}} properly
-  let maxIterations = 10; // Prevent infinite loops
+  // Remove remaining protective braces (e.g., {The Big Bang} → The Big Bang)
+  let maxIterations = 10;
   while (maxIterations-- > 0) {
     const before = value;
-
-    // Remove one layer of innermost braces
     value = value.replace(/\{([^{}]*)\}/g, '$1');
-
-    // Convert LaTeX special characters
-    const latexMap: Record<string, string> = {
-      '\\&': '&',
-      '\\_': '_',
-      '\\%': '%',
-      '\\#': '#',
-      '\\$': '$',
-      '\\textendash': '–',
-      '\\textemdash': '—',
-      "\\'a": 'á', "\\'e": 'é', "\\'i": 'í', "\\'o": 'ó', "\\'u": 'ú', "\\'E": 'É',
-      '\\"a': 'ä', '\\"e': 'ë', '\\"i': 'ï', '\\"o': 'ö', '\\"u': 'ü',
-      '\\`a': 'à', '\\`e': 'è', '\\`i': 'ì', '\\`o': 'ò', '\\`u': 'ù',
-      '\\^a': 'â', '\\^e': 'ê', '\\^i': 'î', '\\^o': 'ô', '\\^u': 'û',
-      '\\c{c}': 'ç', '\\c c': 'ç', '\\c{C}': 'Ç',
-      '\\~n': 'ñ', '\\~a': 'ã', '\\~o': 'õ', '\\~N': 'Ñ',
-      '\\~': '~', // Standalone tilde
-      '\\ss': 'ß',
-      '\\o': 'ø', '\\O': 'Ø',
-      '\\ae': 'æ', '\\AE': 'Æ',
-      '\\aa': 'å', '\\AA': 'Å',
-    };
-
-    for (const [latex, char] of Object.entries(latexMap)) {
-      value = value.split(latex).join(char);
-    }
-
-    // If nothing changed, we're done
-    if (value === before && !value.includes('{')) {
-      break;
-    }
+    if (value === before) break;
   }
 
   return value.trim();
@@ -191,19 +199,53 @@ function parseBibtexEntry(entryStr: string): BibtexEntry | null {
   let content = entryStr.slice(headerMatch[0].length);
   content = content.replace(/\}\s*$/, '');
 
-  // Parse fields - handle nested braces
-  const fieldRegex = /(\w+)\s*=\s*(\{(?:[^{}]|\{[^{}]*\})*\}|"[^"]*"|[^,}\s]+)/g;
-  let match;
+  // Parse fields using proper brace matching for deeply nested braces
+  let pos = 0;
+  while (pos < content.length) {
+    // Skip whitespace and commas
+    while (pos < content.length && /[\s,]/.test(content[pos])) pos++;
+    if (pos >= content.length) break;
 
-  while ((match = fieldRegex.exec(content)) !== null) {
-    const fieldName = match[1].toLowerCase();
-    let fieldValue = match[2];
+    // Match field name
+    const nameMatch = content.slice(pos).match(/^(\w+)\s*=\s*/);
+    if (!nameMatch) {
+      pos++;
+      continue;
+    }
 
-    // Remove quotes or outer braces
-    if (fieldValue.startsWith('"') && fieldValue.endsWith('"')) {
-      fieldValue = fieldValue.slice(1, -1);
-    } else if (fieldValue.startsWith('{') && fieldValue.endsWith('}')) {
-      fieldValue = fieldValue.slice(1, -1);
+    const fieldName = nameMatch[1].toLowerCase();
+    pos += nameMatch[0].length;
+
+    // Extract field value with proper brace/quote matching
+    let fieldValue = '';
+    if (content[pos] === '{') {
+      // Brace-delimited value - match balanced braces
+      let braceDepth = 0;
+      const start = pos;
+      while (pos < content.length) {
+        if (content[pos] === '{') braceDepth++;
+        else if (content[pos] === '}') {
+          braceDepth--;
+          if (braceDepth === 0) {
+            pos++;
+            break;
+          }
+        }
+        pos++;
+      }
+      fieldValue = content.slice(start + 1, pos - 1); // Remove outer braces
+    } else if (content[pos] === '"') {
+      // Quote-delimited value
+      const start = pos;
+      pos++;
+      while (pos < content.length && content[pos] !== '"') pos++;
+      pos++;
+      fieldValue = content.slice(start + 1, pos - 1); // Remove quotes
+    } else {
+      // Unquoted value (until comma or brace)
+      const start = pos;
+      while (pos < content.length && !/[,}]/.test(content[pos])) pos++;
+      fieldValue = content.slice(start, pos).trim();
     }
 
     fields[fieldName] = cleanBibtexValue(fieldValue);
