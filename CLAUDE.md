@@ -6,6 +6,89 @@
 
 ---
 
+## 🛠️ MANDATORY Development Toolkits
+
+> **CRITICAL: These toolkits MUST be used for ALL feature development in this project.**
+> **Read this section FIRST before starting any new feature work.**
+
+### Spec-Kit (Specification-Driven Development)
+**Source:** https://github.com/github/spec-kit
+
+Spec-Kit enables specification-driven development where specifications become executable. Use these slash commands for ALL feature development:
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `/speckit.constitution` | Define project principles | Once per project, update as needed |
+| `/speckit.specify` | Write requirements/user stories | Start of every new feature |
+| `/speckit.clarify` | Address underspecified areas | When requirements are ambiguous |
+| `/speckit.plan` | Create technical implementation strategy | After specification is approved |
+| `/speckit.tasks` | Generate actionable task list | After plan is complete |
+| `/speckit.implement` | Execute implementation | When ready to code |
+| `/speckit.analyze` | Validate consistency across artifacts | After implementation |
+| `/speckit.checklist` | Create quality validation checklist | Before marking feature complete |
+
+**Workflow Order:** `specify` → `clarify` → `plan` → `tasks` → `implement` → `analyze` → `checklist`
+
+### Ralph Wiggum (Iterative AI Development)
+**Source:** https://github.com/anthropics/claude-code/tree/main/plugins/ralph-wiggum
+
+Ralph Wiggum implements iterative AI development with continuous self-referential feedback loops. Use for complex implementations that benefit from autonomous refinement.
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `/ralph-loop` | Start iterative development loop | Complex features with clear success criteria |
+| `/cancel-ralph` | Stop active Ralph loop | When loop is complete or needs intervention |
+
+**Best for:**
+- Features with automated tests/linters for verification
+- Multi-file refactoring
+- Bug fixing with clear reproduction steps
+- Implementation tasks with well-defined output criteria
+
+**Not recommended for:**
+- Tasks requiring human judgment
+- UI/UX decisions
+- One-shot simple operations
+
+### Development Process (MUST FOLLOW)
+
+```
+1. NEW FEATURE REQUEST
+   │
+   ├─→ Create specs/{feature-name}/ directory
+   │
+   ├─→ Run /speckit.specify to create spec.md
+   │
+   ├─→ Run /speckit.clarify if requirements unclear
+   │
+   ├─→ Run /speckit.plan to create plan.md
+   │
+   ├─→ Run /speckit.tasks to create tasks.md
+   │
+   ├─→ For complex implementation:
+   │   └─→ Use /ralph-loop with clear completion criteria
+   │
+   ├─→ Run /speckit.implement for straightforward tasks
+   │
+   ├─→ Run /speckit.analyze to validate consistency
+   │
+   └─→ Run /speckit.checklist for QA validation
+```
+
+### Feature Specification Structure
+
+All features MUST have a directory in `specs/` with:
+```
+specs/{feature-id}-{feature-name}/
+├── spec.md      # Requirements and user stories
+├── plan.md      # Technical implementation strategy
+└── tasks.md     # Actionable task list
+```
+
+**REMEMBER:** Always use these toolkits. They ensure consistent, high-quality development and prevent context loss across sessions.
+
+---
+
 ## 🎯 Project Overview
 
 **Academic Writing Platform** - AI-powered academic writing system with PubMed research integration, multi-LLM support, and professional document export capabilities.

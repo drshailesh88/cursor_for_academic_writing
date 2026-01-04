@@ -697,7 +697,48 @@ cursor_for_academic_writing/
 
 ---
 
+## 🎯 PHASE 7: AI Presentation Generator (PLANNED)
+
+### Overview
+Premium AI-powered presentation generator that creates publication-quality slides directly from academic documents, research synthesis, or custom topics.
+
+**Status:** Specification Complete, Ready for Implementation
+**Specs Location:** `specs/004-presentation-generator/`
+
+### Key Capabilities (Planned)
+- **One-Click Generation:** Transform documents into 10-25 slide presentations
+- **Smart Data Visualization:** Auto-detect statistics and generate charts/graphs
+- **Citation Preservation:** Academic citations properly formatted on reference slides
+- **Multiple Formats:** Conference (15 min), Lecture (45 min), Poster
+- **Premium Themes:** Academic, Dark, Minimal, Discipline-specific
+- **Flowcharts:** PRISMA flows, process diagrams, timelines
+- **Export:** PPTX (PowerPoint), PDF, HTML slideshow
+- **Full Editor:** Drag-drop reorder, inline editing, speaker notes
+
+### Implementation Phases
+- **Phase 7A:** Core Engine (Types, Themes, Content Extraction, Generator)
+- **Phase 7B:** Visualization Engine (Charts, Flowcharts, Tables)
+- **Phase 7C:** Editor Interface (Canvas, Navigator, AI Assist)
+- **Phase 7D:** Export & Polish (PPTX, PDF, Presenter View)
+
+### Competitive Advantage
+The ONLY presentation tool that:
+1. Integrates directly with academic writing workflow
+2. Preserves CSL-formatted citations
+3. Understands statistical data for visualization
+4. Leverages existing research (PubMed, arXiv, Semantic Scholar)
+5. Zero context switching - stays in the app
+
+---
+
 ## 📌 REMAINING ITEMS FOR FUTURE SESSIONS
+
+### P0 - Critical (Next Up):
+- [ ] **Phase 7: Presentation Generator** - See specs/004-presentation-generator/
+  - [ ] Phase 7A: Core Engine
+  - [ ] Phase 7B: Visualization Engine
+  - [ ] Phase 7C: Editor Interface
+  - [ ] Phase 7D: Export & Polish
 
 ### P1 - High Priority:
 - [x] ~~Mobile responsive layout~~ ✅ DONE
@@ -843,11 +884,11 @@ npm start            # Serve production build
 
 ---
 
-**Last Updated:** January 2, 2026
-**Status:** ✅ ALL PHASES 1-6 COMPLETE
-**Ready for:** Firebase Configuration → Production Deploy
+**Last Updated:** January 4, 2026
+**Status:** ✅ PHASES 1-6 COMPLETE | 🔄 PHASE 7 PLANNED
+**Ready for:** Phase 7 Implementation → Firebase Configuration → Production Deploy
 
-🎯 **The app is now feature-complete with full collaboration suite!**
+🎯 **The app has a full collaboration suite! Next: AI Presentation Generator**
 
 **Completed Phases:**
 - Phase 1: Multi-Database Research (PubMed, arXiv, Semantic Scholar, OpenAlex)
@@ -857,3 +898,6 @@ npm start            # Serve production build
 - Phase 4: Plagiarism Detection (fingerprinting, similarity, patterns)
 - Phase 5: Enhanced PDF Export + Plagiarism Panel Integration
 - Phase 6: Collaboration (Comments, Versions, Sharing, Track Changes)
+
+**Planned Phase:**
+- Phase 7: AI Presentation Generator (Specification Complete - see specs/004-presentation-generator/)
