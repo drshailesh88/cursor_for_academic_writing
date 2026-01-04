@@ -23,31 +23,64 @@ vi.mock('firebase/auth', async () => ({
   ),
   GoogleAuthProvider: class MockGoogleAuthProvider { providerId = 'google.com'; },
   createUserWithEmailAndPassword: vi.fn(async (auth: any, email: string, password: string) => {
+    // If there's already a current user (set via mockAuth.setUser), use it
+    if (mockAuth.currentUser) {
+      return { user: mockAuth.currentUser };
+    }
     const result = await mockAuth.signInWithPopup();
     return { user: { ...result.user, email } };
   }),
   signInWithEmailAndPassword: vi.fn(async (auth: any, email: string, password: string) => {
+    // If there's already a current user (set via mockAuth.setUser), use it
+    if (mockAuth.currentUser) {
+      return { user: mockAuth.currentUser };
+    }
     const result = await mockAuth.signInWithPopup();
     return { user: { ...result.user, email } };
   }),
   sendPasswordResetEmail: vi.fn(async () => Promise.resolve()),
-  updateProfile: vi.fn(async () => Promise.resolve()),
+  updateProfile: vi.fn(async (user: any, updates: any) => {
+    // Update the current user with the profile updates
+    if (mockAuth.currentUser) {
+      Object.assign(mockAuth.currentUser, updates);
+    }
+    return Promise.resolve();
+  }),
 }));
 
 vi.mock('firebase/firestore', async () => ({
   getFirestore: vi.fn(() => mockFirestore),
   doc: vi.fn((pathOrRef: any, ...pathSegments: string[]) => {
     if (typeof pathOrRef === 'string') {
-      return mockFirestore.doc(pathOrRef);
+      // doc(db, 'collection', 'id') or doc(db, 'collection/id')
+      const fullPath = [pathOrRef, ...pathSegments].filter(Boolean).join('/');
+      return mockFirestore.doc(fullPath);
+    } else if (pathOrRef && typeof pathOrRef.path === 'string') {
+      // doc(collectionRef) or doc(collectionRef, 'id')
+      if (pathSegments.length > 0) {
+        // doc(collectionRef, 'id')
+        return mockFirestore.collection(pathOrRef.path).doc(pathSegments[0]);
+      } else {
+        // doc(collectionRef) - auto-generate ID
+        return mockFirestore.collection(pathOrRef.path).doc();
+      }
     } else {
+      // Fallback
       const fullPath = pathSegments.join('/');
       return mockFirestore.doc(fullPath);
     }
   }),
   collection: vi.fn((pathOrRef: any, ...pathSegments: string[]) => {
     if (typeof pathOrRef === 'string') {
-      return mockFirestore.collection(pathOrRef);
+      // collection(db, 'documents') or collection(db, 'documents', 'id', 'subcollection')
+      const fullPath = [pathOrRef, ...pathSegments].filter(Boolean).join('/');
+      return mockFirestore.collection(fullPath);
+    } else if (pathOrRef && typeof pathOrRef.path === 'string') {
+      // collection(docRef, 'subcollection')
+      const fullPath = [pathOrRef.path, ...pathSegments].filter(Boolean).join('/');
+      return mockFirestore.collection(fullPath);
     } else {
+      // Fallback: pathOrRef is Firestore instance
       const fullPath = pathSegments.join('/');
       return mockFirestore.collection(fullPath);
     }

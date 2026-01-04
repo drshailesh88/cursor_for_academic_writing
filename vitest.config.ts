@@ -72,10 +72,19 @@ export default defineConfig({
         /msw/,
       ],
     },
+
+    // Server configuration for optional dependencies
+    server: {
+      deps: {
+        inline: ['pptxgenjs'],
+      },
+    },
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      // Mock pptxgenjs for tests when not installed
+      'pptxgenjs': path.resolve(__dirname, './__tests__/mocks/pptxgenjs.ts'),
     },
   },
 });

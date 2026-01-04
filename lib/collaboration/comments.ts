@@ -131,7 +131,7 @@ export async function addReply(
     const commentRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
     const commentSnap = await getDoc(commentRef);
 
-    if (!commentSnap.exists()) {
+    if (!commentSnap.exists) {
       throw new Error('Comment not found');
     }
 

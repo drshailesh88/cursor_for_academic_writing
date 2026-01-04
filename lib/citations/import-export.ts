@@ -129,33 +129,45 @@ function cleanBibtexValue(value: string): string {
   // Remove outer braces
   value = value.replace(/^\{|\}$/g, '');
 
-  // Remove inner braces (but keep content)
-  value = value.replace(/\{([^}]*)\}/g, '$1');
+  // Process iteratively: remove one layer of braces, apply conversions, repeat
+  // This handles nested patterns like {\\c{c}} properly
+  let maxIterations = 10; // Prevent infinite loops
+  while (maxIterations-- > 0) {
+    const before = value;
 
-  // Convert LaTeX special characters
-  const latexMap: Record<string, string> = {
-    '\\&': '&',
-    '\\_': '_',
-    '\\%': '%',
-    '\\#': '#',
-    '\\$': '$',
-    '\\~': '~',
-    '\\textendash': '–',
-    '\\textemdash': '—',
-    "\\'a": 'á', "\\'e": 'é', "\\'i": 'í', "\\'o": 'ó', "\\'u": 'ú',
-    '\\"a': 'ä', '\\"e': 'ë', '\\"i': 'ï', '\\"o': 'ö', '\\"u': 'ü',
-    '\\`a': 'à', '\\`e': 'è', '\\`i': 'ì', '\\`o': 'ò', '\\`u': 'ù',
-    '\\^a': 'â', '\\^e': 'ê', '\\^i': 'î', '\\^o': 'ô', '\\^u': 'û',
-    '\\c{c}': 'ç', '\\c c': 'ç',
-    '\\~n': 'ñ', '\\~a': 'ã', '\\~o': 'õ',
-    '\\ss': 'ß',
-    '\\o': 'ø', '\\O': 'Ø',
-    '\\ae': 'æ', '\\AE': 'Æ',
-    '\\aa': 'å', '\\AA': 'Å',
-  };
+    // Remove one layer of innermost braces
+    value = value.replace(/\{([^{}]*)\}/g, '$1');
 
-  for (const [latex, char] of Object.entries(latexMap)) {
-    value = value.split(latex).join(char);
+    // Convert LaTeX special characters
+    const latexMap: Record<string, string> = {
+      '\\&': '&',
+      '\\_': '_',
+      '\\%': '%',
+      '\\#': '#',
+      '\\$': '$',
+      '\\textendash': '–',
+      '\\textemdash': '—',
+      "\\'a": 'á', "\\'e": 'é', "\\'i": 'í', "\\'o": 'ó', "\\'u": 'ú', "\\'E": 'É',
+      '\\"a': 'ä', '\\"e': 'ë', '\\"i': 'ï', '\\"o': 'ö', '\\"u': 'ü',
+      '\\`a': 'à', '\\`e': 'è', '\\`i': 'ì', '\\`o': 'ò', '\\`u': 'ù',
+      '\\^a': 'â', '\\^e': 'ê', '\\^i': 'î', '\\^o': 'ô', '\\^u': 'û',
+      '\\c{c}': 'ç', '\\c c': 'ç', '\\c{C}': 'Ç',
+      '\\~n': 'ñ', '\\~a': 'ã', '\\~o': 'õ', '\\~N': 'Ñ',
+      '\\~': '~', // Standalone tilde
+      '\\ss': 'ß',
+      '\\o': 'ø', '\\O': 'Ø',
+      '\\ae': 'æ', '\\AE': 'Æ',
+      '\\aa': 'å', '\\AA': 'Å',
+    };
+
+    for (const [latex, char] of Object.entries(latexMap)) {
+      value = value.split(latex).join(char);
+    }
+
+    // If nothing changed, we're done
+    if (value === before && !value.includes('{')) {
+      break;
+    }
   }
 
   return value.trim();

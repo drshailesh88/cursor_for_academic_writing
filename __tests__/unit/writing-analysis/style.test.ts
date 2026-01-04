@@ -148,10 +148,10 @@ describe('Style Analysis', () => {
       expect(result.shortSentences).toBe(2);
     });
 
-    it('identifies long sentences (>30 words)', () => {
+    it('identifies long sentences (>35 words by default)', () => {
       const longSentence = 'This is a very long sentence that contains ' +
-        'more than thirty words and goes on and on with lots of clauses and ' +
-        'phrases that make it difficult to read and comprehend easily.';
+        'more than thirty-five words and goes on and on with lots of clauses and ' +
+        'phrases and additional content that make it difficult to read and comprehend easily and effectively.';
       const result = analyzeStyle(longSentence);
 
       expect(result.longSentences).toBeGreaterThan(0);

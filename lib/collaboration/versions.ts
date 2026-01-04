@@ -127,7 +127,7 @@ export async function getVersion(
     const versionRef = doc(db, 'documents', documentId, 'versions', versionId);
     const versionSnap = await getDoc(versionRef);
 
-    if (versionSnap.exists()) {
+    if (versionSnap.exists) {
       const data = versionSnap.data();
       return {
         id: versionSnap.id,

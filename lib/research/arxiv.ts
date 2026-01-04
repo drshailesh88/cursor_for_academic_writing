@@ -173,7 +173,14 @@ function toSearchResult(entry: ArxivEntry): SearchResult {
   const abstractLink = entry.links.find((l) => l.type === 'text/html') || entry.links[0];
 
   // Extract year from published date
-  const year = entry.published ? new Date(entry.published).getFullYear() : new Date().getFullYear();
+  let year = new Date().getFullYear();
+  if (entry.published) {
+    const parsedYear = new Date(entry.published).getFullYear();
+    // Only use parsed year if it's valid (not NaN)
+    if (!isNaN(parsedYear)) {
+      year = parsedYear;
+    }
+  }
 
   return {
     id: entry.id,

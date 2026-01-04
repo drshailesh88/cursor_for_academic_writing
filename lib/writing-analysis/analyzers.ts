@@ -370,7 +370,7 @@ export function analyzeStyle(text: string, config: AnalysisConfig = DEFAULT_ANAL
   // Sentence lengths
   const sentenceLengths = sentences.map(s => splitWords(s).length);
   const shortSentences = sentenceLengths.filter(l => l < 10).length;
-  const longSentences = sentenceLengths.filter(l => l > 30).length;
+  const longSentences = sentenceLengths.filter(l => l > config.maxSentenceLength).length;
   const veryLongSentences = sentenceLengths.filter(l => l > 40).length;
 
   // Sentence length variance

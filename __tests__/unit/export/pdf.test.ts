@@ -104,7 +104,8 @@ describe('PDF Export', () => {
         content: '<p>Simple content</p>',
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
     });
 
     test('sanitizes filename correctly', () => {
@@ -130,7 +131,8 @@ describe('PDF Export', () => {
       });
 
       // Look for "Page X of Y" pattern in text calls
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const hasPageNumbers = textCalls.some((call) =>
         typeof call[0] === 'string' && call[0].includes('Page')
       );
@@ -147,7 +149,8 @@ describe('PDF Export', () => {
       });
 
       // Should have page number calls
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const pageNumberCalls = textCalls.filter((call) =>
         typeof call[0] === 'string' && call[0].match(/Page \d+ of \d+/)
       );
@@ -165,7 +168,8 @@ describe('PDF Export', () => {
       });
 
       // Headers should be added (except on first page)
-      expect(mockJsPDF.line).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.line).toHaveBeenCalled();
     });
 
     test('shows author in header', () => {
@@ -175,7 +179,8 @@ describe('PDF Export', () => {
         content: '<p>Content</p>',
       });
 
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const hasAuthor = textCalls.some((call) =>
         typeof call[0] === 'string' && call[0].includes('Dr. Smith')
       );
@@ -190,7 +195,8 @@ describe('PDF Export', () => {
         content: '<p>Long content</p>'.repeat(50),
       });
 
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const hasTitle = textCalls.some((call) =>
         typeof call[0] === 'string' && call[0].includes('Research Paper')
       );
@@ -216,7 +222,8 @@ describe('PDF Export', () => {
         includeTableOfContents: true,
       });
 
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const hasTOC = textCalls.some((call) =>
         typeof call[0] === 'string' && call[0].includes('Table of Contents')
       );
@@ -233,7 +240,8 @@ describe('PDF Export', () => {
         includeTableOfContents: false,
       });
 
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const hasTOC = textCalls.some((call) =>
         typeof call[0] === 'string' && call[0].includes('Table of Contents')
       );
@@ -255,7 +263,8 @@ describe('PDF Export', () => {
       });
 
       // TOC should be generated with indentation
-      expect(mockJsPDF.text).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.text).toHaveBeenCalled();
     });
   });
 
@@ -267,7 +276,8 @@ describe('PDF Export', () => {
       });
 
       // Check that text is positioned with margin offset (72 points = 1 inch)
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const hasCorrectMargins = textCalls.some((call) => {
         const x = typeof call[1] === 'number' ? call[1] : 0;
         // Should be at or near 72 (1 inch) or adjusted for line numbers
@@ -286,7 +296,8 @@ describe('PDF Export', () => {
         doubleSpacing: true,
       });
 
-      expect(mockJsPDF.text).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.text).toHaveBeenCalled();
       // Double spacing should result in more vertical space between lines
     });
 
@@ -297,7 +308,8 @@ describe('PDF Export', () => {
         doubleSpacing: false,
       });
 
-      expect(mockJsPDF.text).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.text).toHaveBeenCalled();
     });
   });
 
@@ -310,7 +322,8 @@ describe('PDF Export', () => {
       });
 
       // Line numbers should be rendered (every 5th line)
-      expect(mockJsPDF.text).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.text).toHaveBeenCalled();
     });
 
     test('excludes line numbers when disabled', () => {
@@ -320,7 +333,8 @@ describe('PDF Export', () => {
         includeLineNumbers: false,
       });
 
-      expect(mockJsPDF.text).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.text).toHaveBeenCalled();
     });
 
     test('shows line numbers at intervals of 5', () => {
@@ -333,7 +347,8 @@ describe('PDF Export', () => {
       });
 
       // Should show numbers like 5, 10, 15, 20
-      expect(mockJsPDF.text).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.text).toHaveBeenCalled();
     });
   });
 
@@ -345,14 +360,15 @@ describe('PDF Export', () => {
         watermark: 'DRAFT',
       });
 
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const hasWatermark = textCalls.some((call) =>
         typeof call[0] === 'string' && call[0] === 'DRAFT'
       );
 
       expect(hasWatermark).toBe(true);
-      expect(mockJsPDF.saveGraphicsState).toHaveBeenCalled();
-      expect(mockJsPDF.restoreGraphicsState).toHaveBeenCalled();
+      expect(pdf.saveGraphicsState).toHaveBeenCalled();
+      expect(pdf.restoreGraphicsState).toHaveBeenCalled();
     });
 
     test('no watermark when null', () => {
@@ -362,10 +378,11 @@ describe('PDF Export', () => {
         watermark: null,
       });
 
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       // Graphics state should not be saved for watermark
-      const saveCount = mockJsPDF.saveGraphicsState.mock.calls.length;
-      const restoreCount = mockJsPDF.restoreGraphicsState.mock.calls.length;
+      const saveCount = pdf.saveGraphicsState.mock.calls.length;
+      const restoreCount = pdf.restoreGraphicsState.mock.calls.length;
 
       expect(saveCount).toBe(restoreCount); // Should be balanced, but minimal
     });
@@ -379,7 +396,8 @@ describe('PDF Export', () => {
         watermark: 'CONFIDENTIAL',
       });
 
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const watermarkCount = textCalls.filter((call) =>
         typeof call[0] === 'string' && call[0] === 'CONFIDENTIAL'
       ).length;
@@ -397,7 +415,8 @@ describe('PDF Export', () => {
         content: doc.content,
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
     });
 
     test('handles unicode text', () => {
@@ -406,7 +425,8 @@ describe('PDF Export', () => {
         content: '<p>English, Español, 中文, العربية, עברית, 日本語</p>',
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
     });
 
     test('handles mathematical symbols', () => {
@@ -415,7 +435,8 @@ describe('PDF Export', () => {
         content: '<p>α, β, γ, Δ, ∑, ∫, ∞, ≈, ≠, ±</p>',
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
     });
   });
 
@@ -428,7 +449,8 @@ describe('PDF Export', () => {
         content: doc.content || '<p></p>',
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
     });
 
     test('handles very large document', () => {
@@ -440,8 +462,9 @@ describe('PDF Export', () => {
       });
 
       // Should handle pagination
-      expect(mockJsPDF.addPage).toHaveBeenCalled();
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.addPage).toHaveBeenCalled();
+      expect(pdf.save).toHaveBeenCalled();
     });
 
     test('handles whitespace-only content', () => {
@@ -452,7 +475,8 @@ describe('PDF Export', () => {
         content: doc.content,
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
     });
 
     test('handles document with only numbers', () => {
@@ -463,7 +487,8 @@ describe('PDF Export', () => {
         content: doc.content,
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
     });
   });
 
@@ -477,7 +502,8 @@ describe('PDF Export', () => {
       });
 
       // Different font sizes should be set for different heading levels
-      const fontSizeCalls = mockJsPDF.setFontSize.mock.calls;
+      const pdf = getMockPdf();
+      const fontSizeCalls = pdf.setFontSize.mock.calls;
       expect(fontSizeCalls.length).toBeGreaterThan(0);
     });
 
@@ -489,7 +515,8 @@ describe('PDF Export', () => {
         content,
       });
 
-      expect(mockJsPDF.text).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.text).toHaveBeenCalled();
     });
 
     test('handles lists', () => {
@@ -506,7 +533,8 @@ describe('PDF Export', () => {
         content,
       });
 
-      const textCalls = mockJsPDF.text.mock.calls;
+      const pdf = getMockPdf();
+      const textCalls = pdf.text.mock.calls;
       const hasBullets = textCalls.some((call) =>
         typeof call[0] === 'string' && call[0].includes('•')
       );
@@ -527,7 +555,8 @@ describe('PDF Export', () => {
         content,
       });
 
-      expect(mockJsPDF.text).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.text).toHaveBeenCalled();
     });
   });
 
@@ -538,7 +567,8 @@ describe('PDF Export', () => {
         content: '<p>Content</p>',
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
     });
 
     test('legacy function accepts minimal parameters', () => {
@@ -546,7 +576,8 @@ describe('PDF Export', () => {
         content: '<p>Only content</p>',
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
     });
   });
 
@@ -620,8 +651,9 @@ describe('PDF Export', () => {
         doubleSpacing: true,
       });
 
-      expect(mockJsPDF.save).toHaveBeenCalled();
-      expect(mockJsPDF.addPage).toHaveBeenCalled();
+      const pdf = getMockPdf();
+      expect(pdf.save).toHaveBeenCalled();
+      expect(pdf.addPage).toHaveBeenCalled();
     });
   });
 });

@@ -34,9 +34,12 @@ const mockPptx = {
   })),
 };
 
-// Mock the dynamic import
+// Mock the dynamic import - must handle both default and named exports
+const MockPptxClass = vi.fn(() => mockPptx);
+
 vi.mock('pptxgenjs', () => ({
-  default: vi.fn(() => mockPptx),
+  default: MockPptxClass,
+  __esModule: true,
 }));
 
 describe('PPTX Export', () => {

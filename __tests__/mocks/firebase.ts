@@ -39,7 +39,7 @@ export class MockDocumentSnapshot {
     private _exists: boolean = true
   ) {}
 
-  get exists(): boolean {
+  exists(): boolean {
     return this._exists;
   }
 

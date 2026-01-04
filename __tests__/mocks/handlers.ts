@@ -252,8 +252,17 @@ export const handlers = [
     return HttpResponse.json(semanticScholarSearchResponse);
   }),
 
-  // Semantic Scholar Paper Details
+  // Semantic Scholar Paper Details (handles regular IDs and DOI/ArXiv/PMID lookups)
   http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId', ({ params }) => {
+    const paperId = params.paperId as string;
+
+    // Handle external ID lookups (DOI:, ARXIV:, PMID:)
+    if (paperId.startsWith('DOI:') || paperId.startsWith('ARXIV:') || paperId.startsWith('PMID:')) {
+      const paper = semanticScholarSearchResponse.data[0];
+      return HttpResponse.json(paper);
+    }
+
+    // Regular paper ID lookup
     const paper = semanticScholarSearchResponse.data[0];
     return HttpResponse.json(paper);
   }),
@@ -261,6 +270,13 @@ export const handlers = [
   // OpenAlex Works Search
   http.get('https://api.openalex.org/works', () => {
     return HttpResponse.json(openAlexSearchResponse);
+  }),
+
+  // OpenAlex Work by ID (including DOI lookups like doi:10.1234/abc)
+  http.get('https://api.openalex.org/works/:workId', ({ params }) => {
+    // Return the first result from the search response
+    const work = openAlexSearchResponse.results[0];
+    return HttpResponse.json(work);
   }),
 
   // OpenRouter Chat Completion

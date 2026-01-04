@@ -356,8 +356,9 @@ export async function getByDOI(doi: string): Promise<SearchResult | null> {
   const ssResult = await semanticScholarClient.getById?.(`DOI:${doi}`);
   if (ssResult) return ssResult;
 
-  // Try OpenAlex
-  const oaResult = await openalexClient.getById?.(doi);
+  // Try OpenAlex (use the dedicated getByDOI function)
+  const { getByDOI: openAlexGetByDOI } = await import('./openalex');
+  const oaResult = await openAlexGetByDOI(doi);
   if (oaResult) return oaResult;
 
   return null;
