@@ -109,6 +109,83 @@
   .ProseMirror h3 {
     @apply text-xl font-semibold mb-2 text-primary-500 dark:text-primary-500;
   }
+
+  /* Placeholder styles */
+  .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    @apply text-muted-foreground pointer-events-none float-left h-0;
+  }
+
+  .ProseMirror.is-editor-empty::before {
+    content: attr(data-placeholder);
+    @apply text-muted-foreground pointer-events-none float-left h-0;
+  }
+
+  /* Bibliography styles */
+  .bibliography {
+    @apply mt-6 pt-6 border-t border-border;
+  }
+
+  .bibliography-entry {
+    @apply mb-4 pl-8 -indent-8 text-sm leading-relaxed;
+  }
+
+  .bibliography-entry em {
+    @apply italic;
+  }
+
+  .bibliography-entry strong {
+    @apply font-semibold;
+  }
+
+  /* Inline citation styles */
+  .citation {
+    @apply text-primary cursor-pointer hover:underline;
+  }
+
+  .citation[data-suppress-author="true"] {
+    @apply text-muted-foreground;
+  }
+
+  /* Track Changes styles */
+  .track-insertion {
+    background-color: rgba(34, 197, 94, 0.2);
+    border-bottom: 2px solid rgb(34, 197, 94);
+    cursor: help;
+  }
+
+  .dark .track-insertion {
+    background-color: rgba(34, 197, 94, 0.15);
+  }
+
+  .track-deletion {
+    background-color: rgba(239, 68, 68, 0.2);
+    text-decoration: line-through;
+    color: rgb(239, 68, 68);
+    cursor: help;
+  }
+
+  .dark .track-deletion {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: rgb(252, 165, 165);
+  }
+
+  /* Track changes tooltip on hover */
+  .track-insertion:hover::after,
+  .track-deletion:hover::after {
+    content: attr(data-user-name);
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+  }
 }
 
 /* Custom scrollbar for academic aesthetic */
@@ -128,5 +205,14 @@
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     @apply bg-secondary-400 dark:bg-secondary-600;
+  }
+
+  /* Safe area for mobile devices with notch */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0);
   }
 }

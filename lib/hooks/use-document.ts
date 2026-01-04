@@ -7,9 +7,11 @@ import {
   createDocument,
   saveDocumentContent,
   updateDocument,
+  updateDocumentDiscipline,
 } from '@/lib/firebase/documents';
-import { Document } from '@/lib/firebase/schema';
+import { Document, DisciplineId } from '@/lib/firebase/schema';
 import { useAuth } from '@/lib/firebase/auth';
+import { toast } from 'sonner';
 
 interface UseDocumentOptions {
   documentId?: string;
@@ -154,10 +156,29 @@ export function useDocument(options: UseDocumentOptions = {}) {
     [documentId]
   );
 
-  // Manual save
+  // Manual save with toast feedback
   const saveNow = useCallback(async () => {
     await save();
+    toast.success('Document saved');
   }, [save]);
+
+  // Update document discipline
+  const updateDiscipline = useCallback(
+    async (newDiscipline: DisciplineId) => {
+      if (!documentId) return;
+
+      try {
+        await updateDocumentDiscipline(documentId, newDiscipline);
+        setDocument((prev) =>
+          prev ? { ...prev, discipline: newDiscipline } : null
+        );
+      } catch (err) {
+        setError(err as Error);
+        throw err;
+      }
+    },
+    [documentId]
+  );
 
   return {
     document,
@@ -169,6 +190,7 @@ export function useDocument(options: UseDocumentOptions = {}) {
     error,
     createNew,
     updateTitle,
+    updateDiscipline,
     saveNow,
   };
 }

@@ -71,5 +71,8 @@ __pycache__/
 venv/
 ENV/
 
+# TypeScript
+*.tsbuildinfo
+
 # Misc
 .cache/

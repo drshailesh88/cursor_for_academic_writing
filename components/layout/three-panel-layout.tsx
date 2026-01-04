@@ -2,16 +2,40 @@
 
 import { useState, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Save, CheckCircle } from 'lucide-react';
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  Save,
+  CheckCircle,
+  FileText,
+  Edit3,
+  MessageSquare,
+  MessageCircle,
+  Menu,
+  X,
+  Share2,
+  Settings,
+  Library,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChatInterface } from '@/components/chat/chat-interface';
 import { AcademicEditor } from '@/components/editor/academic-editor';
 import { DocumentList } from '@/components/history/document-list';
 import { ExportButtons } from '@/components/export/export-buttons';
 import { AuthButton } from '@/components/auth/auth-button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { KeyboardShortcuts, useKeyboardShortcuts } from '@/components/ui/keyboard-shortcuts';
+import { CommentsSidebar } from '@/components/collaboration/comments-sidebar';
+import { ShareDialog, useShareDialog } from '@/components/collaboration/share-dialog';
+import { SettingsDialog } from '@/components/settings/settings-dialog';
 import { useDocument } from '@/lib/hooks/use-document';
 import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
+import { DocumentTemplate } from '@/lib/templates/document-templates';
+import type { DisciplineId } from '@/lib/firebase/schema';
 import {
   ResearchProvider,
   ResearchTrigger,
@@ -25,7 +49,23 @@ import {
   PaperChat,
   usePaperLibrary,
 } from '@/components/papers';
-import { Library } from 'lucide-react';
+
+// Hook to detect mobile screen
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
+
+type MobileView = 'documents' | 'editor' | 'chat' | 'comments';
+type RightPanelView = 'chat' | 'comments';
 
 // Paper Library trigger button (must be inside PaperLibraryProvider)
 function PaperLibraryTrigger() {
@@ -49,9 +89,34 @@ function PaperLibraryTrigger() {
 
 export function ThreePanelLayout() {
   const { user } = useAuth();
+
+  return (
+    <ResearchProvider>
+      <CitationExplorerProvider>
+        {user ? (
+          <PaperLibraryProvider userId={user.uid}>
+            <ThreePanelContent />
+          </PaperLibraryProvider>
+        ) : (
+          <ThreePanelContent />
+        )}
+      </CitationExplorerProvider>
+    </ResearchProvider>
+  );
+}
+
+function ThreePanelContent() {
+  const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | undefined>();
+  const [mobileView, setMobileView] = useState<MobileView>('editor');
+  const [rightPanelView, setRightPanelView] = useState<RightPanelView>('chat');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { isOpen: shortcutsOpen, setIsOpen: setShortcutsOpen } = useKeyboardShortcuts();
+  const { isOpen: shareDialogOpen, documentId: shareDocumentId, open: openShareDialog, close: closeShareDialog } = useShareDialog();
 
   const {
     document,
@@ -62,10 +127,38 @@ export function ThreePanelLayout() {
     lastSaved,
     createNew,
     updateTitle,
+    updateDiscipline,
+    saveNow,
   } = useDocument({
     documentId: currentDocumentId,
     autoSaveInterval: 30000, // 30 seconds
   });
+
+  // Handle discipline change from chat interface
+  const handleDisciplineChange = async (newDiscipline: DisciplineId) => {
+    try {
+      await updateDiscipline(newDiscipline);
+    } catch (error) {
+      console.error('Failed to update discipline:', error);
+    }
+  };
+
+  // Handle inserting content from chat into the editor
+  const handleInsertToEditor = (chatContent: string) => {
+    // Convert markdown to HTML for the editor
+    // For now, just append to content with proper paragraph tags
+    const htmlContent = chatContent
+      .split('\n\n')
+      .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)
+      .join('');
+
+    const newContent = content
+      ? `${content}${htmlContent}`
+      : htmlContent;
+
+    setContent(newContent);
+    toast.success('Content inserted into editor');
+  };
 
   // Create initial document when user signs in
   useEffect(() => {
@@ -85,133 +178,264 @@ export function ThreePanelLayout() {
 
   const handleDocumentSelect = (documentId: string) => {
     setCurrentDocumentId(documentId);
-  };
-
-  const handleCreateNew = async () => {
-    try {
-      const newDocId = await createNew('Untitled Document');
-      setCurrentDocumentId(newDocId);
-    } catch (error) {
-      console.error('Failed to create new document:', error);
-      alert('Failed to create new document');
+    // On mobile, switch to editor after selecting a document
+    if (isMobile) {
+      setMobileView('editor');
     }
   };
 
-  return (
-    <ResearchProvider>
-      <CitationExplorerProvider>
-        {user ? (
-          <PaperLibraryProvider userId={user.uid}>
-            <ThreePanelContent
-              user={user}
-              isHistoryCollapsed={isHistoryCollapsed}
-              setIsHistoryCollapsed={setIsHistoryCollapsed}
-              isChatCollapsed={isChatCollapsed}
-              setIsChatCollapsed={setIsChatCollapsed}
-              currentDocumentId={currentDocumentId}
-              setCurrentDocumentId={setCurrentDocumentId}
-              document={document}
-              content={content}
-              setContent={setContent}
-              loading={loading}
-              saving={saving}
-              lastSaved={lastSaved}
-              createNew={createNew}
-              updateTitle={updateTitle}
-            />
-          </PaperLibraryProvider>
-        ) : (
-          <ThreePanelContent
-            user={user}
-            isHistoryCollapsed={isHistoryCollapsed}
-            setIsHistoryCollapsed={setIsHistoryCollapsed}
-            isChatCollapsed={isChatCollapsed}
-            setIsChatCollapsed={setIsChatCollapsed}
-            currentDocumentId={currentDocumentId}
-            setCurrentDocumentId={setCurrentDocumentId}
-            document={document}
-            content={content}
-            setContent={setContent}
-            loading={loading}
-            saving={saving}
-            lastSaved={lastSaved}
-            createNew={createNew}
-            updateTitle={updateTitle}
-          />
-        )}
-      </CitationExplorerProvider>
-    </ResearchProvider>
+  const handleCreateNew = async (template?: DocumentTemplate) => {
+    try {
+      const title = template?.name === 'Blank Document' ? 'Untitled Document' : template?.name || 'Untitled Document';
+      const newDocId = await createNew(title);
+      setCurrentDocumentId(newDocId);
+
+      // If template has content, set it after the document is created
+      if (template?.content) {
+        // Small delay to ensure document is loaded
+        setTimeout(() => {
+          setContent(template.content);
+        }, 100);
+      }
+
+      toast.success('New document created');
+      if (isMobile) {
+        setMobileView('editor');
+      }
+    } catch (error) {
+      console.error('Failed to create new document:', error);
+      toast.error('Failed to create new document');
+    }
+  };
+
+  const handleDocumentDeleted = async (deletedId: string) => {
+    // If the deleted document was the current one, create a new document
+    if (deletedId === currentDocumentId) {
+      try {
+        const newDocId = await createNew('Untitled Document');
+        setCurrentDocumentId(newDocId);
+      } catch (error) {
+        console.error('Failed to create new document after deletion:', error);
+        setCurrentDocumentId(undefined);
+      }
+    }
+  };
+
+  // Keyboard Shortcuts Modal (shared between mobile and desktop)
+  const shortcutsModal = (
+    <KeyboardShortcuts isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
   );
-}
 
-// Separate component to use paper library hooks inside provider
-interface ThreePanelContentProps {
-  user: any;
-  isHistoryCollapsed: boolean;
-  setIsHistoryCollapsed: (v: boolean) => void;
-  isChatCollapsed: boolean;
-  setIsChatCollapsed: (v: boolean) => void;
-  currentDocumentId: string | undefined;
-  setCurrentDocumentId: (id: string | undefined) => void;
-  document: any;
-  content: string;
-  setContent: (v: string) => void;
-  loading: boolean;
-  saving: boolean;
-  lastSaved: Date | null;
-  createNew: (title: string) => Promise<string>;
-  updateTitle: (title: string) => void;
-}
+  const shareDialog = shareDocumentId ? (
+    <ShareDialog
+      isOpen={shareDialogOpen}
+      onClose={closeShareDialog}
+      documentId={shareDocumentId}
+    />
+  ) : null;
 
-function ThreePanelContent({
-  user,
-  isHistoryCollapsed,
-  setIsHistoryCollapsed,
-  isChatCollapsed,
-  setIsChatCollapsed,
-  currentDocumentId,
-  setCurrentDocumentId,
-  document,
-  content,
-  setContent,
-  loading,
-  saving,
-  lastSaved,
-  createNew,
-  updateTitle,
-}: ThreePanelContentProps) {
-  const handleDocumentSelect = (documentId: string) => {
-    setCurrentDocumentId(documentId);
-  };
+  const settingsDialog = (
+    <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+  );
 
-  const handleCreateNew = async () => {
-    try {
-      const newDocId = await createNew('Untitled Document');
-      setCurrentDocumentId(newDocId);
-    } catch (error) {
-      console.error('Failed to create new document:', error);
-      alert('Failed to create new document');
-    }
-  };
-
-  return (
+  // Mobile Layout
+  if (isMobile) {
+    return (
       <div className="h-screen w-screen bg-background flex flex-col">
-        {/* Deep Research Panel (modal overlay) */}
-        <ResearchPanel />
+        {shortcutsModal}
+        {shareDialog}
+        {settingsDialog}
+        {/* Mobile Top Bar */}
+        <div className="h-14 border-b border-border flex items-center justify-between px-3 bg-card">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+            {document && mobileView === 'editor' && (
+              <input
+                type="text"
+                value={document.title}
+                onChange={(e) => updateTitle(e.target.value)}
+                className="flex-1 min-w-0 px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary rounded truncate"
+                placeholder="Untitled Document"
+              />
+            )}
+            {mobileView === 'documents' && (
+              <h1 className="text-lg font-semibold truncate">Documents</h1>
+            )}
+            {mobileView === 'chat' && (
+              <h1 className="text-lg font-semibold truncate">AI Assistant</h1>
+            )}
+          </div>
 
-        {/* Citation Explorer (modal overlay) */}
-        <CitationExplorer />
+          <div className="flex items-center gap-1">
+            {user && saving && <Save className="w-4 h-4 animate-pulse text-muted-foreground" />}
+            {user && !saving && lastSaved && <CheckCircle className="w-4 h-4 text-green-600" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              title="Settings"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+            <ThemeToggle />
+            <AuthButton />
+          </div>
+        </div>
 
-        {/* Paper Library (modal overlay) */}
-        {user && <PaperLibrary userId={user.uid} />}
+        {/* Mobile Menu Dropdown */}
+        {mobileMenuOpen && (
+          <div className="absolute top-14 left-0 right-0 bg-card border-b border-border z-50 p-4 space-y-3">
+            {user && currentDocumentId && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  openShareDialog(currentDocumentId);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share Document
+              </Button>
+            )}
+            {user && (
+              <ExportButtons title={document?.title} content={content} />
+            )}
+            <div className="text-xs text-muted-foreground">
+              {lastSaved && `Saved ${formatDistanceToNow(lastSaved, { addSuffix: true })}`}
+            </div>
+          </div>
+        )}
 
-        {/* Paper Chat (slide-in panel) */}
-        {user && <PaperChat userId={user.uid} />}
+        {/* Mobile Content Area */}
+        <div className="flex-1 overflow-hidden">
+          {mobileView === 'documents' && (
+            <div className="h-full bg-card">
+              {user ? (
+                <DocumentList
+                  currentDocumentId={currentDocumentId}
+                  onDocumentSelect={handleDocumentSelect}
+                  onCreateNew={handleCreateNew}
+                  onDocumentDeleted={handleDocumentDeleted}
+                />
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">
+                  Sign in to see your documents
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Top bar with auth and save status */}
-        <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-card">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold">Academic Writing</h1>
+          {mobileView === 'editor' && (
+            <div className="h-full bg-background">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+                </div>
+              ) : (
+                <AcademicEditor
+                  content={content}
+                  onChange={setContent}
+                  onSave={saveNow}
+                  placeholder="Start writing your academic paper..."
+                />
+              )}
+            </div>
+          )}
+
+          {mobileView === 'chat' && (
+            <div className="h-full bg-card">
+              <ChatInterface
+                documentId={currentDocumentId}
+                onInsertToEditor={handleInsertToEditor}
+                initialDiscipline={document?.discipline}
+                onDisciplineChange={handleDisciplineChange}
+              />
+            </div>
+          )}
+
+          {mobileView === 'comments' && (
+            <div className="h-full bg-card">
+              <CommentsSidebar
+                documentId={currentDocumentId}
+                currentUserId={user?.uid}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="h-16 border-t border-border bg-card flex items-center justify-around px-2 safe-area-bottom">
+          <button
+            onClick={() => { setMobileView('documents'); setMobileMenuOpen(false); }}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              mobileView === 'documents' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+            }`}
+          >
+            <FileText className="h-5 w-5" />
+            <span className="text-xs">Docs</span>
+          </button>
+          <button
+            onClick={() => { setMobileView('editor'); setMobileMenuOpen(false); }}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              mobileView === 'editor' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+            }`}
+          >
+            <Edit3 className="h-5 w-5" />
+            <span className="text-xs">Write</span>
+          </button>
+          <button
+            onClick={() => { setMobileView('chat'); setMobileMenuOpen(false); }}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              mobileView === 'chat' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+            }`}
+          >
+            <MessageSquare className="h-5 w-5" />
+            <span className="text-xs">Chat</span>
+          </button>
+          <button
+            onClick={() => { setMobileView('comments'); setMobileMenuOpen(false); }}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              mobileView === 'comments' ? 'text-primary bg-primary/10' : 'text-muted-foreground'
+            }`}
+          >
+            <MessageCircle className="h-5 w-5" />
+            <span className="text-xs">Comments</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop Layout
+  return (
+    <div className="h-screen w-screen bg-background flex flex-col">
+      {shortcutsModal}
+      {shareDialog}
+      {settingsDialog}
+      {/* Deep Research Panel (modal overlay) */}
+      <ResearchPanel />
+
+      {/* Citation Explorer (modal overlay) */}
+      <CitationExplorer />
+
+      {/* Paper Library (modal overlay) */}
+      {user && <PaperLibrary userId={user.uid} />}
+
+      {/* Paper Chat (slide-in panel) */}
+      {user && <PaperChat userId={user.uid} />}
+
+      {/* Top bar with auth and save status */}
+      <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-card">
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-semibold hidden sm:block">Academic Writing</h1>
           {document && (
             <input
               type="text"
@@ -230,12 +454,12 @@ function ThreePanelContent({
               {saving ? (
                 <>
                   <Save className="w-4 h-4 animate-pulse" />
-                  <span>Saving...</span>
+                  <span className="hidden sm:inline">Saving...</span>
                 </>
               ) : lastSaved ? (
                 <>
                   <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span>
+                  <span className="hidden sm:inline">
                     Saved {formatDistanceToNow(lastSaved, { addSuffix: true })}
                   </span>
                 </>
@@ -243,18 +467,38 @@ function ThreePanelContent({
             </div>
           )}
 
-            <div className="flex items-center gap-3">
-              {/* Paper Library trigger */}
-              {user && <PaperLibraryTrigger />}
-              {/* Deep Research trigger */}
-              {user && <ResearchTrigger />}
-              {user && (
-                <ExportButtons title={document?.title} content={content} />
-              )}
-              <AuthButton />
-            </div>
+          <div className="flex items-center gap-2">
+            {/* Paper Library trigger */}
+            {user && <PaperLibraryTrigger />}
+            {/* Deep Research trigger */}
+            {user && <ResearchTrigger />}
+            {user && currentDocumentId && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openShareDialog(currentDocumentId)}
+                title="Share document"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+            )}
+            {user && (
+              <ExportButtons title={document?.title} content={content} />
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              title="Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            <ThemeToggle />
+            <AuthButton />
           </div>
         </div>
+      </div>
 
       {/* Main content area */}
       <div className="flex-1 overflow-hidden">
@@ -280,6 +524,7 @@ function ThreePanelContent({
                   currentDocumentId={currentDocumentId}
                   onDocumentSelect={handleDocumentSelect}
                   onCreateNew={handleCreateNew}
+                  onDocumentDeleted={handleDocumentDeleted}
                 />
               ) : (
                 <div className="p-4">
@@ -319,6 +564,7 @@ function ThreePanelContent({
                   <AcademicEditor
                     content={content}
                     onChange={setContent}
+                    onSave={saveNow}
                     placeholder="Start writing your academic paper... Use the AI chat on the right to search PubMed or generate content."
                   />
                 )}
@@ -328,7 +574,7 @@ function ThreePanelContent({
 
           <PanelResizeHandle className="w-1 bg-border hover:bg-primary-300 transition-colors" />
 
-          {/* RIGHT PANEL: AI Chat */}
+          {/* RIGHT PANEL: Chat & Comments */}
           <Panel
             defaultSize={30}
             minSize={20}
@@ -337,8 +583,49 @@ function ThreePanelContent({
             onCollapse={() => setIsChatCollapsed(true)}
             onExpand={() => setIsChatCollapsed(false)}
           >
-            <div className="h-full relative bg-card border-l border-border">
-              <ChatInterface />
+            <div className="h-full relative bg-card border-l border-border flex flex-col">
+              {/* Tab buttons */}
+              <div className="flex border-b border-border">
+                <button
+                  onClick={() => setRightPanelView('chat')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    rightPanelView === 'chat'
+                      ? 'text-primary border-b-2 border-primary bg-primary/5'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  <MessageSquare className="h-4 w-4 inline mr-2" />
+                  AI Chat
+                </button>
+                <button
+                  onClick={() => setRightPanelView('comments')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    rightPanelView === 'comments'
+                      ? 'text-primary border-b-2 border-primary bg-primary/5'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  <MessageCircle className="h-4 w-4 inline mr-2" />
+                  Comments
+                </button>
+              </div>
+
+              {/* Panel content */}
+              <div className="flex-1 overflow-hidden">
+                {rightPanelView === 'chat' ? (
+                  <ChatInterface
+                    documentId={currentDocumentId}
+                    onInsertToEditor={handleInsertToEditor}
+                    initialDiscipline={document?.discipline}
+                    onDisciplineChange={handleDisciplineChange}
+                  />
+                ) : (
+                  <CommentsSidebar
+                    documentId={currentDocumentId}
+                    currentUserId={user?.uid}
+                  />
+                )}
+              </div>
 
               {/* Collapse button */}
               <Button

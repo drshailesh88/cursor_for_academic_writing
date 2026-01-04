@@ -1,411 +1,257 @@
 # Gemini AI Instructions
 
-## 🎯 Project Context
+## Project: Academic Writing Platform
 
-You are assisting with the **Academic Writing Platform** - an AI-powered tool for medical/scientific writing with PubMed integration, multi-LLM support, and professional document export.
+An AI-powered academic writing system with multi-database research, plagiarism detection, collaboration features, and professional document export.
 
-**Current Status:** Firebase complete, export features pending
+**Status:** All 6 Phases Complete (50 features)
 **Tech:** Next.js 14, TypeScript, TipTap, Firebase, Vercel AI SDK
 **Port:** localhost:2550
 
 ---
 
-## 📚 Essential Reading
+## Essential Reading
 
 **CRITICAL:** Read these files before starting any task:
-1. `README.md` - Project overview
-2. `HANDOVER.md` - Complete implementation status
-3. `FIREBASE_SETUP.md` - Firebase configuration
 
-These files contain the full context of what's built and what needs work.
+1. **HANDOVER.md** - Complete implementation status (50 features, 6 phases)
+2. **CLAUDE.md** - Coding standards and architecture
+3. **FIREBASE_SETUP.md** - Firebase configuration
 
 ---
 
-## 🏗️ Architecture Overview
+## What's Been Built (6 Phases)
 
-### Tech Stack
+### Phase 1: Multi-Database Research
+- **4 Academic Databases:** PubMed, arXiv, Semantic Scholar, OpenAlex
+- **15 Scientific Disciplines** with custom AI prompts
+- **Unified Search** with DOI-based deduplication
+- Files: `lib/research/`, `lib/prompts/disciplines/`
+
+### Phase 2: Citation Management
+- **Paperpile-Style Library:** 30+ reference types
+- **Cite-While-You-Write:** Cmd+Shift+P shortcut
+- **10 CSL Styles:** APA, MLA, Chicago, Vancouver, Harvard, IEEE, AMA, Nature, Cell
+- **Import/Export:** BibTeX, RIS, CSV, JSON
+- Files: `lib/citations/`, `components/citations/`
+
+### Phase 3A: Writing Analysis
+- **Readability:** Flesch, Flesch-Kincaid, Gunning Fog
+- **Style:** Passive voice, adverbs, sentence variety
+- **Vocabulary:** Clichés, hedging, filler words
+- **Academic Checks:** First-person, formality score
+- Files: `lib/writing-analysis/`, `components/writing-analysis/`
+
+### Phase 3B: AI Writing + Detection
+- **16 AI Actions:** Paraphrase, simplify, expand, formalize, etc.
+- **Floating Toolbar:** Appears on text selection
+- **GPTZero-Style Detection:** Burstiness, predictability, vocabulary
+- Files: `lib/ai-writing/`, `lib/ai-detection/`, `app/api/ai-writing/`
+
+### Phase 4: Plagiarism Detection
+- **N-gram Fingerprinting:** Winnowing algorithm
+- **Similarity:** Jaccard, containment, overlap
+- **Detection:** Exact, near-exact, paraphrase, mosaic
+- **Patterns:** Unicode substitution, invisible characters
+- Files: `lib/plagiarism/`, `components/plagiarism/`
+
+### Phase 5: Enhanced PDF Export
+- Running headers, page numbers (Page X of Y)
+- Optional line numbers, double spacing
+- Auto-generated Table of Contents
+- Optional watermarks (draft, confidential)
+- Files: `lib/export/pdf.ts`
+
+### Phase 6: Collaboration
+- **Comments:** Threaded replies, resolve/unresolve, suggestions
+- **Version History:** Auto-save every 5 min, restore with backup
+- **Sharing:** Link sharing, email sharing, password protection
+- **Track Changes:** TipTap marks, accept/reject, batch operations
+- Files: `lib/collaboration/`, `components/collaboration/`
+
+---
+
+## Architecture
+
 ```
 Frontend:
-- Next.js 14 (App Router)
-- TypeScript (strict mode)
-- TipTap editor
-- shadcn/ui + Tailwind CSS
-- React Resizable Panels
+├── Next.js 14 (App Router)
+├── TypeScript (strict mode)
+├── TipTap (with track changes extensions)
+├── shadcn/ui + Tailwind CSS
+└── React Resizable Panels
 
 Backend:
-- Firebase Auth (Google Sign-in)
-- Firestore (documents storage)
-- Vercel AI SDK (multi-LLM)
-- PubMed E-utilities API
+├── Firebase Auth (Google Sign-in)
+├── Firestore (documents + subcollections)
+├── Vercel AI SDK (14 models)
+└── 4 Academic Database APIs
 
-AI Models:
-- Claude Sonnet 3.5 (Anthropic)
-- GPT-4o (OpenAI)
-- Gemini 2.0 Flash (Google)
-- Qwen 2.5 72B (OpenRouter)
+AI Models (14 total):
+├── Premium: Claude 3.5 Sonnet, GPT-4o, Gemini 2.0 Flash
+└── Free: Llama 3.3, Qwen 2.5, DeepSeek V3, + more via OpenRouter
 ```
-
-### Key Features
-1. **Three-panel layout:** Document list | Rich text editor | AI chat
-2. **Auto-save:** 30-second debounced saves to Firestore
-3. **PubMed integration:** Direct search and citation retrieval
-4. **Multi-LLM chat:** Switch between 4 AI models
-5. **Firebase sync:** Real-time document updates
 
 ---
 
-## 💻 Development Guidelines
+## Key File Locations
 
-### TypeScript Standards
+```
+app/
+├── api/chat/route.ts           # AI chat endpoint
+├── api/ai-writing/route.ts     # AI writing actions
+├── shared/[token]/page.tsx     # Share link validation
+└── globals.css                 # Theme + track changes CSS
+
+components/
+├── editor/academic-editor.tsx  # Main TipTap editor
+├── chat/chat-interface.tsx     # AI chat + model selector
+├── plagiarism/plagiarism-panel.tsx
+├── writing-analysis/analysis-panel.tsx
+└── collaboration/
+    ├── comments-sidebar.tsx
+    ├── version-history-panel.tsx
+    ├── share-dialog.tsx
+    ├── track-changes-toolbar.tsx
+    └── track-changes-panel.tsx
+
+lib/
+├── firebase/                   # Auth, Firestore, schema
+├── hooks/                      # 10+ custom hooks
+│   ├── use-document.ts
+│   ├── use-plagiarism.ts
+│   ├── use-comments.ts
+│   ├── use-versions.ts
+│   ├── use-sharing.ts
+│   └── use-track-changes.ts
+├── research/                   # 4 database clients
+├── citations/                  # CSL formatter, import/export
+├── plagiarism/                 # Fingerprint, similarity, detector
+├── collaboration/              # Comments, versions, sharing, track-changes
+├── writing-analysis/           # Analyzers
+├── ai-writing/                 # Action types, prompts
+├── ai-detection/               # GPTZero-style detection
+└── export/                     # DOCX, enhanced PDF
+```
+
+---
+
+## Development Standards
+
+### TypeScript
 ```typescript
-// Always use strict types
+// Always strict types - NO 'any'
 interface ComponentProps {
-  title: string;
+  documentId: string;
   onSave: (content: string) => Promise<void>;
 }
 
-// No 'any' types
-// ❌ const data: any = ...
-// ✅ const data: Document = ...
-
-// Use interfaces for props, types for data
-interface ButtonProps { ... }
-type Document = { ... }
+// Interfaces for props, types for data
+interface EditorProps { }
+type Document = { }
 ```
 
-### File Organization
+### File Naming
 ```
-components/
-  ├── layout/          # Layout components
-  ├── editor/          # TipTap editor
-  ├── chat/            # AI chat interface
-  ├── auth/            # Authentication
-  ├── history/         # Document list
-  └── ui/              # shadcn/ui components
-
-lib/
-  ├── firebase/        # Firebase client & admin
-  ├── hooks/           # Custom React hooks
-  ├── export/          # DOCX/PDF export (pending)
-  ├── pubmed/          # PubMed API client
-  └── utils/           # Utilities
-
-app/
-  ├── api/chat/        # AI chat endpoint
-  ├── page.tsx         # Main page
-  └── layout.tsx       # Root layout
+Components:  kebab-case.tsx     (share-dialog.tsx)
+Hooks:       use-kebab-case.ts  (use-sharing.ts)
+Types:       types.ts           (lib/plagiarism/types.ts)
 ```
 
-### Naming Conventions
-- **Files:** kebab-case.tsx (e.g., `three-panel-layout.tsx`)
-- **Components:** PascalCase (e.g., `ThreePanelLayout`)
-- **Hooks:** use prefix (e.g., `useDocument`)
-- **Types:** PascalCase (e.g., `DocumentSchema`)
-
----
-
-## ✍️ Academic Writing Style
-
-### Target: Eric Topol-inspired Medical Writing
-
-**Characteristics:**
-- Conversational yet authoritative
-- Data-driven with specific numbers
-- Balanced with nuance
-- Accessible without being simplistic
-
-**Example:**
-```
-❌ Marketing speak:
-"Revolutionary AI breakthrough transforms medical diagnosis!"
-
-✅ Academic style:
-"Recent advances in deep learning have shown promise in medical
-image classification. A 2024 study (Chen et al.) reported 94%
-diagnostic accuracy on chest X-rays, though validation across
-diverse populations remains necessary."
-```
-
-### Citation Style
-- **In-text:** Author-year format (Smith et al., 2023)
-- **Reference list:** Vancouver style
-- **Natural integration:** "Recent work by Zhang and colleagues (2024)..."
-
-### Writing Guidelines
-```
-✅ DO:
-- Use active voice: "The study demonstrated..."
-- Be precise: "increased by 23%"
-- Acknowledge limitations
-- Cite specific data points
-- Use natural transitions
-
-❌ AVOID:
-- Marketing language: "game-changing," "revolutionary"
-- Absolute claims: "proves," "always"
-- Passive voice overuse: "It was found that..."
-- Unexplained jargon
-```
-
----
-
-## 🔥 Firebase Integration
-
-### Authentication
+### Import Order
 ```typescript
-// Client-side auth hook
+// 1. React/Next
+import { useState, useEffect } from 'react';
+
+// 2. External
+import { Editor } from '@tiptap/react';
+
+// 3. Internal lib
 import { useAuth } from '@/lib/firebase/auth';
+import { usePlagiarism } from '@/lib/hooks/use-plagiarism';
 
-function Component() {
-  const { user, loading, signIn, signOut } = useAuth();
-
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <button onClick={signIn}>Sign In</button>;
-
-  return <div>Welcome {user.displayName}</div>;
-}
-```
-
-### Document Operations
-```typescript
-// CRUD operations
-import {
-  createDocument,
-  getDocument,
-  updateDocument,
-  deleteDocument,
-  getUserDocuments
-} from '@/lib/firebase/documents';
-
-// Create
-const doc = await createDocument(userId, {
-  title: 'New Document',
-  content: '',
-  wordCount: 0
-});
-
-// Read
-const doc = await getDocument(docId);
-
-// Update
-await updateDocument(docId, {
-  content: newContent,
-  wordCount: count,
-  updatedAt: new Date()
-});
-
-// List
-const docs = await getUserDocuments(userId);
-```
-
-### Auto-save Pattern
-```typescript
-// Used in useDocument hook
-import { debounce } from 'lodash';
-
-const saveDocument = debounce(async (content: string) => {
-  await updateDocument(documentId, {
-    content,
-    wordCount: countWords(content),
-    updatedAt: new Date()
-  });
-}, 30000); // 30 seconds
-```
-
----
-
-## 🤖 AI Chat Integration
-
-### Chat Endpoint
-```typescript
-// Location: app/api/chat/route.ts
-// Supports 4 models with streaming responses
-
-POST /api/chat
-Content-Type: application/json
-
-{
-  "messages": [
-    { "role": "user", "content": "Search PubMed for CRISPR" }
-  ],
-  "model": "claude-3-5-sonnet-20241022"
-}
-
-Response: StreamingTextResponse
-```
-
-### PubMed Search Tool
-```typescript
-// Available in AI chat
-{
-  name: 'search_pubmed',
-  description: 'Search medical literature',
-  parameters: {
-    query: string,
-    maxResults?: number,
-    yearFrom?: number,
-    yearTo?: number
-  }
-}
-
-// Returns:
-{
-  articles: [{
-    pmid: string,
-    title: string,
-    authors: string[],
-    journal: string,
-    year: number,
-    abstract: string,
-    doi?: string
-  }]
-}
-```
-
----
-
-## 🎨 UI/UX Guidelines
-
-### Theme Colors
-```css
-/* Academic palette */
---academic-purple: hsl(270, 50%, 40%)
---scholarly-gold: hsl(45, 80%, 60%)
---warm-gray: hsl(30, 10%, 50%)
-
-/* Supports dark mode */
-.dark {
-  --background: hsl(240, 10%, 10%);
-  --foreground: hsl(0, 0%, 95%);
-}
-```
-
-### Component Patterns
-```typescript
-// Use shadcn/ui as base
+// 4. Components
 import { Button } from '@/components/ui/button';
 
-// Academic theme overrides in globals.css
-<Button variant="academic">Save</Button>
-
-// Resizable panels for layout
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+// 5. Types
+import type { Document } from '@/lib/firebase/schema';
 ```
-
-### Accessibility
-- Use semantic HTML
-- Include ARIA labels
-- Support keyboard navigation
-- Maintain focus states
-- Test with screen readers
 
 ---
 
-## 🧪 Testing & Debugging
+## Firebase Schema
 
-### Before Committing
-```bash
-# Type check
-npx tsc --noEmit
+```
+/users/{userId}
+  - displayName, email, photoURL, createdAt
 
-# Build check
-npm run build
+/documents/{docId}
+  - title, content, wordCount, userId, disciplineId
+  - createdAt, updatedAt
 
-# Start dev server
-npm run dev
+/documents/{docId}/comments/{commentId}
+  - type: 'comment' | 'suggestion' | 'question'
+  - content, selectedText, authorId, resolved, replies[]
+
+/documents/{docId}/versions/{versionId}
+  - type: 'auto' | 'manual' | 'restore-backup'
+  - content, wordCount, label, createdBy, createdAt
+
+/documents/{docId}/shares/{shareId}
+  - type: 'link' | 'email'
+  - permission: 'view' | 'comment' | 'edit'
+  - token, email, password, expiresAt
+
+/documents/{docId}/changes/{changeId}
+  - type: 'insertion' | 'deletion'
+  - content, position, authorId, status, createdAt
 ```
 
-### Manual Testing Checklist
-```
-[ ] Firebase auth works (sign in/out)
-[ ] Documents save automatically
-[ ] Document list shows all docs
-[ ] Editor preserves formatting
-[ ] AI chat responds correctly
-[ ] PubMed search returns results
-[ ] No console errors
-[ ] Dark mode works
-```
+---
 
-### Common Issues
+## Common Tasks
 
-**Firebase not connecting:**
-```bash
-# Check .env.local has all variables
-NEXT_PUBLIC_FIREBASE_API_KEY=...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
-# etc.
-
-# Restart dev server
-npm run dev
-```
-
-**Auto-save not working:**
+### Using Hooks
 ```typescript
-// Check useDocument hook
-const { document, saveDocument, loading } = useDocument(docId);
+// Plagiarism detection
+import { usePlagiarism } from '@/lib/hooks/use-plagiarism';
+const { result, checkPlagiarism, isChecking } = usePlagiarism();
+await checkPlagiarism(content);
 
-// Verify user is authenticated
-const { user } = useAuth();
-if (!user) return;
+// Comments
+import { useComments } from '@/lib/hooks/use-comments';
+const { comments, addComment, resolveComment } = useComments(docId);
 
-// Check Firestore console for updates
+// Version history
+import { useVersions } from '@/lib/hooks/use-versions';
+const { versions, createSnapshot, restoreVersion } = useVersions(docId);
+
+// Sharing
+import { useSharing } from '@/lib/hooks/use-sharing';
+const { shareLink, createShareLink, copyToClipboard } = useSharing(docId);
 ```
 
-**Type errors:**
-```bash
-# Clear cache and rebuild
-rm -rf .next
-npm run build
-```
-
----
-
-## 📋 Current Priorities
-
-### ✅ Completed
-- TipTap editor with tables
-- Firebase auth & Firestore
-- Auto-save (30s interval)
-- Document CRUD
-- AI chat (4 models)
-- PubMed integration
-- Three-panel layout
-
-### ⏳ In Progress
-- DOCX export implementation
-- PDF export implementation
-
-### 📌 Upcoming
-- Export button UI
-- Citation manager
-- Email/password auth
-- Collaborative editing
-- Template system
-
----
-
-## 🔧 Common Tasks
-
-### Adding a New Component
+### Adding a Component
 ```typescript
-// Location: components/{category}/{name}.tsx
+// components/feature/my-component.tsx
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface MyComponentProps {
-  title: string;
+  documentId: string;
   onAction: () => void;
 }
 
-export function MyComponent({ title, onAction }: MyComponentProps) {
-  const [state, setState] = useState();
+export function MyComponent({ documentId, onAction }: MyComponentProps) {
+  const [loading, setLoading] = useState(false);
 
   return (
     <div>
-      {/* Implementation */}
+      <Button onClick={onAction} disabled={loading}>
+        Action
+      </Button>
     </div>
   );
 }
@@ -413,119 +259,125 @@ export function MyComponent({ title, onAction }: MyComponentProps) {
 
 ### Adding a Firebase Operation
 ```typescript
-// Location: lib/firebase/{operation}.ts
+// lib/firebase/my-operation.ts
 import { db } from './client';
-import { collection, doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
-export async function myOperation(id: string) {
+export async function myOperation(docId: string, data: MyData) {
   try {
-    const docRef = doc(db, 'collection', id);
-    const docSnap = await getDoc(docRef);
-
-    if (!docSnap.exists()) {
-      throw new Error('Not found');
-    }
-
-    return docSnap.data();
+    const docRef = doc(db, 'documents', docId);
+    await updateDoc(docRef, data);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Operation failed:', error);
     throw error;
   }
 }
 ```
 
-### Adding a Custom Hook
-```typescript
-// Location: lib/hooks/use-{name}.ts
-import { useState, useEffect } from 'react';
+---
 
-export function useMyHook(param: string) {
-  const [state, setState] = useState();
+## Testing
 
-  useEffect(() => {
-    // Effect logic
-  }, [param]);
+### Commands
+```bash
+npm run dev          # Start on localhost:2550
+npx tsc --noEmit     # Type check (must pass)
+npm run build        # Production build
+```
 
-  return { state, setState };
-}
+### Checklist
+```
+[ ] Firebase auth works
+[ ] Auto-save triggers (30 seconds)
+[ ] AI chat responds
+[ ] Database searches return results
+[ ] Plagiarism check runs
+[ ] Comments work (add/reply/resolve)
+[ ] Version restore works
+[ ] Share link generates
+[ ] Track changes accept/reject
+[ ] Export downloads files
 ```
 
 ---
 
-## 🚨 Critical Rules
+## Critical Rules
 
 ### Security
-- **NEVER commit .env.local** - Contains API keys
-- **NEVER hardcode secrets** - Use environment variables
-- Validate all user input before Firestore writes
+- **NEVER commit `.env.local`**
+- **NEVER hardcode secrets**
+- Validate user owns document before operations
 - Use Firebase security rules
 
 ### Performance
-- Debounce expensive operations (auto-save)
-- Use React.memo sparingly
-- Optimize Firestore queries
+- Debounce auto-save (30 sec)
+- Debounce analysis (1 sec)
+- Use Firestore onSnapshot for real-time
 - Lazy load heavy components
 
 ### Code Quality
-- No `any` types in TypeScript
-- Write self-documenting code
+- No `any` types ever
+- Error handling for all async ops
+- Match existing patterns
 - Comments explain WHY not WHAT
-- Keep functions focused
-- Follow existing patterns
 
 ---
 
-## 🤝 Working with Other AI Assistants
+## Academic Writing Style
 
-This project supports multiple AI tools:
-- **Claude Code** - Primary development AI
-- **Gemini** (you!) - Development, research
-- **Codex/Copilot** - Code completion
-- **ChatGPT** - Research, writing
+### Target: Eric Topol-inspired
+```
+❌ Marketing:
+"Revolutionary AI breakthrough transforms diagnosis!"
 
-**See also:**
-- `CLAUDE.md` for Claude-specific instructions
-- `AGENTS.md` for universal AI guidelines
-
----
-
-## 📞 Quick Reference
-
-**Project:** Academic Writing Platform
-**Location:** `/Users/shaileshsingh/cursor for academic writing`
-**Port:** 2550
-**Dev Server:** `npm run dev`
-**Main URL:** http://localhost:2550
-
-**Key Commands:**
-```bash
-npm run dev          # Start dev server
-npm run build        # Production build
-npx tsc --noEmit     # Type check only
+✅ Academic:
+"Recent advances in deep learning have shown promise in
+medical image classification. A 2024 study (Chen et al.)
+reported 94% diagnostic accuracy, though validation across
+diverse populations remains necessary."
 ```
 
-**Environment Files:**
-- `.env.local` - Local development (DO NOT COMMIT)
-- `.env.example` - Template file
-
-**Key Documentation:**
-- `README.md` - Project overview
-- `HANDOVER.md` - Implementation status
-- `FIREBASE_SETUP.md` - Firebase guide
+### Guidelines
+- Active voice: "The study demonstrated..."
+- Precise data: "increased by 23% (p<0.001)"
+- Natural citations: "Recent work by Zhang and colleagues (2024)..."
+- Acknowledge limitations: "though further validation is needed"
 
 ---
 
-## 💡 Pro Tips
+## Working with Other AIs
 
-1. **Always read before writing** - Check existing code first
-2. **Follow the handover doc** - It has the complete status
-3. **Test with Firebase** - Sign in and save to verify
-4. **Use TypeScript strictly** - It catches bugs early
-5. **Keep it simple** - Don't over-engineer
-6. **Update docs** - Change HANDOVER.md if significant
+| AI | Best For |
+|----|----------|
+| Claude Code | Complex features, architecture |
+| **Gemini** (you) | Research, alternatives, quick tasks |
+| Codex/Copilot | Code completion |
+| ChatGPT | Research, content |
+
+**Key docs:** `HANDOVER.md` (50 features), `AGENTS.md` (universal guide)
+
+---
+
+## Quick Reference
+
+**Project:** Academic Writing Platform
+**Port:** 2550
+**URL:** http://localhost:2550
+
+```bash
+npm run dev          # Start server
+npx tsc --noEmit     # Type check
+npm run build        # Build
+```
+
+**Critical files:**
+- `HANDOVER.md` - All 50 features
+- `.env.local` - API keys (never commit)
+- `lib/firebase/schema.ts` - Types
 
 ---
 
 **Last Updated:** January 2, 2026
-**Optimized for:** Google Gemini models
-**Maintained by:** Dr. Shailesh
+**Status:** All 6 Phases Complete
+**Features:** 50 implemented
+**Optimized for:** Google Gemini

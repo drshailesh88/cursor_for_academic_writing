@@ -1,0 +1,195 @@
+# Academic Writing Platform - Specification
+
+## Feature: Multi-Discipline Research Integration
+
+### Overview
+Transform the platform from a PubMed-only tool to a comprehensive multi-database research system supporting 15+ scientific disciplines with 8+ database integrations.
+
+---
+
+## F001: Unified Database Search
+
+### Description
+Enable searching across multiple academic databases (PubMed, arXiv, Semantic Scholar, OpenAlex, bioRxiv, CrossRef, NASA ADS, ChemRxiv) with automatic discipline-based database selection and result deduplication.
+
+### User Stories
+- As a physicist, I want to search arXiv and Semantic Scholar simultaneously so I can find preprints and published papers
+- As a biologist, I want PubMed and bioRxiv results ranked together so I can see the latest research
+- As a computer scientist, I want arXiv CS and ACM results combined so I can find both preprints and proceedings
+
+### Acceptance Criteria
+- [ ] Search returns results from at least 3 databases per query
+- [ ] Results are deduplicated by DOI (same paper from multiple sources merged)
+- [ ] Discipline selection auto-suggests relevant databases
+- [ ] Response time < 3 seconds for combined search
+- [ ] Each result shows source database badge
+- [ ] Open access papers are clearly marked
+- [ ] Citation counts shown when available
+
+### Technical Requirements
+```typescript
+interface UnifiedSearchResult {
+  id: string;
+  source: 'pubmed' | 'arxiv' | 'semantic-scholar' | 'openalex' | 'biorxiv' | 'crossref';
+  title: string;
+  authors: Author[];
+  abstract: string;
+  year: number;
+  doi?: string;
+  url: string;
+  openAccess: boolean;
+  citationCount?: number;
+  relevanceScore: number;
+}
+```
+
+---
+
+## F002: Discipline-Aware AI Writing Assistant
+
+### Description
+Provide AI writing assistance that adapts to the user's scientific discipline, using appropriate terminology, conventions, citation styles, and structural patterns.
+
+### User Stories
+- As a chemist, I want the AI to use IUPAC nomenclature so my compound names are correct
+- As a physicist, I want equations numbered and referenced properly (Eq. 1, Eq. 2)
+- As a clinician, I want CONSORT-compliant language for my trial reports
+- As a computer scientist, I want algorithm pseudocode formatted correctly
+
+### Acceptance Criteria
+- [ ] 15 discipline-specific system prompts implemented
+- [ ] Prompts include discipline conventions, terminology, structure patterns
+- [ ] Users can switch disciplines and see immediate prompt adaptation
+- [ ] AI suggestions follow discipline-specific style guides
+- [ ] Citation format matches discipline default (Vancouver for medicine, APA for psychology, etc.)
+
+### Technical Requirements
+See F002-PROMPTS specification below.
+
+---
+
+## F003: PDF Upload and Analysis
+
+### Description
+Allow users to upload PDF papers and chat with their content, extracting sections, figures, and citations for use in their writing.
+
+### User Stories
+- As a researcher, I want to upload a PDF and ask questions about its methodology
+- As a student, I want the AI to summarize key findings from an uploaded paper
+- As a writer, I want to extract and cite specific claims from uploaded sources
+
+### Acceptance Criteria
+- [ ] PDF upload accepts files up to 50MB
+- [ ] Text extraction accuracy > 95% for standard academic PDFs
+- [ ] Section detection (Abstract, Introduction, Methods, Results, Discussion)
+- [ ] Chat responses cite specific pages and sections
+- [ ] Users can insert cited content directly into their document
+- [ ] Support for at least 10 PDFs per user in free tier
+
+---
+
+## F004: Multi-Style Citation System
+
+### Description
+Support 25+ citation styles with automatic formatting for in-text citations and reference lists.
+
+### User Stories
+- As a medical researcher, I want Vancouver numbered citations [1], [2]
+- As a psychologist, I want APA 7th edition (Author, Year) format
+- As a physicist, I want Physical Review style with numbered references
+- As a humanities scholar, I want Chicago footnote style
+
+### Acceptance Criteria
+- [ ] 25+ citation styles implemented (APA, MLA, Chicago, Vancouver, IEEE, ACS, Nature, etc.)
+- [ ] In-text citations automatically formatted
+- [ ] Reference list generated in selected style
+- [ ] Style switching updates all citations instantly
+- [ ] Export includes properly formatted bibliography
+
+---
+
+## F005: AI Writing Autocomplete
+
+### Description
+Provide inline writing suggestions as users type, offering discipline-appropriate completions, citations, and terminology.
+
+### User Stories
+- As a writer, I want sentence completion suggestions when I pause typing
+- As a researcher, I want the AI to suggest relevant citations as I write
+- As a student, I want help with academic phrasing and transitions
+
+### Acceptance Criteria
+- [ ] Suggestions appear after 1.5 seconds of inactivity
+- [ ] Tab key accepts suggestion
+- [ ] Escape key dismisses suggestion
+- [ ] Suggestions are discipline-aware
+- [ ] Can be disabled in settings
+
+---
+
+## F006: Document Templates by Discipline
+
+### Description
+Provide 50+ document templates organized by discipline, each with appropriate structure, headings, and placeholder guidance.
+
+### User Stories
+- As a physicist, I want a Physical Review Letter template with proper section structure
+- As a clinician, I want a CONSORT-compliant RCT report template
+- As a CS researcher, I want a NeurIPS-style ML paper template
+
+### Acceptance Criteria
+- [ ] 50+ templates across 15 disciplines
+- [ ] Each template includes structural guidance
+- [ ] Templates match target journal/venue requirements
+- [ ] Users can save custom templates
+
+---
+
+## F002-PROMPTS: Discipline-Specific System Prompts
+
+### Overview
+This specification defines the enhanced system prompts for each scientific discipline, inspired by K-Dense AI's scientific skills framework.
+
+### Prompt Architecture
+
+```typescript
+interface DisciplinePrompt {
+  id: DisciplineId;
+  name: string;
+  systemPrompt: string;
+  writingConventions: Convention[];
+  terminologyGuide: string[];
+  avoidPatterns: string[];
+  exampleTransformations: Example[];
+  citationGuidance: string;
+  structurePatterns: StructurePattern[];
+}
+```
+
+### Discipline Prompts
+
+See `/lib/prompts/disciplines/` for full implementations.
+
+---
+
+## Dependencies
+
+| Feature | Depends On |
+|---------|-----------|
+| F002 | F001 (needs database context) |
+| F003 | F002 (needs discipline prompts) |
+| F004 | None |
+| F005 | F002 (needs discipline context) |
+| F006 | F002 (needs discipline templates) |
+
+---
+
+## Priority Order
+
+1. **P0:** F001 (Multi-database), F002 (Discipline prompts)
+2. **P1:** F003 (PDF analysis), F004 (Citations)
+3. **P2:** F005 (Autocomplete), F006 (Templates)
+
+---
+
+**Last Updated:** January 2, 2026

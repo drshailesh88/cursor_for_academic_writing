@@ -3,6 +3,14 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
+import { getSystemPrompt, type DisciplineId } from '@/lib/prompts/disciplines';
+import {
+  unifiedSearch,
+  searchDatabase,
+  formatResultsForAI,
+  generateCitation,
+  type DatabaseSource,
+} from '@/lib/research';
 
 // Create OpenAI provider
 const openai = createOpenAI({
@@ -41,89 +49,227 @@ const MODEL_MAP = {
   'openrouter-toppy-7b': openrouter('undi95/toppy-m-7b:free'),
 };
 
-const ACADEMIC_WRITING_SYSTEM_PROMPT = `You are an expert academic writing assistant specializing in medical and scientific literature.
-
-CORE PRINCIPLES:
-
-1. AVOID Common AI Writing Patterns:
-   - ❌ "plays a significant role in shaping"
-   - ❌ "it is important to note that"
-   - ❌ "in conclusion, it can be said"
-   - ❌ "delve into the intricacies"
-   - ❌ Excessive use of "moreover," "furthermore," "additionally"
-   - ❌ Overly formal or pompous language
-   - ❌ Generic statements without specifics
-
-2. Write Clear, Professional Academic Prose:
-   - ✅ Be direct and precise
-   - ✅ Use active voice when appropriate
-   - ✅ Support claims with evidence
-   - ✅ Vary sentence structure naturally
-   - ✅ Use field-appropriate terminology
-   - ✅ Be objective and evidence-based
-
-3. Citation Format (CRITICAL):
-   - Use author-year parenthetical citations: (Author et al., Year)
-   - Examples: (Mbachu et al., 2020), (Tiwari et al., 2023)
-   - Multiple citations: (Smith et al., 2020; Jones & Brown, 2021)
-   - Integrate citations naturally into sentences
-   - Place citations at the end of relevant statements
-   - This format allows easy integration with Paperpile, Zotero, and other citation managers
-
-4. Style Flexibility:
-   - Adapt tone to the target audience (undergraduate, graduate, professional)
-   - Match the formality level requested by the user
-   - Can range from conversational to highly formal
-   - Always maintain academic integrity and precision
-
-Your capabilities:
-- Search PubMed for relevant research articles
-- Generate well-structured tables of contents
-- Write academic content in various styles (formal, conversational, technical)
-- Use author-year parenthetical citations for easy citation manager integration
-- Provide evidence-based analysis and synthesis`;
+// Default discipline for backwards compatibility
+const DEFAULT_DISCIPLINE: DisciplineId = 'life-sciences';
 
 export async function POST(req: Request) {
   try {
-    const { messages, model = 'anthropic', documentId } = await req.json();
+    const {
+      messages,
+      model = 'anthropic',
+      documentId,
+      discipline = DEFAULT_DISCIPLINE,
+    } = await req.json();
 
     const selectedModel = MODEL_MAP[model as keyof typeof MODEL_MAP] || MODEL_MAP.anthropic;
+
+    // Get discipline-specific system prompt
+    const systemPrompt = getSystemPrompt(discipline as DisciplineId);
 
     const result = await streamText({
       model: selectedModel,
       messages,
-      system: ACADEMIC_WRITING_SYSTEM_PROMPT,
+      system: systemPrompt,
       tools: {
+        // Unified search across all databases
+        searchResearch: tool({
+          description: `Search academic databases for research papers. Automatically searches the most relevant databases for the current discipline (${discipline}). Returns papers with citations, abstracts, and metadata.`,
+          parameters: z.object({
+            query: z.string().describe('Search query (e.g., "machine learning protein folding")'),
+            maxResults: z.number().default(15).describe('Maximum number of results'),
+            yearStart: z.number().optional().describe('Filter: minimum publication year'),
+            yearEnd: z.number().optional().describe('Filter: maximum publication year'),
+            openAccessOnly: z.boolean().default(false).describe('Only return open access papers'),
+          }),
+          execute: async ({ query, maxResults, yearStart, yearEnd, openAccessOnly }) => {
+            try {
+              const response = await unifiedSearch({
+                text: query,
+                discipline: discipline as DisciplineId,
+                limit: maxResults,
+                yearRange: yearStart || yearEnd ? { start: yearStart, end: yearEnd } : undefined,
+                openAccessOnly,
+                deduplicate: true,
+              });
+
+              const citations = response.results.map((r) => generateCitation(r));
+              const formatted = formatResultsForAI(response.results);
+
+              return {
+                success: true,
+                count: response.results.length,
+                totalFound: response.total,
+                sources: response.bySource,
+                duplicatesRemoved: response.deduplicated,
+                searchTimeMs: response.executionTimeMs,
+                citations: citations.join(', '),
+                results: formatted,
+                message: `Found ${response.results.length} papers across ${Object.keys(response.bySource).join(', ')}. Use these citations: ${citations.slice(0, 5).join(', ')}${citations.length > 5 ? '...' : ''}`,
+              };
+            } catch (error) {
+              return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Search failed',
+                message: 'Research search failed. Please try again.',
+              };
+            }
+          },
+        }),
+
+        // PubMed-specific search (for medical/life sciences)
         searchPubMed: tool({
-          description: 'Search PubMed for academic articles on a given topic. Returns articles with author-year citations.',
+          description: 'Search PubMed specifically for biomedical and life sciences literature. Best for clinical medicine, pharmacology, and biology.',
           parameters: z.object({
             query: z.string().describe('PubMed search query (e.g., "SGLT2 inhibitors heart failure")'),
             maxResults: z.number().default(15).describe('Maximum number of results'),
-            years: z.object({
-              start: z.number().optional(),
-              end: z.number().optional(),
-            }).optional().describe('Filter by publication year range'),
+            yearStart: z.number().optional().describe('Minimum publication year'),
+            yearEnd: z.number().optional().describe('Maximum publication year'),
           }),
-          execute: async ({ query, maxResults, years }) => {
-            const { searchPubMed, articleToCitation } = await import('@/lib/pubmed/client');
+          execute: async ({ query, maxResults, yearStart, yearEnd }) => {
+            try {
+              const response = await searchDatabase('pubmed', {
+                text: query,
+                limit: maxResults,
+                yearRange: yearStart || yearEnd ? { start: yearStart, end: yearEnd } : undefined,
+              });
 
-            const articles = await searchPubMed({
-              query,
-              maxResults,
-              dateRange: years ? { startYear: years.start || 2015, endYear: years.end || new Date().getFullYear() } : undefined,
-            });
+              const citations = response.results.map((r) => generateCitation(r));
 
-            // Add citation format to each article
-            const articlesWithCitations = articles.map(article => ({
-              ...article,
-              citation: articleToCitation(article),
-            }));
+              return {
+                success: true,
+                count: response.results.length,
+                source: 'PubMed',
+                citations: citations.join(', '),
+                results: formatResultsForAI(response.results),
+                message: `Found ${response.results.length} PubMed articles. Citations: ${citations.slice(0, 5).join(', ')}`,
+              };
+            } catch (error) {
+              return {
+                success: false,
+                error: error instanceof Error ? error.message : 'PubMed search failed',
+              };
+            }
+          },
+        }),
 
-            return {
-              articles: articlesWithCitations,
-              count: articles.length,
-              message: `Found ${articles.length} articles. Use these citations in your writing: ${articlesWithCitations.map(a => a.citation).join(', ')}`,
-            };
+        // arXiv-specific search (for physics, CS, math)
+        searchArxiv: tool({
+          description: 'Search arXiv for preprints in physics, mathematics, computer science, quantitative biology, astronomy, and economics.',
+          parameters: z.object({
+            query: z.string().describe('arXiv search query'),
+            category: z.enum([
+              'physics', 'hep-ph', 'hep-th', 'cond-mat', 'quant-ph', 'astro-ph',
+              'math', 'cs', 'cs.AI', 'cs.LG', 'cs.CV', 'cs.CL',
+              'q-bio', 'stat', 'stat.ML', 'econ', 'eess'
+            ]).optional().describe('arXiv category to filter'),
+            maxResults: z.number().default(10).describe('Maximum number of results'),
+          }),
+          execute: async ({ query, category, maxResults }) => {
+            try {
+              const response = await searchDatabase('arxiv', {
+                text: query,
+                categories: category ? [category] : undefined,
+                limit: maxResults,
+              });
+
+              const citations = response.results.map((r) => generateCitation(r));
+
+              return {
+                success: true,
+                count: response.results.length,
+                source: 'arXiv',
+                citations: citations.join(', '),
+                results: formatResultsForAI(response.results),
+                message: `Found ${response.results.length} arXiv preprints. Citations: ${citations.slice(0, 5).join(', ')}`,
+              };
+            } catch (error) {
+              return {
+                success: false,
+                error: error instanceof Error ? error.message : 'arXiv search failed',
+              };
+            }
+          },
+        }),
+
+        // Semantic Scholar search (all disciplines, with citations)
+        searchSemanticScholar: tool({
+          description: 'Search Semantic Scholar for papers across all disciplines. Includes citation counts and can find related papers.',
+          parameters: z.object({
+            query: z.string().describe('Search query'),
+            maxResults: z.number().default(10).describe('Maximum number of results'),
+            yearStart: z.number().optional().describe('Minimum publication year'),
+            fieldsOfStudy: z.array(z.string()).optional().describe('Filter by fields (e.g., ["Computer Science", "Medicine"])'),
+          }),
+          execute: async ({ query, maxResults, yearStart, fieldsOfStudy }) => {
+            try {
+              const response = await searchDatabase('semantic-scholar', {
+                text: query,
+                limit: maxResults,
+                yearRange: yearStart ? { start: yearStart } : undefined,
+                categories: fieldsOfStudy,
+              });
+
+              const citations = response.results.map((r) => generateCitation(r));
+
+              // Sort by citation count for this source
+              const sorted = response.results.sort((a, b) =>
+                (b.citationCount || 0) - (a.citationCount || 0)
+              );
+
+              return {
+                success: true,
+                count: sorted.length,
+                source: 'Semantic Scholar',
+                citations: citations.join(', '),
+                results: formatResultsForAI(sorted),
+                topCited: sorted.slice(0, 3).map((r) => ({
+                  title: r.title,
+                  citations: r.citationCount,
+                  year: r.year,
+                })),
+                message: `Found ${sorted.length} papers. Most cited: ${sorted[0]?.title} (${sorted[0]?.citationCount} citations)`,
+              };
+            } catch (error) {
+              return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Semantic Scholar search failed',
+              };
+            }
+          },
+        }),
+
+        // OpenAlex search (comprehensive, 250M+ works)
+        searchOpenAlex: tool({
+          description: 'Search OpenAlex, a comprehensive open catalog of 250M+ scholarly works across all disciplines.',
+          parameters: z.object({
+            query: z.string().describe('Search query'),
+            maxResults: z.number().default(10).describe('Maximum number of results'),
+            openAccessOnly: z.boolean().default(false).describe('Only return open access works'),
+          }),
+          execute: async ({ query, maxResults, openAccessOnly }) => {
+            try {
+              const response = await searchDatabase('openalex', {
+                text: query,
+                limit: maxResults,
+                openAccessOnly,
+              });
+
+              const citations = response.results.map((r) => generateCitation(r));
+
+              return {
+                success: true,
+                count: response.results.length,
+                source: 'OpenAlex',
+                citations: citations.join(', '),
+                results: formatResultsForAI(response.results),
+                message: `Found ${response.results.length} works in OpenAlex. Citations: ${citations.slice(0, 5).join(', ')}`,
+              };
+            } catch (error) {
+              return {
+                success: false,
+                error: error instanceof Error ? error.message : 'OpenAlex search failed',
+              };
+            }
           },
         }),
       },

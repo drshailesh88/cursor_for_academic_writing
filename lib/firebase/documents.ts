@@ -17,7 +17,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './client';
-import { COLLECTIONS, Document, DocumentMetadata, createNewDocument } from './schema';
+import { COLLECTIONS, Document, DocumentMetadata, DisciplineId, createNewDocument } from './schema';
 
 // Create a new document
 export async function createDocument(
@@ -134,6 +134,7 @@ export async function getUserDocuments(
         updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
         wordCount: data.wordCount || 0,
         folder: data.folder,
+        discipline: data.discipline,
       });
     });
 
@@ -165,6 +166,23 @@ export async function renameDocument(
     });
   } catch (error) {
     console.error('Error renaming document:', error);
+    throw error;
+  }
+}
+
+// Update document discipline
+export async function updateDocumentDiscipline(
+  documentId: string,
+  discipline: DisciplineId
+): Promise<void> {
+  try {
+    const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
+    await updateDoc(docRef, {
+      discipline,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error updating document discipline:', error);
     throw error;
   }
 }

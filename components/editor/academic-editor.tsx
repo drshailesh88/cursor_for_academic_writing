@@ -1,25 +1,75 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Link } from '@tiptap/extension-link';
 import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import { useEffect } from 'react';
+import CharacterCount from '@tiptap/extension-character-count';
+import Placeholder from '@tiptap/extension-placeholder';
+import { useEffect, useCallback, useState, useRef } from 'react';
+import { BookOpen, List, ChevronDown, BarChart3, X, Shield, Clock, Save } from 'lucide-react';
+import { CitationDialog, useCitationDialog } from '@/components/citations/citation-dialog';
+import type { CitationStyleId } from '@/lib/citations/csl-formatter';
+import { useCitations } from '@/lib/hooks/use-citations';
+import { useWritingAnalysis } from '@/lib/hooks/use-writing-analysis';
+import { usePlagiarism } from '@/lib/hooks/use-plagiarism';
+import { useVersions } from '@/lib/hooks/use-versions';
+import { useTrackChanges } from '@/lib/hooks/use-track-changes';
+import { AnalysisPanel } from '@/components/writing-analysis/analysis-panel';
+import { PlagiarismPanel } from '@/components/plagiarism/plagiarism-panel';
+import { AIWritingToolbar } from '@/components/ai-writing/ai-writing-toolbar';
+import { VersionHistoryPanel } from '@/components/collaboration/version-history-panel';
+import { VersionPreviewModal } from '@/components/collaboration/version-preview-modal';
+import { TrackChangesToolbar } from '@/components/collaboration/track-changes-toolbar';
+import { TrackChangesPanel } from '@/components/collaboration/track-changes-panel';
+import { TrackInsertion, TrackDeletion } from '@/lib/editor/track-changes-extensions';
+import type { Reference } from '@/lib/citations/types';
+import type { CitationOptions } from '@/components/citations/citation-dialog';
+import type { DocumentVersion } from '@/lib/collaboration/types';
 
 interface AcademicEditorProps {
   content?: string;
   onChange?: (content: string) => void;
+  onSave?: () => void;
   placeholder?: string;
+  onEditorReady?: (editor: Editor) => void;
+  documentId?: string;
+  userDocuments?: Array<{
+    id: string;
+    title: string;
+    content: string;
+    createdAt: number;
+  }>;
 }
 
 export function AcademicEditor({
   content = '',
   onChange,
-  placeholder = 'Start writing your academic paper...'
+  onSave,
+  placeholder = 'Start writing your academic paper...',
+  onEditorReady,
+  documentId,
+  userDocuments = [],
 }: AcademicEditorProps) {
+  // Citation dialog state
+  const { isOpen: citationDialogOpen, open: openCitationDialog, close: closeCitationDialog } = useCitationDialog();
+
+  // Handle Cmd+S / Ctrl+S for manual save
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+      event.preventDefault();
+      onSave?.();
+    }
+  }, [onSave]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -54,6 +104,13 @@ export function AcademicEditor({
           class: 'border border-border px-4 py-2 bg-muted font-semibold',
         },
       }),
+      CharacterCount,
+      Placeholder.configure({
+        placeholder,
+        emptyEditorClass: 'is-editor-empty',
+      }),
+      TrackInsertion,
+      TrackDeletion,
     ],
     content,
     editorProps: {
@@ -66,20 +123,170 @@ export function AcademicEditor({
     },
   });
 
+  // Notify parent when editor is ready
+  useEffect(() => {
+    if (editor) {
+      onEditorReady?.(editor);
+    }
+  }, [editor, onEditorReady]);
+
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
       editor.commands.setContent(content);
     }
   }, [content, editor]);
 
+  // Citations hook
+  const {
+    insertCitation,
+    citationCount,
+    uniqueReferenceCount,
+    insertBibliography,
+    citationStyle,
+    setCitationStyle,
+    availableStyles,
+  } = useCitations({ editor });
+
+  // Bibliography dropdown state
+  const [showBibDropdown, setShowBibDropdown] = useState(false);
+  const bibDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Writing analysis
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const {
+    analysis,
+    isAnalyzing,
+    overallScore,
+    refreshAnalysis,
+  } = useWritingAnalysis({ editor, enabled: showAnalysis });
+
+  // Plagiarism detection
+  const [showPlagiarism, setShowPlagiarism] = useState(false);
+  const {
+    result: plagiarismResult,
+    isChecking: isPlagiarismChecking,
+    checkPlagiarism,
+    excludeMatch,
+    includeMatch,
+    quickStats,
+  } = usePlagiarism({
+    documentId: documentId || 'temp-doc',
+    userDocuments,
+  });
+
+  // Version history
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState<DocumentVersion | null>(null);
+  const {
+    versions,
+    loading: versionsLoading,
+    stats: versionStats,
+    createManualVersion,
+    restoreVersion: restoreVersionFromHistory,
+    deleteVersion: deleteVersionFromHistory,
+    updateLabel: updateVersionLabel,
+    refreshVersions,
+  } = useVersions({
+    documentId,
+    currentContent: content,
+    currentWordCount: editor?.storage.characterCount?.words() || 0,
+    enabled: !!documentId,
+  });
+
+  // Track changes
+  const [showTrackChanges, setShowTrackChanges] = useState(false);
+  const {
+    trackingEnabled,
+    showChanges,
+    changes,
+    loading: trackChangesLoading,
+    pendingCount,
+    toggleTracking,
+    toggleShowChanges,
+    acceptChange,
+    rejectChange,
+    acceptAll,
+    rejectAll,
+  } = useTrackChanges({
+    documentId,
+    editor,
+    enabled: !!documentId,
+  });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (bibDropdownRef.current && !bibDropdownRef.current.contains(event.target as Node)) {
+        setShowBibDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle citation insertion
+  const handleCitationInsert = useCallback(
+    (reference: Reference, options: CitationOptions, formatted: string) => {
+      insertCitation(reference, options, formatted);
+      closeCitationDialog();
+    },
+    [insertCitation, closeCitationDialog]
+  );
+
+  // Handle version history actions
+  const handleSaveVersion = useCallback(async () => {
+    const label = prompt('Enter a label for this version (optional):');
+    const description = prompt('Enter a description for this version (optional):');
+    await createManualVersion(label || undefined, description || undefined);
+  }, [createManualVersion]);
+
+  const handleRestoreVersion = useCallback(
+    async (versionId: string) => {
+      const success = await restoreVersionFromHistory(versionId);
+      if (success) {
+        // Reload the page or refresh the document to show restored content
+        window.location.reload();
+      }
+    },
+    [restoreVersionFromHistory]
+  );
+
+  const handlePreviewVersion = useCallback((version: DocumentVersion) => {
+    setPreviewVersion(version);
+  }, []);
+
+  const handleClosePreview = useCallback(() => {
+    setPreviewVersion(null);
+  }, []);
+
   if (!editor) {
     return null;
   }
 
   return (
-    <div className="h-full overflow-y-auto scrollbar-thin">
+    <div className="h-full flex flex-col">
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 p-2 bg-background border-b border-border">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 md:gap-2 p-2 bg-background border-b border-border">
+        {/* Undo/Redo */}
+        <button
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          className="px-2 py-1 text-sm rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Undo (Cmd+Z)"
+        >
+          ↩
+        </button>
+        <button
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          className="px-2 py-1 text-sm rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Redo (Cmd+Shift+Z)"
+        >
+          ↪
+        </button>
+
+        <div className="w-px h-6 bg-border mx-1 hidden md:block" />
+
         {/* Headings */}
         <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -175,6 +382,74 @@ export function AcademicEditor({
 
         <div className="w-px h-6 bg-border mx-2" />
 
+        {/* Citation button */}
+        <button
+          onClick={() => openCitationDialog()}
+          className="px-3 py-1 text-sm rounded hover:bg-muted flex items-center gap-1"
+          title="Insert citation (Cmd+Shift+P)"
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Cite</span>
+          {citationCount > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-primary/20 text-primary">
+              {citationCount}
+            </span>
+          )}
+        </button>
+
+        {/* Bibliography dropdown */}
+        <div className="relative" ref={bibDropdownRef}>
+          <button
+            onClick={() => setShowBibDropdown(!showBibDropdown)}
+            className="px-3 py-1 text-sm rounded hover:bg-muted flex items-center gap-1"
+            title="Insert bibliography"
+            disabled={uniqueReferenceCount === 0}
+          >
+            <List className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Bibliography</span>
+            <ChevronDown className="h-3 w-3" />
+          </button>
+
+          {showBibDropdown && (
+            <div className="absolute top-full left-0 mt-1 w-56 bg-background border border-border rounded-lg shadow-lg z-20 py-1">
+              <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border">
+                Citation Style
+              </div>
+              {availableStyles.map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => {
+                    setCitationStyle(style.id);
+                    setShowBibDropdown(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center justify-between ${
+                    citationStyle === style.id ? 'bg-primary/10 text-primary' : ''
+                  }`}
+                >
+                  <span>{style.name}</span>
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {style.category.replace('-', ' ')}
+                  </span>
+                </button>
+              ))}
+              <div className="border-t border-border mt-1 pt-1">
+                <button
+                  onClick={() => {
+                    insertBibliography();
+                    setShowBibDropdown(false);
+                  }}
+                  disabled={uniqueReferenceCount === 0}
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted text-primary font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Insert Bibliography ({uniqueReferenceCount} refs)
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="w-px h-6 bg-border mx-2" />
+
         {/* Table controls */}
         <button
           onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
@@ -224,13 +499,214 @@ export function AcademicEditor({
           </>
         )}
 
-        <div className="ml-auto text-sm text-muted-foreground">
-          {editor.storage.characterCount?.words() || 0} words
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {editor.storage.characterCount?.words() || 0} words
+          </span>
+
+          {/* Analysis toggle button */}
+          <button
+            onClick={() => setShowAnalysis(!showAnalysis)}
+            className={`px-3 py-1 text-sm rounded flex items-center gap-1.5 transition-colors ${
+              showAnalysis
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+            title="Toggle writing analysis"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Analysis</span>
+            {showAnalysis && overallScore > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] rounded-full ${
+                overallScore >= 80 ? 'bg-green-500/20 text-green-200' :
+                overallScore >= 60 ? 'bg-yellow-500/20 text-yellow-200' :
+                'bg-red-500/20 text-red-200'
+              }`}>
+                {overallScore}
+              </span>
+            )}
+          </button>
+
+          {/* Plagiarism toggle button */}
+          <button
+            onClick={() => setShowPlagiarism(!showPlagiarism)}
+            className={`px-3 py-1 text-sm rounded flex items-center gap-1.5 transition-colors ${
+              showPlagiarism
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+            title="Toggle plagiarism check"
+          >
+            <Shield className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Originality</span>
+            {quickStats && quickStats.originalityScore > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] rounded-full ${
+                quickStats.originalityScore >= 80 ? 'bg-green-500/20 text-green-200' :
+                quickStats.originalityScore >= 60 ? 'bg-yellow-500/20 text-yellow-200' :
+                'bg-red-500/20 text-red-200'
+              }`}>
+                {quickStats.originalityScore}%
+              </span>
+            )}
+          </button>
+
+          <div className="w-px h-6 bg-border mx-2" />
+
+          {/* Track Changes toggle button */}
+          <button
+            onClick={toggleTracking}
+            disabled={!documentId}
+            className={`px-3 py-1 text-sm rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              trackingEnabled
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+            title="Toggle track changes"
+          >
+            <span className="text-sm">📝</span>
+            <span className="hidden sm:inline">Track</span>
+            {pendingCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-white/20">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+
+          {/* Save Version button */}
+          <button
+            onClick={handleSaveVersion}
+            disabled={!documentId}
+            className="px-3 py-1 text-sm rounded hover:bg-muted flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Save current version"
+          >
+            <Save className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Save Version</span>
+          </button>
+
+          {/* Version history toggle button */}
+          <button
+            onClick={() => setShowVersionHistory(!showVersionHistory)}
+            disabled={!documentId}
+            className={`px-3 py-1 text-sm rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              showVersionHistory
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-muted'
+            }`}
+            title="Toggle version history"
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">History</span>
+            {versionStats.totalVersions > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-primary/20 text-primary">
+                {versionStats.totalVersions}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Editor */}
-      <EditorContent editor={editor} />
+      {/* Track Changes Toolbar */}
+      {trackingEnabled && (
+        <TrackChangesToolbar
+          trackingEnabled={trackingEnabled}
+          showChanges={showChanges}
+          pendingCount={pendingCount}
+          onToggleTracking={toggleTracking}
+          onToggleShowChanges={toggleShowChanges}
+          onAcceptAll={acceptAll}
+          onRejectAll={rejectAll}
+          disabled={!documentId}
+        />
+      )}
+
+      {/* Main content area with optional panels */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Editor with AI toolbar */}
+        <div className={`flex-1 flex flex-col overflow-hidden ${(showAnalysis || showPlagiarism || showVersionHistory || trackingEnabled) ? 'border-r border-border' : ''}`}>
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <EditorContent editor={editor} />
+          </div>
+
+          {/* AI Writing Toolbar - appears when text is selected */}
+          <AIWritingToolbar editor={editor} />
+        </div>
+
+        {/* Right sidebar with panels */}
+        {(showAnalysis || showPlagiarism || showVersionHistory || trackingEnabled) && (
+          <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden bg-card border-l border-border">
+            {/* Analysis Panel */}
+            {showAnalysis && (
+              <div className={`${showPlagiarism || showVersionHistory || trackingEnabled ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
+                <AnalysisPanel
+                  analysis={analysis}
+                  isAnalyzing={isAnalyzing}
+                  onRefresh={refreshAnalysis}
+                  text={editor.getText()}
+                />
+              </div>
+            )}
+
+            {/* Plagiarism Panel */}
+            {showPlagiarism && (
+              <div className={`${showAnalysis || showVersionHistory || trackingEnabled ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
+                <PlagiarismPanel
+                  result={plagiarismResult}
+                  isChecking={isPlagiarismChecking}
+                  onCheck={() => checkPlagiarism(editor.getText())}
+                  onExcludeMatch={excludeMatch}
+                  onIncludeMatch={includeMatch}
+                  wordCount={editor.storage.characterCount?.words() || 0}
+                />
+              </div>
+            )}
+
+            {/* Version History Panel */}
+            {showVersionHistory && (
+              <div className={`${showAnalysis || showPlagiarism || trackingEnabled ? 'flex-1 border-b border-border' : 'h-full'} overflow-hidden`}>
+                <VersionHistoryPanel
+                  versions={versions}
+                  loading={versionsLoading}
+                  onRestore={handleRestoreVersion}
+                  onDelete={deleteVersionFromHistory}
+                  onUpdateLabel={updateVersionLabel}
+                  onPreview={handlePreviewVersion}
+                  onRefresh={refreshVersions}
+                  onClose={() => setShowVersionHistory(false)}
+                />
+              </div>
+            )}
+
+            {/* Track Changes Panel */}
+            {trackingEnabled && (
+              <div className={`${showAnalysis || showPlagiarism || showVersionHistory ? 'flex-1' : 'h-full'} overflow-hidden`}>
+                <TrackChangesPanel
+                  changes={changes}
+                  loading={trackChangesLoading}
+                  onAcceptChange={acceptChange}
+                  onRejectChange={rejectChange}
+                  onClose={() => toggleTracking()}
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Citation Dialog */}
+      <CitationDialog
+        isOpen={citationDialogOpen}
+        onClose={closeCitationDialog}
+        onInsert={handleCitationInsert}
+      />
+
+      {/* Version Preview Modal */}
+      <VersionPreviewModal
+        version={previewVersion}
+        isOpen={!!previewVersion}
+        onClose={handleClosePreview}
+        onRestore={handleRestoreVersion}
+        currentContent={content}
+      />
     </div>
   );
 }

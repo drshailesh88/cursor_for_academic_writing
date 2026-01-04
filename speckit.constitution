@@ -1,0 +1,122 @@
+# Academic Writing Platform - Constitution
+
+## Project Identity
+
+**Name:** Academic Writing Platform
+**Version:** 2.0
+**Mission:** Empower researchers across all scientific disciplines to write publication-ready documents with AI assistance, multi-database research integration, and professional export capabilities.
+
+---
+
+## Core Principles
+
+### 1. Academic Integrity First
+- All AI-generated content must be transparent and editable
+- Citations must be verifiable and traceable to source databases
+- Never generate fabricated citations or data
+- Clearly distinguish AI suggestions from user content
+
+### 2. Discipline Agnosticism
+- Support all scientific fields equally: life sciences, physical sciences, engineering, social sciences, humanities
+- Adapt writing conventions, citation styles, and terminology per discipline
+- No discipline should be a second-class citizen
+
+### 3. Open & Accessible
+- Multi-LLM support: users choose their AI provider
+- Free tier with meaningful capabilities (11+ free models via OpenRouter)
+- Self-hostable for institutional deployment
+- Open-source codebase
+
+### 4. Research Reproducibility
+- All database queries are logged and reproducible
+- Search parameters are transparent
+- Export includes full citation metadata
+
+### 5. User Control
+- Users own their documents and data
+- No AI training on user content without consent
+- Easy data export and account deletion
+- Transparent about AI model being used
+
+---
+
+## Technical Governance
+
+### Architecture Constraints
+- **Frontend:** Next.js 14+ with App Router
+- **Editor:** TipTap with academic extensions
+- **State:** React hooks + Firestore real-time sync
+- **AI:** Vercel AI SDK with multi-provider support
+- **Export:** Client-side DOCX/PDF/LaTeX generation
+
+### Quality Standards
+- TypeScript strict mode required
+- No `any` types in production code
+- All components must be accessible (ARIA, keyboard nav)
+- Mobile-first responsive design
+- Dark mode support mandatory
+
+### Security Requirements
+- Firebase Authentication required for write operations
+- API keys never exposed to client
+- Rate limiting on all external API calls
+- Input sanitization before database writes
+
+---
+
+## Development Process
+
+### Specification-Driven Development (SDD)
+1. **Specify** requirements before implementation
+2. **Plan** architecture with consideration for all disciplines
+3. **Implement** with tests and documentation
+4. **Validate** against specification
+
+### Change Management
+- Breaking changes require spec update
+- New disciplines require prompt review
+- Database integrations require rate limit analysis
+- All AI prompts require academic review
+
+---
+
+## Stakeholder Priorities
+
+### Primary Users
+1. Graduate students writing theses/dissertations
+2. Researchers writing journal articles
+3. Faculty writing grant proposals
+4. Clinicians writing case reports
+
+### Secondary Users
+1. Undergraduate students learning academic writing
+2. Science communicators writing for public audiences
+3. Industry researchers writing technical reports
+
+---
+
+## Success Metrics
+
+| Metric | Target |
+|--------|--------|
+| Disciplines supported | 15+ |
+| Databases integrated | 8+ |
+| Citation styles | 25+ |
+| User satisfaction (NPS) | >50 |
+| Time to first document | <2 minutes |
+| Export success rate | >99% |
+
+---
+
+## Non-Negotiables
+
+1. **Never fabricate citations** - All references must come from real, verified sources
+2. **Never claim AI writing is human** - Transparency about AI assistance
+3. **Never compromise user data** - Privacy and security are paramount
+4. **Never lock users in** - Export and portability always available
+5. **Never discriminate by discipline** - Equal quality across all fields
+
+---
+
+**Last Updated:** January 2, 2026
+**Maintainer:** Project Team
