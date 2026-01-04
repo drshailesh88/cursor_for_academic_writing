@@ -18,6 +18,7 @@ import {
   Share2,
   Settings,
   Library,
+  Presentation as PresentationIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChatInterface } from '@/components/chat/chat-interface';
@@ -49,6 +50,9 @@ import {
   PaperChat,
   usePaperLibrary,
 } from '@/components/papers';
+import { GenerationDialog } from '@/components/presentations/generation-dialog';
+import { PresentationMode } from '@/components/presentations/presentation-mode';
+import { GenerationConfig, Presentation } from '@/lib/presentations/types';
 
 // Hook to detect mobile screen
 function useIsMobile() {
@@ -118,6 +122,11 @@ function ThreePanelContent() {
   const { isOpen: shortcutsOpen, setIsOpen: setShortcutsOpen } = useKeyboardShortcuts();
   const { isOpen: shareDialogOpen, documentId: shareDocumentId, open: openShareDialog, close: closeShareDialog } = useShareDialog();
 
+  // Presentation state
+  const [showGenerationDialog, setShowGenerationDialog] = useState(false);
+  const [currentPresentation, setCurrentPresentation] = useState<Presentation | null>(null);
+  const [isPresentationMode, setIsPresentationMode] = useState(false);
+
   const {
     document,
     content,
@@ -176,6 +185,22 @@ function ThreePanelContent() {
     createInitialDoc();
   }, [user, currentDocumentId, createNew]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+Shift+G or Ctrl+Shift+G - Generate presentation
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'G') {
+        e.preventDefault();
+        if (user && currentDocumentId) {
+          setShowGenerationDialog(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [user, currentDocumentId]);
+
   const handleDocumentSelect = (documentId: string) => {
     setCurrentDocumentId(documentId);
     // On mobile, switch to editor after selecting a document
@@ -221,6 +246,113 @@ function ThreePanelContent() {
     }
   };
 
+  // Presentation handlers
+  const handleGeneratePresentation = async (config: GenerationConfig) => {
+    try {
+      const response = await fetch('/api/presentations/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...config,
+          sourceId: currentDocumentId,
+          sourceText: content,
+          userId: user?.uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.slides) {
+        // Create presentation object
+        const presentation: Presentation = {
+          id: '',  // Will be set on save
+          userId: user?.uid || '',
+          documentId: currentDocumentId || '',
+          title: document?.title || 'Untitled Presentation',
+          theme: config.theme,
+          slides: data.slides,
+          settings: {
+            aspectRatio: '16:9',
+            showSlideNumbers: true,
+            showProgressBar: true,
+            autoAdvance: false,
+            autoAdvanceInterval: 30,
+            transition: 'fade',
+            transitionDuration: 300,
+          },
+          createdAt: new Date() as any,
+          updatedAt: new Date() as any,
+        };
+
+        setCurrentPresentation(presentation);
+        setIsPresentationMode(true);
+        setShowGenerationDialog(false);
+        toast.success(`Generated ${data.slides.length} slides`);
+      } else {
+        toast.error(data.error || 'Failed to generate presentation');
+      }
+    } catch (error) {
+      console.error('Presentation generation error:', error);
+      toast.error('Failed to generate presentation');
+    }
+  };
+
+  const handleSavePresentation = async () => {
+    if (!currentPresentation || !user?.uid) return;
+
+    try {
+      const response = await fetch('/api/presentations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          ...currentPresentation,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setCurrentPresentation({
+          ...currentPresentation,
+          id: data.presentationId,
+        });
+        toast.success('Presentation saved');
+      }
+    } catch (error) {
+      console.error('Failed to save presentation:', error);
+      toast.error('Failed to save presentation');
+    }
+  };
+
+  const handleExportPresentation = async (format: 'pptx' | 'pdf') => {
+    if (!currentPresentation) return;
+
+    try {
+      if (format === 'pptx') {
+        const { exportToPptx } = await import('@/lib/presentations/export/pptx-export');
+        const blob = await exportToPptx(currentPresentation);
+        downloadBlob(blob, `${currentPresentation.title}.pptx`);
+      } else {
+        const { exportToPdf } = await import('@/lib/presentations/export/pdf-export');
+        const blob = await exportToPdf(currentPresentation);
+        downloadBlob(blob, `${currentPresentation.title}.pdf`);
+      }
+      toast.success(`Exported as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(`Failed to export as ${format.toUpperCase()}`);
+    }
+  };
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // Keyboard Shortcuts Modal (shared between mobile and desktop)
   const shortcutsModal = (
     <KeyboardShortcuts isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
@@ -238,6 +370,33 @@ function ThreePanelContent() {
     <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
   );
 
+  const generationDialog = (
+    <GenerationDialog
+      open={showGenerationDialog}
+      onOpenChange={setShowGenerationDialog}
+      documentId={currentDocumentId}
+      documentTitle={document?.title}
+      documentContent={content}
+      onGenerate={handleGeneratePresentation}
+    />
+  );
+
+  // Presentation mode - render full screen when active
+  if (isPresentationMode && currentPresentation) {
+    return (
+      <PresentationMode
+        presentation={currentPresentation}
+        onUpdate={setCurrentPresentation}
+        onExit={() => {
+          setIsPresentationMode(false);
+          setCurrentPresentation(null);
+        }}
+        onSave={handleSavePresentation}
+        onExport={handleExportPresentation}
+      />
+    );
+  }
+
   // Mobile Layout
   if (isMobile) {
     return (
@@ -245,6 +404,7 @@ function ThreePanelContent() {
         {shortcutsModal}
         {shareDialog}
         {settingsDialog}
+        {generationDialog}
         {/* Mobile Top Bar */}
         <div className="h-14 border-b border-border flex items-center justify-between px-3 bg-card">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -303,6 +463,20 @@ function ThreePanelContent() {
               >
                 <Share2 className="h-4 w-4 mr-2" />
                 Share Document
+              </Button>
+            )}
+            {user && currentDocumentId && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowGenerationDialog(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full"
+              >
+                <PresentationIcon className="h-4 w-4 mr-2" />
+                Generate Slides
               </Button>
             )}
             {user && (
@@ -420,6 +594,7 @@ function ThreePanelContent() {
       {shortcutsModal}
       {shareDialog}
       {settingsDialog}
+      {generationDialog}
       {/* Deep Research Panel (modal overlay) */}
       <ResearchPanel />
 
@@ -481,6 +656,17 @@ function ThreePanelContent() {
               >
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
+              </Button>
+            )}
+            {user && currentDocumentId && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowGenerationDialog(true)}
+                title="Generate Presentation (Cmd+Shift+G)"
+              >
+                <PresentationIcon className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Slides</span>
               </Button>
             )}
             {user && (

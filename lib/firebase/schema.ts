@@ -75,6 +75,7 @@ export const COLLECTIONS = {
   RESEARCH_SESSIONS: 'researchSessions',
   PAPERS: 'papers',
   PAPER_CONTENTS: 'paperContents',
+  PRESENTATIONS: 'presentations',
   // Citation library collections (nested under users)
   REFERENCES: 'references',      // users/{userId}/references
   LIBRARY_FOLDERS: 'folders',    // users/{userId}/folders
