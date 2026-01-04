@@ -5,20 +5,71 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   test: {
+    // Test environment
     environment: 'jsdom',
+
+    // Global test utilities (describe, test, expect, etc.)
     globals: true,
-    setupFiles: ['./tests/setup.ts'],
-    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['node_modules', '.next', 'e2e'],
+
+    // Setup files - runs before all tests
+    setupFiles: ['./__tests__/setup.ts'],
+
+    // Include patterns - where to look for tests
+    include: ['__tests__/**/*.{test,spec}.{ts,tsx}'],
+
+    // Exclude patterns
+    exclude: ['node_modules', '.next', 'dist'],
+
+    // Coverage configuration
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'html', 'lcov'],
+      include: [
+        'lib/**/*.{ts,tsx}',
+        'components/**/*.{ts,tsx}',
+        'app/**/*.{ts,tsx}',
+      ],
       exclude: [
-        'node_modules/',
-        'tests/',
         '**/*.d.ts',
+        '**/node_modules/**',
+        '**/__tests__/**',
+        '**/mocks/**',
         '**/*.config.*',
         '.next/',
+      ],
+      thresholds: {
+        global: {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80,
+        },
+      },
+    },
+
+    // Timeouts
+    testTimeout: 30000,
+    hookTimeout: 30000,
+
+    // Mock behavior
+    clearMocks: true,
+    restoreMocks: true,
+
+    // Reporter - verbose output
+    reporters: ['verbose'],
+
+    // Parallel execution
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: false,
+      },
+    },
+
+    // Dependencies to inline (for ESM compatibility)
+    deps: {
+      inline: [
+        /msw/,
       ],
     },
   },

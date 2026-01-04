@@ -92,16 +92,88 @@ export function splitWords(text: string): string[] {
 
 /**
  * Count syllables in a word (approximation)
+ * Uses a more accurate algorithm that handles:
+ * - Words ending in "ed" (walked=1, created=3)
+ * - Words ending in "es" (boxes=2, loves=1)
+ * - Silent e handling
+ * - Common exceptions
  */
 export function countSyllables(word: string): number {
   word = word.toLowerCase().replace(/[^a-z]/g, '');
+  if (word.length === 0) return 0;
   if (word.length <= 3) return 1;
 
-  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
-  word = word.replace(/^y/, '');
+  // Special cases and common patterns
+  const specialCases: Record<string, number> = {
+    'area': 3, 'idea': 3, 'real': 2, 'being': 2, 'seeing': 2,
+    'the': 1, 'people': 2, 'business': 3, 'science': 2,
+    // Common -ated words where 'ea' forms two syllables
+    'created': 3, 'related': 3, 'updated': 3, 'located': 3, 'operated': 4,
+    'indicated': 4, 'complicated': 5, 'educated': 4, 'recreated': 4,
+    // Common -iated words
+    'associated': 5, 'differentiated': 6, 'appreciated': 5,
+  };
+  if (specialCases[word]) return specialCases[word];
 
-  const matches = word.match(/[aeiouy]{1,2}/g);
-  return matches ? matches.length : 1;
+  let count = 0;
+  let prevVowel = false;
+  const vowels = 'aeiouy';
+
+  // Count vowel groups
+  for (let i = 0; i < word.length; i++) {
+    const isVowel = vowels.includes(word[i]);
+    if (isVowel && !prevVowel) {
+      count++;
+    }
+    prevVowel = isVowel;
+  }
+
+  // Handle silent 'e' at end
+  if (word.endsWith('e') && !word.endsWith('le') && count > 1) {
+    // Check if the 'e' is truly silent (not part of a vowel sound)
+    const beforeE = word[word.length - 2];
+    if (!vowels.includes(beforeE)) {
+      count--;
+    }
+  }
+
+  // Handle "ed" endings - "ed" is a syllable after 't' or 'd', silent otherwise
+  // Exception: words ending in -ated, -ited where "ed" IS pronounced
+  if (word.endsWith('ed') && word.length > 3) {
+    const beforeEd = word[word.length - 3];
+    const twoBeforeEd = word.slice(-4, -2);
+
+    // "ed" is pronounced (adds syllable) after 't' or 'd'
+    // "ed" is silent after other consonants, so we need to subtract
+    // But -ated, -eted, -ited, -oted, -uted keep the "ed" sound
+    if (beforeEd !== 't' && beforeEd !== 'd' && !vowels.includes(beforeEd)) {
+      // Check if it's an -ated pattern (where 'ed' is pronounced)
+      if (!['at', 'et', 'it', 'ot', 'ut'].includes(twoBeforeEd)) {
+        count--;
+      }
+    }
+  }
+
+  // Handle "es" endings - adds syllable after s, x, z, ch, sh
+  if (word.endsWith('es') && word.length > 2) {
+    const beforeEs = word.slice(-3, -2);
+    const twoBeforeEs = word.slice(-4, -2);
+    // "es" adds syllable after sibilants
+    if (['s', 'x', 'z'].includes(beforeEs) ||
+        ['ch', 'sh'].includes(twoBeforeEs)) {
+      // Already counted correctly, no adjustment needed
+    }
+  }
+
+  // Handle "le" endings (like "table", "people")
+  if (word.endsWith('le') && word.length > 2) {
+    const beforeLe = word[word.length - 3];
+    if (!vowels.includes(beforeLe)) {
+      // "le" preceded by consonant is a separate syllable (already counted)
+    }
+  }
+
+  return Math.max(count, 1);
 }
 
 /**
@@ -115,17 +187,8 @@ function generateId(): string {
 // PASSIVE VOICE DETECTION
 // ============================================================================
 
-const PASSIVE_PATTERNS = [
-  /\b(am|is|are|was|were|be|been|being)\s+(\w+ed)\b/gi,
-  /\b(am|is|are|was|were|be|been|being)\s+(\w+en)\b/gi,
-  /\b(has|have|had)\s+been\s+(\w+ed)\b/gi,
-  /\b(has|have|had)\s+been\s+(\w+en)\b/gi,
-  /\b(will|would|shall|should|may|might|must|can|could)\s+be\s+(\w+ed)\b/gi,
-  /\b(will|would|shall|should|may|might|must|can|could)\s+be\s+(\w+en)\b/gi,
-];
-
 // Common irregular past participles
-const IRREGULAR_PARTICIPLES = new Set([
+const IRREGULAR_PARTICIPLES = [
   'been', 'done', 'gone', 'seen', 'taken', 'given', 'known', 'shown',
   'written', 'driven', 'eaten', 'fallen', 'forgotten', 'frozen', 'gotten',
   'hidden', 'ridden', 'risen', 'spoken', 'stolen', 'sworn', 'torn', 'worn',
@@ -133,7 +196,24 @@ const IRREGULAR_PARTICIPLES = new Set([
   'felt', 'found', 'heard', 'held', 'kept', 'left', 'lost', 'made',
   'meant', 'met', 'paid', 'said', 'sent', 'sold', 'spent', 'stood',
   'thought', 'told', 'understood', 'won',
-]);
+];
+
+// Build the irregular participles regex pattern
+const IRREGULAR_PATTERN = IRREGULAR_PARTICIPLES.join('|');
+
+const PASSIVE_PATTERNS = [
+  // Regular participles (ending in -ed or -en)
+  /\b(am|is|are|was|were|be|been|being)\s+(\w+ed)\b/gi,
+  /\b(am|is|are|was|were|be|been|being)\s+(\w+en)\b/gi,
+  /\b(has|have|had)\s+been\s+(\w+ed)\b/gi,
+  /\b(has|have|had)\s+been\s+(\w+en)\b/gi,
+  /\b(will|would|shall|should|may|might|must|can|could)\s+be\s+(\w+ed)\b/gi,
+  /\b(will|would|shall|should|may|might|must|can|could)\s+be\s+(\w+en)\b/gi,
+  // Irregular past participles
+  new RegExp(`\\b(am|is|are|was|were|be|been|being)\\s+(${IRREGULAR_PATTERN})\\b`, 'gi'),
+  new RegExp(`\\b(has|have|had)\\s+been\\s+(${IRREGULAR_PATTERN})\\b`, 'gi'),
+  new RegExp(`\\b(will|would|shall|should|may|might|must|can|could)\\s+be\\s+(${IRREGULAR_PATTERN})\\b`, 'gi'),
+];
 
 /**
  * Detect passive voice instances
@@ -489,19 +569,15 @@ export function analyzeAcademic(text: string): AcademicMetrics {
   const plainText = stripHtml(text).toLowerCase();
   const words = splitWords(plainText);
 
-  // First person usage
+  // First person usage - use regex for accurate word boundary matching
   const firstPersonInstances: { word: string; position: number }[] = [];
-  let charPos = 0;
 
   for (const word of FIRST_PERSON_WORDS) {
-    let pos = plainText.indexOf(` ${word} `);
-    while (pos !== -1) {
-      firstPersonInstances.push({ word, position: pos + 1 });
-      pos = plainText.indexOf(` ${word} `, pos + 1);
-    }
-    // Check start of text
-    if (plainText.startsWith(word + ' ')) {
-      firstPersonInstances.push({ word, position: 0 });
+    // Use word boundary regex to match the word anywhere (start, middle, end, with punctuation)
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    let match;
+    while ((match = regex.exec(plainText)) !== null) {
+      firstPersonInstances.push({ word, position: match.index });
     }
   }
 

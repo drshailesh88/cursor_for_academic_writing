@@ -96,7 +96,7 @@ function formatAuthorInitialsFirst(author: ReferenceAuthor): string {
 // ============================================================================
 
 function formatYear(date: ReferenceDate | undefined): string {
-  if (!date) return 'n.d.';
+  if (!date || date.year === undefined || date.year === null) return 'n.d.';
   if (date.literal) return date.literal;
   return String(date.year);
 }
@@ -338,7 +338,7 @@ function formatBibliographyAPA(ref: Reference): string {
       parts.push(`${authorList}.`);
     } else {
       const first19 = ref.authors.slice(0, 19).map(a => formatAuthorLastFirst(a)).join(', ');
-      parts.push(`${first19}, ... ${formatAuthorLastFirst(ref.authors[ref.authors.length - 1])}.`);
+      parts.push(`${first19}, . . . ${formatAuthorLastFirst(ref.authors[ref.authors.length - 1])}.`);
     }
   }
 
