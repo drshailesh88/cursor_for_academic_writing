@@ -214,7 +214,7 @@ describe('Semantic Scholar Client', () => {
 
     test('returns null for non-existent ID', async () => {
       server.use(
-        http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId', () => {
+        http.get('https://api.semanticscholar.org/graph/v1/paper/*', () => {
           return new HttpResponse(null, { status: 404 });
         })
       );
@@ -225,7 +225,7 @@ describe('Semantic Scholar Client', () => {
 
     test('handles network errors gracefully', async () => {
       server.use(
-        http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId', () => {
+        http.get('https://api.semanticscholar.org/graph/v1/paper/*', () => {
           return HttpResponse.error();
         })
       );
@@ -245,7 +245,7 @@ describe('Semantic Scholar Client', () => {
 
     test('handles DOI lookup errors', async () => {
       server.use(
-        http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId', () => {
+        http.get('https://api.semanticscholar.org/graph/v1/paper/*', () => {
           return new HttpResponse(null, { status: 404 });
         })
       );
@@ -276,7 +276,7 @@ describe('Semantic Scholar Client', () => {
   describe('getRelatedPapers', () => {
     test('retrieves recommended papers', async () => {
       server.use(
-        http.post('https://api.semanticscholar.org/graph/v1/paper/:paperId/recommendations', () => {
+        http.post('https://api.semanticscholar.org/graph/v1/paper/*/recommendations', () => {
           return HttpResponse.json({
             recommendedPapers: [
               {
@@ -309,7 +309,7 @@ describe('Semantic Scholar Client', () => {
 
     test('returns empty array on error', async () => {
       server.use(
-        http.post('https://api.semanticscholar.org/graph/v1/paper/:paperId/recommendations', () => {
+        http.post('https://api.semanticscholar.org/graph/v1/paper/*/recommendations', () => {
           return new HttpResponse(null, { status: 500 });
         })
       );
@@ -321,7 +321,7 @@ describe('Semantic Scholar Client', () => {
 
     test('respects limit parameter', async () => {
       server.use(
-        http.post('https://api.semanticscholar.org/graph/v1/paper/:paperId/recommendations', () => {
+        http.post('https://api.semanticscholar.org/graph/v1/paper/*/recommendations', () => {
           return HttpResponse.json({
             recommendedPapers: [],
           });
@@ -337,7 +337,7 @@ describe('Semantic Scholar Client', () => {
   describe('getCitations', () => {
     test('retrieves papers that cite this paper', async () => {
       server.use(
-        http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId/citations', () => {
+        http.get('https://api.semanticscholar.org/graph/v1/paper/*/citations', () => {
           return HttpResponse.json({
             data: [
               {
@@ -378,7 +378,7 @@ describe('Semantic Scholar Client', () => {
   describe('getReferences', () => {
     test('retrieves papers this paper references', async () => {
       server.use(
-        http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId/references', () => {
+        http.get('https://api.semanticscholar.org/graph/v1/paper/*/references', () => {
           return HttpResponse.json({
             data: [
               {
@@ -453,7 +453,7 @@ describe('Semantic Scholar Client', () => {
 
     test('getCitations method works', async () => {
       server.use(
-        http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId/citations', () => {
+        http.get('https://api.semanticscholar.org/graph/v1/paper/*/citations', () => {
           return HttpResponse.json({
             data: [],
           });
@@ -467,7 +467,7 @@ describe('Semantic Scholar Client', () => {
 
     test('getRelated method works', async () => {
       server.use(
-        http.post('https://api.semanticscholar.org/graph/v1/paper/:paperId/recommendations', () => {
+        http.post('https://api.semanticscholar.org/graph/v1/paper/*/recommendations', () => {
           return HttpResponse.json({
             recommendedPapers: [],
           });

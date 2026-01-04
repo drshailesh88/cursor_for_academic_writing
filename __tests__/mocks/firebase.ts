@@ -34,7 +34,7 @@ export class MockTimestamp {
 
 export class MockDocumentSnapshot {
   public ref: MockDocumentReference | null = null;
-  public readonly exists: boolean;
+  private _exists: boolean;
 
   constructor(
     public id: string,
@@ -43,11 +43,15 @@ export class MockDocumentSnapshot {
     ref?: MockDocumentReference
   ) {
     this.ref = ref || null;
-    this.exists = exists;
+    this._exists = exists;
+  }
+
+  exists(): boolean {
+    return this._exists;
   }
 
   data(): Record<string, unknown> | undefined {
-    return this.exists ? this._data ?? undefined : undefined;
+    return this._exists ? this._data ?? undefined : undefined;
   }
 }
 
@@ -262,8 +266,17 @@ export class MockQuery {
     // Apply ordering
     for (const orderBy of this.orderBys) {
       docs.sort((a, b) => {
-        const aVal = a[orderBy.field];
-        const bVal = b[orderBy.field];
+        let aVal = a[orderBy.field];
+        let bVal = b[orderBy.field];
+
+        // Handle MockTimestamp objects by converting to dates
+        if (aVal instanceof MockTimestamp) {
+          aVal = aVal.toDate().getTime();
+        }
+        if (bVal instanceof MockTimestamp) {
+          bVal = bVal.toDate().getTime();
+        }
+
         const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
         return orderBy.direction === 'asc' ? comparison : -comparison;
       });

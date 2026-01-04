@@ -313,7 +313,9 @@ describe('OpenAlex Client', () => {
 
     test('returns null for invalid DOI', async () => {
       server.use(
-        http.get('https://api.openalex.org/works/:workId', () => {
+        http.get('https://api.openalex.org/works/*', ({ request }) => {
+          const url = new URL(request.url);
+          // Always return 404 for this test to override the default handler
           return new HttpResponse(null, { status: 404 });
         })
       );

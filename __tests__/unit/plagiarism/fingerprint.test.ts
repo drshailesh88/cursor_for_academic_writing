@@ -296,8 +296,8 @@ describe('Winnowing Algorithm', () => {
     });
 
     it('produces overlapping fingerprints for similar text', () => {
-      const text1 = 'The quick brown fox jumps over the lazy dog';
-      const text2 = 'The quick brown fox leaps over the lazy cat';
+      const text1 = 'The quick brown fox jumps over the lazy dog in the meadow';
+      const text2 = 'The quick brown fox jumps over the lazy cat in the garden';
 
       const hashes1 = generateNgramHashes(text1, 5);
       const hashes2 = generateNgramHashes(text2, 5);
@@ -313,7 +313,7 @@ describe('Winnowing Algorithm', () => {
         if (hashes2Set.has(hash)) overlap++;
       }
 
-      // Similar texts should have some overlap
+      // Similar texts should have some overlap (both start with "the quick brown fox jumps over the lazy")
       expect(overlap).toBeGreaterThan(0);
     });
 
@@ -429,13 +429,14 @@ describe('Document Fingerprinting', () => {
     });
 
     it('finds partial matches', () => {
-      const text1 = 'The quick brown fox jumps over the lazy dog';
-      const text2 = 'The quick brown fox sleeps in the sun';
+      const text1 = 'The quick brown fox jumps over the lazy dog in the meadow';
+      const text2 = 'The quick brown fox jumps over the fence in the garden';
 
       const fp1 = generateFingerprints(text1, 'doc1');
       const fp2 = generateFingerprints(text2, 'doc2');
 
       const matches = findMatchingFingerprints(fp1, fp2);
+      // Should find matches for "the quick brown fox jumps over the"
       expect(matches.length).toBeGreaterThan(0);
     });
 

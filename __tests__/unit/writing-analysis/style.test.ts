@@ -218,14 +218,15 @@ describe('Style Analysis', () => {
     it('respects configuration thresholds', () => {
       const customConfig = {
         ...DEFAULT_ANALYSIS_CONFIG,
-        maxSentenceLength: 20,
+        maxSentenceLength: 5, // Very small threshold - any normal sentence exceeds this
       };
 
-      const text = 'This is a sentence with more than twenty words in it to test the configuration.';
+      // Simple sentence with 8 words - clearly above 5-word threshold
+      const text = 'The quick brown fox jumps over the dog.';
       const result = analyzeStyle(text, customConfig);
 
-      // Should detect as long sentence based on custom threshold
-      expect(result.longSentences).toBeGreaterThan(0);
+      // Should detect as long sentence since 8 > 5
+      expect(result.longSentences).toBe(1);
     });
   });
 

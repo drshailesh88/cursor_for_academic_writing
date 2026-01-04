@@ -423,7 +423,7 @@ describe('Unified Search', () => {
       let ssCallCount = 0;
 
       server.use(
-        http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId', () => {
+        http.get('https://api.semanticscholar.org/graph/v1/paper/*', () => {
           ssCallCount++;
           return HttpResponse.json({
             paperId: 'ss123',
@@ -444,10 +444,10 @@ describe('Unified Search', () => {
 
     test('falls back to OpenAlex if Semantic Scholar fails', async () => {
       server.use(
-        http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId', () => {
+        http.get('https://api.semanticscholar.org/graph/v1/paper/*', () => {
           return new HttpResponse(null, { status: 404 });
         }),
-        http.get('https://api.openalex.org/works/:workId', () => {
+        http.get('https://api.openalex.org/works/*', () => {
           return HttpResponse.json({
             id: 'https://openalex.org/W123',
             doi: 'https://doi.org/10.1234/test',
@@ -468,10 +468,10 @@ describe('Unified Search', () => {
 
     test('returns null if not found in any database', async () => {
       server.use(
-        http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId', () => {
+        http.get('https://api.semanticscholar.org/graph/v1/paper/*', () => {
           return new HttpResponse(null, { status: 404 });
         }),
-        http.get('https://api.openalex.org/works/:workId', () => {
+        http.get('https://api.openalex.org/works/*', () => {
           return new HttpResponse(null, { status: 404 });
         })
       );
