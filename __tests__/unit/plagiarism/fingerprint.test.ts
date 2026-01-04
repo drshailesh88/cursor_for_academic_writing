@@ -225,10 +225,12 @@ describe('N-gram Generation', () => {
       expect(ngrams[3].wordOffset).toBe(3);
     });
 
-    it('returns empty array for text shorter than n', () => {
+    it('adjusts n-gram size for text shorter than n', () => {
       const text = 'hello world';
       const ngrams = generateNgrams(text, 5);
-      expect(ngrams).toEqual([]);
+      // Should use effectiveN=2 (min of 5 and 2 words)
+      expect(ngrams).toHaveLength(1);
+      expect(ngrams[0].words).toEqual(['hello', 'world']);
     });
 
     it('handles n=1 correctly', () => {
@@ -479,7 +481,9 @@ describe('Edge Cases and Robustness', () => {
     const text = 'Hi';
     const fpSet = generateFingerprints(text, 'doc1');
     expect(fpSet.wordCount).toBe(1);
-    expect(fpSet.fingerprints).toEqual([]); // Not enough words for 5-gram
+    // Should generate 1-gram since text is shorter than default n=5
+    expect(fpSet.fingerprints.length).toBeGreaterThan(0);
+    expect(fpSet.fingerprints[0].ngram).toBe('hi');
   });
 
   it('handles text exactly n-gram size', () => {

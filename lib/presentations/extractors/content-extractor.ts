@@ -26,8 +26,8 @@ const PATTERNS = {
   increase: /(\d+(?:\.\d+)?)\s*%?\s*(?:increase|decrease|improvement|reduction|change)/gi,
 };
 
-// Match patterns like (Smith et al., 2023) or (Smith & Jones, 2024)
-const CITATION_PATTERN = /\(([A-Z][a-z]+(?:\s+(?:et\s+al\.?|&\s+[A-Z][a-z]+))?),?\s*(\d{4})\)/g;
+// Match patterns like (Smith et al., 2023), (Smith & Jones, 2024), or Smith et al. (2023)
+const CITATION_PATTERN = /(?:^|[^a-zA-Z])([A-Z][a-z]+(?:\s+(?:et\s+al\.?|&\s+[A-Z][a-z]+))?)\s*\((\d{4})\)|\(([A-Z][a-z]+(?:\s+(?:et\s+al\.?|&\s+[A-Z][a-z]+))?),?\s*(\d{4})\)/g;
 
 // Heading patterns for section detection
 const HEADING_PATTERNS = {
@@ -110,10 +110,10 @@ export function extractTitle(content: string): string {
     return cleanContent(htmlH1Match[1]);
   }
 
-  // Fall back to first non-empty line
-  const cleanText = cleanContent(content);
-  const firstLine = cleanText.split('\n')[0];
-  return firstLine.substring(0, 200).trim(); // Max 200 chars
+  // Fall back to first non-empty line (split BEFORE cleaning to preserve line breaks)
+  const firstLine = content.split(/\n/)[0].trim();
+  const cleanedLine = cleanContent(firstLine);
+  return cleanedLine.substring(0, 200).trim(); // Max 200 chars
 }
 
 /**
@@ -215,6 +215,20 @@ export function extractDataPatterns(text: string): DataPattern[] {
     });
   }
 
+  // Extract year ranges (for time series detection)
+  const yearRangePattern = /\b(19|20)\d{2}\s+to\s+(19|20)\d{2}\b/gi;
+  while ((match = yearRangePattern.exec(text)) !== null) {
+    const contextStart = Math.max(0, match.index - 50);
+    const contextEnd = Math.min(text.length, match.index + match[0].length + 50);
+
+    patterns.push({
+      type: 'trend',
+      value: match[0],
+      context: text.substring(contextStart, contextEnd).trim(),
+      position: { start: match.index, end: match.index + match[0].length },
+    });
+  }
+
   return patterns;
 }
 
@@ -229,9 +243,12 @@ export function extractCitations(text: string): ExtractedCitation[] {
   let match;
 
   while ((match = citationRegex.exec(text)) !== null) {
-    const authors = match[1];
-    const year = parseInt(match[2], 10);
-    const inTextFormat = match[0];
+    // Pattern has two alternatives: Author (Year) or (Author, Year)
+    // match[1] and match[2] are for "Author (Year)" format
+    // match[3] and match[4] are for "(Author, Year)" format
+    const authors = match[1] || match[3];
+    const year = parseInt(match[2] || match[4], 10);
+    const inTextFormat = match[0].trim();
 
     // Create unique ID
     const id = `${authors.toLowerCase().replace(/\s+/g, '-')}-${year}`;
@@ -351,7 +368,7 @@ export function parseSections(content: string): DocumentSection[] {
       heading: 'Content',
       level: 1,
       content: cleanText,
-      bulletPoints: extractBulletPoints(cleanText),
+      bulletPoints: extractBulletPoints(content), // Use original content for bullet detection
       hasData: dataPatterns.length > 0,
       dataPatterns,
       citations,
@@ -378,7 +395,7 @@ export function parseSections(content: string): DocumentSection[] {
       heading: heading.text,
       level: heading.level,
       content: sectionCleanText,
-      bulletPoints: extractBulletPoints(sectionCleanText),
+      bulletPoints: extractBulletPoints(sectionContent), // Use original content for bullet detection
       hasData: dataPatterns.length > 0,
       dataPatterns,
       citations,

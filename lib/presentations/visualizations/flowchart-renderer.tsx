@@ -465,6 +465,19 @@ function TerminalNode({ node, position, theme }: NodeProps) {
       >
         {node.label}
       </text>
+      {node.metadata?.count !== undefined && (
+        <text
+          x={position.x}
+          y={position.y + 20}
+          textAnchor="middle"
+          fill={color}
+          fontSize="12"
+          fontFamily={theme.fonts.body}
+          fontWeight="600"
+        >
+          n = {node.metadata.count}
+        </text>
+      )}
     </g>
   );
 }

@@ -149,13 +149,19 @@ async function addToSharedWithMe(
     const ownerData = ownerSnap.exists ? ownerSnap.data() : null;
 
     const sharedDocRef = doc(db, COLLECTIONS.USERS, userId, 'sharedWithMe', documentId);
+
+    // Handle both Timestamp objects and numbers
+    const updatedAtValue = typeof docData.updatedAt === 'number'
+      ? docData.updatedAt
+      : (docData.updatedAt as Timestamp)?.toMillis() || now;
+
     const sharedDocData: Omit<SharedDocument, 'documentId'> & { shareId: string } = {
       title: docData.title,
       ownerName: ownerData?.displayName || 'Unknown',
       ownerId: docData.userId,
       permission,
       sharedAt: now,
-      updatedAt: (docData.updatedAt as Timestamp)?.toMillis() || now,
+      updatedAt: updatedAtValue,
       wordCount: docData.wordCount,
       shareId,
     };

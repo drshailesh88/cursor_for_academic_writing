@@ -90,7 +90,7 @@ vi.mock('firebase/firestore', async () => ({
   setDoc: vi.fn(async (ref: any, data: any, options?: any) => {
     if (options?.merge) {
       const existing = await ref.get();
-      if (existing.exists) {
+      if (existing.exists()) {
         return ref.update(data);
       }
     }
@@ -132,12 +132,11 @@ vi.mock('firebase/firestore', async () => ({
     // Return unsubscribe function
     return vi.fn();
   }),
-  writeBatch: vi.fn(() => ({
-    set: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    commit: vi.fn(async () => Promise.resolve()),
-  })),
+  writeBatch: vi.fn((db: any) => {
+    // db might be a function (getFirebaseDb) or the mockFirestore instance
+    const firestoreInstance = typeof db === 'function' ? mockFirestore : db;
+    return firestoreInstance.writeBatch();
+  }),
   serverTimestamp: vi.fn(() => MockTimestamp.now()),
   Timestamp: MockTimestamp,
   FieldValue: class FieldValue {},

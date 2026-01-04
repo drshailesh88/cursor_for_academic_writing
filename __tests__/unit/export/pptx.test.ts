@@ -10,37 +10,7 @@ import { exportToPptx, exportAndDownloadPptx } from '@/lib/presentations/export/
 import { createMockPresentation } from '../../mocks/test-data';
 import type { Presentation, Slide, SlideContent } from '@/lib/presentations/types';
 import { Timestamp } from 'firebase/firestore';
-
-// Mock pptxgenjs
-const mockPptxSlide = {
-  addText: vi.fn(),
-  addImage: vi.fn(),
-  addTable: vi.fn(),
-  addChart: vi.fn(),
-  addNotes: vi.fn(),
-  background: undefined as any,
-};
-
-const mockPptx = {
-  title: '',
-  author: '',
-  subject: '',
-  company: '',
-  layout: '',
-  defineSlideMaster: vi.fn(),
-  addSlide: vi.fn(() => mockPptxSlide),
-  write: vi.fn(async () => new Blob(['mock-pptx-content'], {
-    type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-  })),
-};
-
-// Mock the dynamic import - must handle both default and named exports
-const MockPptxClass = vi.fn(() => mockPptx);
-
-vi.mock('pptxgenjs', () => ({
-  default: MockPptxClass,
-  __esModule: true,
-}));
+import { mockPptxSlide, mockPptxInstance as mockPptx } from '../../mocks/pptxgenjs';
 
 describe('PPTX Export', () => {
   // Helper to create a full presentation with all slide types

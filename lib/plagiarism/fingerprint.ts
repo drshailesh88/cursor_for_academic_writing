@@ -132,15 +132,18 @@ export function generateNgrams(text: string, n: number = 5): Array<{
     wordOffset: number;
   }> = [];
 
-  if (words.length < n) {
+  if (words.length === 0) {
     return ngrams;
   }
+
+  // Adjust n-gram size for short texts - use smaller n if text is too short
+  const effectiveN = Math.min(n, words.length);
 
   // Get word positions for accurate character offsets
   const wordPositions = getWordPositions(text);
 
-  for (let i = 0; i <= words.length - n; i++) {
-    const ngramWords = words.slice(i, i + n);
+  for (let i = 0; i <= words.length - effectiveN; i++) {
+    const ngramWords = words.slice(i, i + effectiveN);
     const ngramText = ngramWords.join(' ');
 
     // Find character position (approximate)

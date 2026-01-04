@@ -33,18 +33,21 @@ export class MockTimestamp {
 // ============================================================
 
 export class MockDocumentSnapshot {
+  public ref: MockDocumentReference | null = null;
+  public readonly exists: boolean;
+
   constructor(
     public id: string,
     private _data: Record<string, unknown> | null,
-    private _exists: boolean = true
-  ) {}
-
-  exists(): boolean {
-    return this._exists;
+    exists: boolean = true,
+    ref?: MockDocumentReference
+  ) {
+    this.ref = ref || null;
+    this.exists = exists;
   }
 
   data(): Record<string, unknown> | undefined {
-    return this._exists ? this._data ?? undefined : undefined;
+    return this.exists ? this._data ?? undefined : undefined;
   }
 }
 
@@ -81,7 +84,7 @@ export class MockDocumentReference {
 
   async get(): Promise<MockDocumentSnapshot> {
     const data = this.store.getData(this.path);
-    return new MockDocumentSnapshot(this.id, data, data !== null);
+    return new MockDocumentSnapshot(this.id, data, data !== null, this);
   }
 
   async set(data: Record<string, unknown>): Promise<void> {
@@ -110,11 +113,11 @@ export class MockDocumentReference {
   ): () => void {
     // Immediately call with current data
     const data = this.store.getData(this.path);
-    callback(new MockDocumentSnapshot(this.id, data, data !== null));
+    callback(new MockDocumentSnapshot(this.id, data, data !== null, this));
 
     // Set up listener for changes
     const unsubscribe = this.store.addListener(this.path, (newData) => {
-      callback(new MockDocumentSnapshot(this.id, newData, newData !== null));
+      callback(new MockDocumentSnapshot(this.id, newData, newData !== null, this));
     });
 
     return unsubscribe;
@@ -145,7 +148,10 @@ export class MockCollectionReference {
   async get(): Promise<MockQuerySnapshot> {
     const docs = this.store.getCollection(this.path);
     return new MockQuerySnapshot(
-      docs.map((doc) => new MockDocumentSnapshot(doc.id, doc))
+      docs.map((doc) => {
+        const ref = new MockDocumentReference(doc.id, `${this.path}/${doc.id}`, this.store);
+        return new MockDocumentSnapshot(doc.id, doc, true, ref);
+      })
     );
   }
 
@@ -168,13 +174,19 @@ export class MockCollectionReference {
     // Immediately call with current data
     const docs = this.store.getCollection(this.path);
     callback(
-      new MockQuerySnapshot(docs.map((doc) => new MockDocumentSnapshot(doc.id, doc)))
+      new MockQuerySnapshot(docs.map((doc) => {
+        const ref = new MockDocumentReference(doc.id, `${this.path}/${doc.id}`, this.store);
+        return new MockDocumentSnapshot(doc.id, doc, true, ref);
+      }))
     );
 
     // Set up listener
     const unsubscribe = this.store.addCollectionListener(this.path, (docs) => {
       callback(
-        new MockQuerySnapshot(docs.map((doc) => new MockDocumentSnapshot(doc.id, doc)))
+        new MockQuerySnapshot(docs.map((doc) => {
+          const ref = new MockDocumentReference(doc.id, `${this.path}/${doc.id}`, this.store);
+          return new MockDocumentSnapshot(doc.id, doc, true, ref);
+        }))
       );
     });
 
@@ -263,8 +275,54 @@ export class MockQuery {
     }
 
     return new MockQuerySnapshot(
-      docs.map((doc) => new MockDocumentSnapshot(doc.id, doc))
+      docs.map((doc) => {
+        const ref = new MockDocumentReference(doc.id, `${this.path}/${doc.id}`, this.store);
+        return new MockDocumentSnapshot(doc.id, doc, true, ref);
+      })
     );
+  }
+}
+
+// ============================================================
+// Mock WriteBatch
+// ============================================================
+
+export class MockWriteBatch {
+  private operations: Array<() => void> = [];
+
+  constructor(private store: MockFirestore) {}
+
+  set(ref: MockDocumentReference, data: Record<string, unknown>): this {
+    this.operations.push(() => {
+      this.store.setData(ref.path, { ...data, id: ref.id });
+    });
+    return this;
+  }
+
+  update(ref: MockDocumentReference, data: Record<string, unknown>): this {
+    this.operations.push(() => {
+      const existing = this.store.getData(ref.path);
+      if (!existing) {
+        throw new Error(`Document ${ref.path} does not exist`);
+      }
+      this.store.setData(ref.path, { ...existing, ...data });
+    });
+    return this;
+  }
+
+  delete(ref: MockDocumentReference): this {
+    this.operations.push(() => {
+      this.store.deleteData(ref.path);
+    });
+    return this;
+  }
+
+  async commit(): Promise<void> {
+    // Execute all operations
+    for (const operation of this.operations) {
+      operation();
+    }
+    this.operations = [];
   }
 }
 
@@ -281,6 +339,7 @@ export class MockFirestore {
     Set<(docs: Array<Record<string, unknown>>) => void>
   > = new Map();
   private idCounter = 0;
+  private timestampOffset = 0; // Ensures unique timestamps in rapid operations
 
   collection(path: string): MockCollectionReference {
     return new MockCollectionReference(path, this);
@@ -292,6 +351,10 @@ export class MockFirestore {
     return new MockDocumentReference(id, path, this);
   }
 
+  writeBatch(): MockWriteBatch {
+    return new MockWriteBatch(this);
+  }
+
   generateId(): string {
     return `mock-id-${++this.idCounter}-${Date.now()}`;
   }
@@ -301,8 +364,17 @@ export class MockFirestore {
   }
 
   setData(path: string, data: Record<string, unknown>): void {
-    this.data.set(path, data);
-    this.notifyListeners(path, data);
+    // Ensure unique timestamps by adding small offset for test reliability
+    const processedData = { ...data };
+    if (typeof processedData.createdAt === 'number') {
+      processedData.createdAt += this.timestampOffset++;
+    }
+    if (typeof processedData.updatedAt === 'number') {
+      processedData.updatedAt += this.timestampOffset;
+    }
+
+    this.data.set(path, processedData);
+    this.notifyListeners(path, processedData);
     this.notifyCollectionListeners(path);
   }
 

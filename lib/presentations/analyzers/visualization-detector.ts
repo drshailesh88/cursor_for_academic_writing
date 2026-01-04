@@ -150,9 +150,15 @@ export function detectComparison(text: string): VisualizationOpportunity | null 
   }
 
   // Check for numerical comparisons
-  const numericalPattern = /\d+\.?\d*\s*(vs\.?|versus|compared to)\s*\d+\.?\d*/gi;
+  const numericalPattern = /\d+\.?\d*\s*(vs\.?|versus|compared to|with)\s*\d+\.?\d*/gi;
   if (numericalPattern.test(text)) {
     confidence += 0.25;
+  }
+
+  // Check for "Group X scored Y" pattern
+  const groupScorePattern = /group\s+\w+\s+scored\s+\d+/gi;
+  if (groupScorePattern.test(text)) {
+    confidence += 0.2;
   }
 
   if (confidence < 0.4) {
@@ -256,7 +262,18 @@ export function detectTrend(text: string): VisualizationOpportunity | null {
   const timeSeriesPattern = /(week|month|day|year)\s*\d+/gi;
   const timeSeriesMatches = text.match(timeSeriesPattern);
   if (timeSeriesMatches && timeSeriesMatches.length >= 2) {
-    confidence += 0.25;
+    confidence += 0.3;
+  }
+
+  // Check for baseline mentions and comma-separated time points
+  if (/\bbaseline\b/i.test(text) && timeSeriesMatches && timeSeriesMatches.length >= 2) {
+    confidence += 0.2;
+  }
+
+  // Check for multiple time points separated by commas/and
+  const multipleTimePoints = text.match(/,\s*(week|month|day)\s*\d+/gi);
+  if (multipleTimePoints && multipleTimePoints.length >= 2) {
+    confidence += 0.2;
   }
 
   if (confidence < 0.4) {
@@ -334,7 +351,7 @@ export function detectProportions(text: string): VisualizationOpportunity | null
     }
   }
   if (partsCount >= 2) {
-    confidence += 0.3;
+    confidence += 0.35;
   }
 
   // Extract percentages and check if they sum to ~100
@@ -342,9 +359,9 @@ export function detectProportions(text: string): VisualizationOpportunity | null
   if (percentages.length >= 2) {
     const sum = percentages.reduce((a, b) => a + b, 0);
     if (sum >= 90 && sum <= 110) {
-      confidence += 0.4;
+      confidence += 0.65; // High boost for summing to 100 (clear distribution)
     } else if (percentages.length >= 3) {
-      confidence += 0.2;
+      confidence += 0.25; // Boost for multiple categories
     }
   }
 
@@ -404,6 +421,9 @@ export function detectProcess(text: string): VisualizationOpportunity | null {
     'in case',
     'depending on',
     'based on',
+    'criteria met',
+    'proceed to',
+    'exclude from',
   ];
 
   const prismaKeywords = [
@@ -431,15 +451,22 @@ export function detectProcess(text: string): VisualizationOpportunity | null {
   }
   if (processMatches >= 2) {
     confidence += 0.3;
+  } else if (processMatches >= 1) {
+    confidence += 0.15;
   }
 
-  // Check for decision language
+  // Check for decision language (allow multi-word phrases)
+  let decisionMatches = 0;
   for (const keyword of decisionKeywords) {
-    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    const regex = new RegExp(keyword.replace(/\s+/g, '\\s+'), 'gi');
     if (regex.test(lowerText)) {
-      confidence += 0.15;
-      break;
+      decisionMatches++;
     }
+  }
+  if (decisionMatches >= 2) {
+    confidence += 0.3;
+  } else if (decisionMatches >= 1) {
+    confidence += 0.2;
   }
 
   // Check for PRISMA-style language (very high confidence)
@@ -451,15 +478,17 @@ export function detectProcess(text: string): VisualizationOpportunity | null {
     }
   }
   if (prismaMatches >= 3) {
-    confidence += 0.5;
+    confidence += 0.65; // Boost to ensure > 0.6
   } else if (prismaMatches >= 1) {
-    confidence += 0.2;
+    confidence += 0.25;
   }
 
-  // Check for numbered steps
-  const numberedSteps = text.match(/\b\d+\.\s+[A-Z]/g);
-  if (numberedSteps && numberedSteps.length >= 2) {
-    confidence += 0.25;
+  // Check for numbered steps (more flexible - allow lowercase after number)
+  const numberedSteps = text.match(/\b\d+\.\s+[A-Za-z]/g);
+  if (numberedSteps && numberedSteps.length >= 3) {
+    confidence += 0.45; // Strong indicator of procedural flow
+  } else if (numberedSteps && numberedSteps.length >= 2) {
+    confidence += 0.3;
   }
 
   if (confidence < 0.4) {
@@ -528,13 +557,29 @@ export function detectTabularData(text: string): VisualizationOpportunity | null
   const attributePattern = /([A-Za-z\s]+):\s*(\d+\.?\d*)/g;
   const attributeMatches = text.match(attributePattern);
   if (attributeMatches && attributeMatches.length >= 3) {
+    confidence += 0.4;
+  } else if (attributeMatches && attributeMatches.length >= 2) {
     confidence += 0.3;
+  }
+
+  // Check for comma-separated attribute-value pairs
+  const commaPattern = /,\s*[A-Za-z]/g;
+  const commaMatches = text.match(commaPattern);
+  if (commaMatches && commaMatches.length >= 2 && attributeMatches) {
+    confidence += 0.15; // Boost for structured comma-separated data
   }
 
   // Check for comparison across groups
   const groupComparison = /(group|cohort|arm)\s+[A-Z]/gi;
   const groupMatches = text.match(groupComparison);
   if (groupMatches && groupMatches.length >= 2) {
+    confidence += 0.3;
+  }
+
+  // Check for "mean = " or "SD = " patterns
+  const meanSdSimplePattern = /(mean|SD)\s*=\s*\d+\.?\d*/gi;
+  const meanSdSimpleMatches = text.match(meanSdSimplePattern);
+  if (meanSdSimpleMatches && meanSdSimpleMatches.length >= 2) {
     confidence += 0.25;
   }
 
@@ -581,15 +626,28 @@ export function suggestChartType(patterns: DataPattern[]): ChartType | null {
   // Count percentages to determine if it's a distribution
   const percentageCount = patterns.filter((p) => p.type === 'percentage').length;
 
-  if (hasTrend) {
+  // Check pattern contexts for temporal/trend indicators
+  const contextText = patterns.map(p => p.context).join(' ').toLowerCase();
+  const hasTimeIndicators = /\b(from|to|between|during|over time|year|month|week|day|baseline|\d{4})\b/.test(contextText);
+  const hasCategoryComparison = /\b(vs\.?|versus|compared to|group|cohort)\b/.test(contextText);
+
+  // Prioritize trend detection for time series
+  if (hasTrend || (hasTimeIndicators && patterns.length >= 1)) {
     return 'line';
   }
 
+  // Prioritize bar chart over pie if there's a comparison pattern
+  if (hasComparison || hasCategoryComparison) {
+    return 'bar';
+  }
+
+  // Detect pie charts for distributions
   if (percentageCount >= 3 && hasPercentageSum(patterns, 90, 110)) {
     return 'pie';
   }
 
-  if (hasComparison || percentageCount >= 2) {
+  // Detect bar charts for multiple percentages
+  if (percentageCount >= 2) {
     return 'bar';
   }
 
@@ -719,12 +777,12 @@ function hasPercentageSum(patterns: DataPattern[], min: number, max: number): bo
 function extractProcessSteps(text: string): Array<{ text: string; isDecision: boolean }> {
   const steps: Array<{ text: string; isDecision: boolean }> = [];
 
-  // Try numbered steps first
-  const numberedPattern = /\d+\.\s+([^.!?]+[.!?])/g;
+  // Try numbered steps first (more flexible pattern)
+  const numberedPattern = /(\d+)\.\s+([^.!?\n]+(?:[.!?]|$))/g;
   let match;
 
   while ((match = numberedPattern.exec(text)) !== null) {
-    const stepText = match[1].trim();
+    const stepText = match[2].trim();
     const isDecision = /\bif\b|\bwhen\b|\botherwise\b/i.test(stepText);
     steps.push({
       text: stepText.length > 100 ? stepText.slice(0, 100) + '...' : stepText,

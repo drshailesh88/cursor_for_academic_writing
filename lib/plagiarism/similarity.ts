@@ -214,9 +214,9 @@ export function determineMatchType(
   queryText: string,
   sourceText: string
 ): MatchType {
-  // Normalize for comparison
-  const normalizedQuery = queryText.toLowerCase().trim();
-  const normalizedSource = sourceText.toLowerCase().trim();
+  // Normalize for comparison - collapse multiple spaces
+  const normalizedQuery = queryText.toLowerCase().trim().replace(/\s+/g, ' ');
+  const normalizedSource = sourceText.toLowerCase().trim().replace(/\s+/g, ' ');
 
   // Exact match
   if (normalizedQuery === normalizedSource) {

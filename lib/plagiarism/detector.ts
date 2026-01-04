@@ -69,7 +69,16 @@ export function detectQuotes(text: string): Array<{
     }
   }
 
-  return quotes.sort((a, b) => a.startOffset - b.startOffset);
+  // Deduplicate quotes by position (same quote matched by multiple patterns)
+  const seen = new Set<string>();
+  const uniqueQuotes = quotes.filter(q => {
+    const key = `${q.startOffset}-${q.endOffset}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return uniqueQuotes.sort((a, b) => a.startOffset - b.startOffset);
 }
 
 /**
@@ -88,10 +97,21 @@ export function detectCitations(text: string): Array<{
     format: 'author-year' | 'numeric' | 'footnote';
   }> = [];
 
-  // Author-year: (Smith, 2023), (Smith et al., 2023), (Smith & Jones, 2023)
+  // Author-year parenthetical: (Smith, 2023), (Smith et al., 2023), (Smith & Jones, 2023)
   const authorYearRegex = /\([A-Z][a-z]+(?:\s+(?:et\s+al\.|&\s+[A-Z][a-z]+))?,\s*\d{4}[a-z]?\)/g;
   let match;
   while ((match = authorYearRegex.exec(text)) !== null) {
+    citations.push({
+      citation: match[0],
+      startOffset: match.index,
+      endOffset: match.index + match[0].length,
+      format: 'author-year',
+    });
+  }
+
+  // Narrative citations: Smith (2023), Jones et al. (2022)
+  const narrativeRegex = /\b[A-Z][a-z]+(?:\s+et\s+al\.)?\s+\(\d{4}[a-z]?\)/g;
+  while ((match = narrativeRegex.exec(text)) !== null) {
     citations.push({
       citation: match[0],
       startOffset: match.index,
@@ -122,7 +142,16 @@ export function detectCitations(text: string): Array<{
     });
   }
 
-  return citations.sort((a, b) => a.startOffset - b.startOffset);
+  // Deduplicate citations by position (same citation matched by multiple patterns)
+  const seen = new Set<string>();
+  const uniqueCitations = citations.filter(c => {
+    const key = `${c.startOffset}-${c.endOffset}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return uniqueCitations.sort((a, b) => a.startOffset - b.startOffset);
 }
 
 /**
@@ -322,7 +351,12 @@ export function shouldExcludeMatch(
   if (config.exclusions.quotes) {
     const quotes = detectQuotes(text);
     for (const quote of quotes) {
-      if (match.startOffset >= quote.startOffset && match.endOffset <= quote.endOffset) {
+      // Check for position overlap
+      const positionOverlap = match.startOffset >= quote.startOffset && match.endOffset <= quote.endOffset;
+      // Also check if match text appears in quote text (for cases where positions don't align)
+      const textContained = quote.text.includes(match.text) || match.text.includes(quote.text);
+
+      if (positionOverlap || textContained) {
         return { excluded: true, reason: 'quoted' };
       }
     }

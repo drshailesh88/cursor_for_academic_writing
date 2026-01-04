@@ -98,7 +98,7 @@ const arxivSearchResponse = `<?xml version="1.0" encoding="UTF-8"?>
     <category term="cs.CV"/>
     <category term="cs.LG"/>
     <link href="http://arxiv.org/abs/2401.12345v1" rel="alternate" type="text/html"/>
-    <link href="http://arxiv.org/pdf/2401.12345v1" rel="related" type="application/pdf"/>
+    <link href="http://arxiv.org/pdf/2401.12345v1.pdf" title="pdf" rel="related" type="application/pdf"/>
   </entry>
 </feed>`;
 
@@ -253,18 +253,39 @@ export const handlers = [
   }),
 
   // Semantic Scholar Paper Details (handles regular IDs and DOI/ArXiv/PMID lookups)
-  http.get('https://api.semanticscholar.org/graph/v1/paper/:paperId', ({ params }) => {
-    const paperId = params.paperId as string;
+  // Using wildcard pattern to match DOIs with slashes
+  http.get('https://api.semanticscholar.org/graph/v1/paper/*', ({ request }) => {
+    // Extract the paper ID from the URL path
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    // Get everything after '/paper/' by joining the remaining segments
+    const paperId = pathParts.slice(5).map(decodeURIComponent).join('/');
 
     // Handle external ID lookups (DOI:, ARXIV:, PMID:)
     if (paperId.startsWith('DOI:') || paperId.startsWith('ARXIV:') || paperId.startsWith('PMID:')) {
-      const paper = semanticScholarSearchResponse.data[0];
-      return HttpResponse.json(paper);
+      // Return complete paper data for external ID lookups
+      return HttpResponse.json({
+        paperId: 'abc123def456',
+        title: 'Machine Learning in Clinical Practice',
+        abstract: 'This paper reviews the use of machine learning algorithms in clinical settings...',
+        year: 2024,
+        citationCount: 45,
+        influentialCitationCount: 12,
+        authors: [
+          { authorId: 'a1', name: 'David Chen' },
+          { authorId: 'a2', name: 'Sarah Lee' },
+        ],
+        externalIds: {
+          DOI: '10.1016/j.jbi.2024.104567',
+          PubMed: '38765432',
+        },
+        isOpenAccess: false,
+        url: 'https://www.semanticscholar.org/paper/abc123def456',
+      });
     }
 
     // Regular paper ID lookup
-    const paper = semanticScholarSearchResponse.data[0];
-    return HttpResponse.json(paper);
+    return HttpResponse.json(semanticScholarSearchResponse.data[0]);
   }),
 
   // OpenAlex Works Search
@@ -273,10 +294,48 @@ export const handlers = [
   }),
 
   // OpenAlex Work by ID (including DOI lookups like doi:10.1234/abc)
-  http.get('https://api.openalex.org/works/:workId', ({ params }) => {
-    // Return the first result from the search response
-    const work = openAlexSearchResponse.results[0];
-    return HttpResponse.json(work);
+  // Using wildcard pattern to match DOIs with slashes
+  http.get('https://api.openalex.org/works/*', ({ request }) => {
+    // Extract the work ID from the URL path
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    // Get everything after '/works/' by joining the remaining segments
+    const workId = pathParts.slice(3).map(decodeURIComponent).join('/');
+
+    // Handle DOI lookups
+    if (workId.startsWith('doi:') || workId.startsWith('DOI:')) {
+      return HttpResponse.json({
+        id: 'https://openalex.org/W4390123456',
+        doi: 'https://doi.org/10.1016/j.cell.2024.01.001',
+        display_name: 'CRISPR Applications in Cancer Research',
+        publication_year: 2024,
+        authorships: [
+          {
+            author: {
+              id: 'https://openalex.org/A5012345678',
+              display_name: 'Michael Zhang',
+            },
+            author_position: 'first',
+          },
+        ],
+        abstract_inverted_index: {
+          'This': [0],
+          'study': [1],
+          'explores': [2],
+          'CRISPR': [3],
+        },
+        cited_by_count: 89,
+        is_oa: true,
+        primary_location: {
+          source: {
+            display_name: 'Cell',
+          },
+        },
+      });
+    }
+
+    // Return the first result from the search response for regular IDs
+    return HttpResponse.json(openAlexSearchResponse.results[0]);
   }),
 
   // OpenRouter Chat Completion

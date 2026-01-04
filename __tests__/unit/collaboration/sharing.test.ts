@@ -17,10 +17,10 @@ import type { DocumentShare, SharePermission } from '@/lib/collaboration/types';
 
 // Mock crypto.randomUUID for consistent testing
 const mockRandomUUID = vi.fn(() => 'a'.repeat(32) + '-' + 'b'.repeat(4));
-global.crypto = {
+vi.stubGlobal('crypto', {
   ...global.crypto,
   randomUUID: mockRandomUUID,
-} as Crypto;
+});
 
 // Mock the Firebase client module
 vi.mock('@/lib/firebase/client', () => ({

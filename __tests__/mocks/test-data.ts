@@ -54,6 +54,15 @@ export interface MockPresentation {
   title: string;
   theme: 'academic' | 'dark' | 'minimal';
   slides: MockSlide[];
+  settings: {
+    aspectRatio: '16:9' | '4:3';
+    showSlideNumbers: boolean;
+    showProgressBar: boolean;
+    autoAdvance: boolean;
+    autoAdvanceInterval: number;
+    transition: string;
+    transitionDuration: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -200,6 +209,15 @@ export function createMockPresentation(overrides?: Partial<MockPresentation>): M
       createMockSlide('two-column'),
       createMockSlide('references'),
     ],
+    settings: {
+      aspectRatio: '16:9',
+      showSlideNumbers: true,
+      showProgressBar: true,
+      autoAdvance: false,
+      autoAdvanceInterval: 30,
+      transition: 'fade',
+      transitionDuration: 300,
+    },
     createdAt: faker.date.past(),
     updatedAt: faker.date.recent(),
     ...overrides,

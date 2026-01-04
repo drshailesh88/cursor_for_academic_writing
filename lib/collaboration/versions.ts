@@ -168,16 +168,16 @@ export async function restoreVersion(
   currentUserName: string
 ): Promise<void> {
   try {
+    // Check if document exists first
+    const currentDocument = await getDocument(documentId);
+    if (!currentDocument) {
+      throw new Error('Document not found');
+    }
+
     // Get the version to restore
     const version = await getVersion(documentId, versionId);
     if (!version) {
       throw new Error('Version not found');
-    }
-
-    // Get current document state to create a backup version before restoring
-    const currentDocument = await getDocument(documentId);
-    if (!currentDocument) {
-      throw new Error('Document not found');
     }
 
     // Create a backup of current state before restoring
