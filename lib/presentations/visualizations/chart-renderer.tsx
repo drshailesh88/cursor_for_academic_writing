@@ -6,6 +6,22 @@
  *
  * Provides professional, theme-aware charts for presentation slides
  * using pure SVG (no external charting libraries required)
+ *
+ * Supported chart types:
+ * - Bar charts (vertical, horizontal, stacked)
+ * - Line charts (single, multi-line)
+ * - Area charts (with gradient fills)
+ * - Scatter plots (with optional trend line and R² calculation)
+ * - Bubble charts (scatter with size variation)
+ * - Pie/Donut charts
+ * - Box plots (statistical distributions with quartiles and outliers)
+ *
+ * Features:
+ * - Interactive hover states with value tooltips
+ * - Statistical annotations (p-values, significance markers, confidence intervals)
+ * - Linear regression trend lines with R² display
+ * - Responsive sizing and theme integration
+ * - Academic-quality styling suitable for scientific presentations
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -36,6 +52,23 @@ interface ChartComponentProps {
 interface Point {
   x: number;
   y: number;
+}
+
+interface ScatterPoint {
+  x: number;
+  y: number;
+  label?: string;
+  size?: number;
+}
+
+interface BoxPlotData {
+  label: string;
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+  outliers?: number[];
 }
 
 interface BarLayout {
@@ -295,6 +328,52 @@ function generateSmoothPath(points: Point[]): string {
   path += ` Q ${secondLast.x} ${secondLast.y} ${last.x} ${last.y}`;
 
   return path;
+}
+
+/**
+ * Calculate linear regression trend line
+ */
+function calculateTrendLine(points: { x: number; y: number }[]): {
+  slope: number;
+  intercept: number;
+  r2: number;
+} {
+  if (points.length < 2) {
+    return { slope: 0, intercept: 0, r2: 0 };
+  }
+
+  const n = points.length;
+  let sumX = 0;
+  let sumY = 0;
+  let sumXY = 0;
+  let sumXX = 0;
+  let sumYY = 0;
+
+  for (const point of points) {
+    sumX += point.x;
+    sumY += point.y;
+    sumXY += point.x * point.y;
+    sumXX += point.x * point.x;
+    sumYY += point.y * point.y;
+  }
+
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+
+  // Calculate R-squared
+  const meanY = sumY / n;
+  let ssTotal = 0;
+  let ssResidual = 0;
+
+  for (const point of points) {
+    const predicted = slope * point.x + intercept;
+    ssTotal += Math.pow(point.y - meanY, 2);
+    ssResidual += Math.pow(point.y - predicted, 2);
+  }
+
+  const r2 = ssTotal > 0 ? 1 - ssResidual / ssTotal : 0;
+
+  return { slope, intercept, r2 };
 }
 
 // ============================================================================
@@ -902,13 +981,849 @@ function PieChart({ data, options, colors, width, height, theme, donut = false }
   );
 }
 
+/**
+ * Statistical Annotation Component
+ */
+function StatisticalAnnotation({
+  x,
+  y,
+  text,
+  type,
+  theme,
+}: {
+  x: number;
+  y: number;
+  text: string;
+  type: 'pValue' | 'significance' | 'ci' | 'label';
+  theme: Theme;
+}) {
+  const getAnnotationStyle = () => {
+    switch (type) {
+      case 'pValue':
+        return {
+          fontSize: 10,
+          fontStyle: 'italic',
+          color: theme.colors.textMuted,
+        };
+      case 'significance':
+        return {
+          fontSize: 14,
+          fontWeight: 700,
+          color: theme.colors.accent,
+        };
+      case 'ci':
+        return {
+          fontSize: 9,
+          fontStyle: 'italic',
+          color: theme.colors.textMuted,
+        };
+      case 'label':
+      default:
+        return {
+          fontSize: 11,
+          fontWeight: 500,
+          color: theme.colors.text,
+        };
+    }
+  };
+
+  const style = getAnnotationStyle();
+
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      dominantBaseline="middle"
+      fill={style.color}
+      fontSize={style.fontSize}
+      fontWeight={style.fontWeight || 400}
+      fontStyle={style.fontStyle || 'normal'}
+      fontFamily={theme.fonts.body}
+    >
+      {text}
+    </text>
+  );
+}
+
+/**
+ * Scatter Chart Component (with bubble chart variant)
+ */
+function ScatterChart({
+  data,
+  options,
+  colors,
+  width,
+  height,
+  theme,
+}: ChartComponentProps & { data: ChartData & { points?: ScatterPoint[] } }) {
+  const padding = { top: 40, right: 20, bottom: 60, left: 60 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  // Get scatter points from data
+  const scatterPoints: ScatterPoint[] = data.points || [];
+
+  // If no explicit points, convert from datasets
+  if (scatterPoints.length === 0 && data.datasets.length > 0) {
+    data.datasets.forEach((dataset, datasetIndex) => {
+      dataset.data.forEach((value, index) => {
+        scatterPoints.push({
+          x: index,
+          y: value,
+          label: data.labels[index],
+          size: 1,
+        });
+      });
+    });
+  }
+
+  // Calculate ranges
+  const xValues = scatterPoints.map(p => p.x);
+  const yValues = scatterPoints.map(p => p.y);
+  const minX = Math.min(...xValues);
+  const maxX = Math.max(...xValues);
+  const minY = Math.min(...yValues, 0);
+  const maxY = Math.max(...yValues);
+
+  const xRange = maxX - minX || 1;
+  const yRange = maxY - minY || 1;
+
+  const xScale = (value: number) => padding.left + ((value - minX) / xRange) * chartWidth;
+  const yScale = (value: number) => padding.top + chartHeight - ((value - minY) / yRange) * chartHeight;
+
+  // Generate axis ticks
+  const xTicks = useMemo(() => {
+    const tickCount = 5;
+    const ticks: number[] = [];
+    for (let i = 0; i <= tickCount; i++) {
+      ticks.push(minX + (xRange / tickCount) * i);
+    }
+    return ticks;
+  }, [minX, xRange]);
+
+  const yTicks = useMemo(() => {
+    const tickCount = 5;
+    const ticks: number[] = [];
+    for (let i = 0; i <= tickCount; i++) {
+      ticks.push(minY + (yRange / tickCount) * i);
+    }
+    return ticks;
+  }, [minY, yRange]);
+
+  // Calculate trend line if enabled
+  const showTrendLine = options.showTrendLine !== false;
+  const trendLine = useMemo(() => {
+    if (!showTrendLine) return null;
+    return calculateTrendLine(scatterPoints.map(p => ({ x: p.x, y: p.y })));
+  }, [scatterPoints, showTrendLine]);
+
+  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
+
+  return (
+    <svg width={width} height={height} className="chart-svg">
+      {/* Grid lines */}
+      {options.showGrid !== false && (
+        <g className="grid">
+          {yTicks.map((tick, i) => (
+            <line
+              key={`y-${i}`}
+              x1={padding.left}
+              y1={yScale(tick)}
+              x2={width - padding.right}
+              y2={yScale(tick)}
+              stroke={theme.colors.border}
+              strokeOpacity={0.5}
+              strokeWidth={1}
+              strokeDasharray="4 2"
+            />
+          ))}
+          {xTicks.map((tick, i) => (
+            <line
+              key={`x-${i}`}
+              x1={xScale(tick)}
+              y1={padding.top}
+              x2={xScale(tick)}
+              y2={height - padding.bottom}
+              stroke={theme.colors.border}
+              strokeOpacity={0.5}
+              strokeWidth={1}
+              strokeDasharray="4 2"
+            />
+          ))}
+        </g>
+      )}
+
+      {/* Axes */}
+      <g className="axes">
+        <line
+          x1={padding.left}
+          y1={padding.top}
+          x2={padding.left}
+          y2={height - padding.bottom}
+          stroke={theme.colors.text}
+          strokeWidth={2}
+        />
+        <line
+          x1={padding.left}
+          y1={height - padding.bottom}
+          x2={width - padding.right}
+          y2={height - padding.bottom}
+          stroke={theme.colors.text}
+          strokeWidth={2}
+        />
+      </g>
+
+      {/* Axis labels */}
+      <g className="axis-labels">
+        {yTicks.map((tick, i) => (
+          <text
+            key={`y-label-${i}`}
+            x={padding.left - 10}
+            y={yScale(tick)}
+            textAnchor="end"
+            dominantBaseline="middle"
+            fill={theme.colors.textMuted}
+            fontSize={12}
+            fontFamily={theme.fonts.body}
+          >
+            {formatAxisLabel(tick)}
+          </text>
+        ))}
+        {xTicks.map((tick, i) => (
+          <text
+            key={`x-label-${i}`}
+            x={xScale(tick)}
+            y={height - padding.bottom + 20}
+            textAnchor="middle"
+            fill={theme.colors.textMuted}
+            fontSize={12}
+            fontFamily={theme.fonts.body}
+          >
+            {formatAxisLabel(tick)}
+          </text>
+        ))}
+      </g>
+
+      {/* Trend line */}
+      {trendLine && trendLine.r2 > 0 && (
+        <g className="trend-line">
+          <line
+            x1={xScale(minX)}
+            y1={yScale(trendLine.slope * minX + trendLine.intercept)}
+            x2={xScale(maxX)}
+            y2={yScale(trendLine.slope * maxX + trendLine.intercept)}
+            stroke={theme.colors.accent}
+            strokeWidth={2}
+            strokeDasharray="8 4"
+            opacity={0.7}
+          />
+          <text
+            x={width - padding.right - 10}
+            y={padding.top + 20}
+            textAnchor="end"
+            fill={theme.colors.accent}
+            fontSize={10}
+            fontFamily={theme.fonts.body}
+          >
+            R² = {trendLine.r2.toFixed(3)}
+          </text>
+        </g>
+      )}
+
+      {/* Scatter points */}
+      <g className="points">
+        {scatterPoints.map((point, i) => {
+          const isHovered = hoveredPoint === i;
+          const pointSize = (point.size || 1) * (isHovered ? 8 : 6);
+          const px = xScale(point.x);
+          const py = yScale(point.y);
+
+          return (
+            <g key={i}>
+              <circle
+                cx={px}
+                cy={py}
+                r={pointSize}
+                fill={colors[0]}
+                fillOpacity={0.7}
+                stroke={theme.colors.background}
+                strokeWidth={2}
+                onMouseEnter={() => setHoveredPoint(i)}
+                onMouseLeave={() => setHoveredPoint(null)}
+                style={{ transition: 'r 0.2s', cursor: 'pointer' }}
+              />
+              {isHovered && (
+                <>
+                  <rect
+                    x={px + 10}
+                    y={py - 30}
+                    width={80}
+                    height={40}
+                    fill={theme.colors.background}
+                    stroke={theme.colors.border}
+                    strokeWidth={1}
+                    rx={4}
+                    opacity={0.95}
+                  />
+                  <text
+                    x={px + 50}
+                    y={py - 18}
+                    textAnchor="middle"
+                    fill={theme.colors.text}
+                    fontSize={10}
+                    fontWeight={600}
+                    fontFamily={theme.fonts.body}
+                  >
+                    {point.label || `Point ${i + 1}`}
+                  </text>
+                  <text
+                    x={px + 50}
+                    y={py - 5}
+                    textAnchor="middle"
+                    fill={theme.colors.textMuted}
+                    fontSize={9}
+                    fontFamily={theme.fonts.body}
+                  >
+                    ({formatAxisLabel(point.x)}, {formatAxisLabel(point.y)})
+                  </text>
+                </>
+              )}
+            </g>
+          );
+        })}
+      </g>
+
+      {/* Title */}
+      {options.title && (
+        <text
+          x={width / 2}
+          y={20}
+          textAnchor="middle"
+          fill={theme.colors.text}
+          fontSize={16}
+          fontWeight={theme.styles.headingWeight}
+          fontFamily={theme.fonts.heading}
+        >
+          {options.title}
+        </text>
+      )}
+    </svg>
+  );
+}
+
+/**
+ * Area Chart Component
+ */
+function AreaChart({ data, options, colors, width, height, theme }: ChartComponentProps) {
+  const padding = { top: 40, right: 20, bottom: 60, left: 60 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  const allValues = data.datasets.flatMap(ds => ds.data);
+  const maxValue = Math.max(...allValues, 0) * 1.1;
+  const minValue = Math.min(...allValues, 0);
+  const valueRange = maxValue - minValue;
+
+  const xScale = (index: number) => padding.left + (index / (data.labels.length - 1)) * chartWidth;
+  const yScale = (value: number) => padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
+
+  const yTicks = useMemo(() => {
+    const tickCount = 5;
+    const ticks: number[] = [];
+    for (let i = 0; i <= tickCount; i++) {
+      ticks.push(minValue + (valueRange / tickCount) * i);
+    }
+    return ticks;
+  }, [minValue, valueRange]);
+
+  const [hoveredPoint, setHoveredPoint] = useState<{ datasetIndex: number; pointIndex: number } | null>(null);
+
+  return (
+    <svg width={width} height={height} className="chart-svg">
+      {/* Grid lines */}
+      {options.showGrid !== false && (
+        <g className="grid">
+          {yTicks.map((tick, i) => (
+            <line
+              key={i}
+              x1={padding.left}
+              y1={yScale(tick)}
+              x2={width - padding.right}
+              y2={yScale(tick)}
+              stroke={theme.colors.border}
+              strokeOpacity={0.5}
+              strokeWidth={1}
+              strokeDasharray="4 2"
+            />
+          ))}
+        </g>
+      )}
+
+      {/* Axes */}
+      <g className="axes">
+        <line
+          x1={padding.left}
+          y1={padding.top}
+          x2={padding.left}
+          y2={height - padding.bottom}
+          stroke={theme.colors.text}
+          strokeWidth={2}
+        />
+        <line
+          x1={padding.left}
+          y1={height - padding.bottom}
+          x2={width - padding.right}
+          y2={height - padding.bottom}
+          stroke={theme.colors.text}
+          strokeWidth={2}
+        />
+      </g>
+
+      {/* Y-axis labels */}
+      <g className="y-axis-labels">
+        {yTicks.map((tick, i) => (
+          <text
+            key={i}
+            x={padding.left - 10}
+            y={yScale(tick)}
+            textAnchor="end"
+            dominantBaseline="middle"
+            fill={theme.colors.textMuted}
+            fontSize={12}
+            fontFamily={theme.fonts.body}
+          >
+            {formatAxisLabel(tick)}
+          </text>
+        ))}
+      </g>
+
+      {/* X-axis labels */}
+      <g className="x-axis-labels">
+        {data.labels.map((label, i) => (
+          <text
+            key={i}
+            x={xScale(i)}
+            y={height - padding.bottom + 20}
+            textAnchor="middle"
+            fill={theme.colors.textMuted}
+            fontSize={12}
+            fontFamily={theme.fonts.body}
+          >
+            {label}
+          </text>
+        ))}
+      </g>
+
+      {/* Areas and lines */}
+      {data.datasets.map((dataset, datasetIndex) => {
+        const points: Point[] = dataset.data.map((value, i) => ({
+          x: xScale(i),
+          y: yScale(value),
+        }));
+
+        const linePath = generateSmoothPath(points);
+
+        // Create area path (close to bottom)
+        const areaPath = linePath +
+          ` L ${points[points.length - 1].x} ${height - padding.bottom}` +
+          ` L ${points[0].x} ${height - padding.bottom}` +
+          ' Z';
+
+        const color = dataset.borderColor || colors[datasetIndex % colors.length];
+        const fillColor = dataset.backgroundColor || color;
+
+        return (
+          <g key={datasetIndex}>
+            {/* Gradient definition */}
+            <defs>
+              <linearGradient id={`area-gradient-${datasetIndex}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor={fillColor} stopOpacity={0.5} />
+                <stop offset="100%" stopColor={fillColor} stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
+
+            {/* Area fill */}
+            <path
+              d={areaPath}
+              fill={`url(#area-gradient-${datasetIndex})`}
+            />
+
+            {/* Line */}
+            <path
+              d={linePath}
+              fill="none"
+              stroke={color}
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Points */}
+            {points.map((point, pointIndex) => {
+              const isHovered =
+                hoveredPoint?.datasetIndex === datasetIndex && hoveredPoint?.pointIndex === pointIndex;
+
+              return (
+                <g key={pointIndex}>
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={isHovered ? 5 : 3}
+                    fill={color}
+                    stroke={theme.colors.background}
+                    strokeWidth={2}
+                    onMouseEnter={() => setHoveredPoint({ datasetIndex, pointIndex })}
+                    onMouseLeave={() => setHoveredPoint(null)}
+                    style={{ transition: 'r 0.2s', cursor: 'pointer' }}
+                  />
+                  {isHovered && (
+                    <text
+                      x={point.x}
+                      y={point.y - 15}
+                      textAnchor="middle"
+                      fill={theme.colors.text}
+                      fontSize={11}
+                      fontWeight={600}
+                      fontFamily={theme.fonts.body}
+                    >
+                      {formatAxisLabel(dataset.data[pointIndex])}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+        );
+      })}
+
+      {/* Title */}
+      {options.title && (
+        <text
+          x={width / 2}
+          y={20}
+          textAnchor="middle"
+          fill={theme.colors.text}
+          fontSize={16}
+          fontWeight={theme.styles.headingWeight}
+          fontFamily={theme.fonts.heading}
+        >
+          {options.title}
+        </text>
+      )}
+    </svg>
+  );
+}
+
+/**
+ * Box Plot Component for statistical distributions
+ */
+function BoxPlot({
+  data,
+  options,
+  colors,
+  width,
+  height,
+  theme,
+}: {
+  data: { datasets: BoxPlotData[] };
+  options: ChartComponentProps['options'];
+  colors: string[];
+  width: number;
+  height: number;
+  theme: Theme;
+}) {
+  const padding = { top: 40, right: 20, bottom: 60, left: 60 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  // Calculate global min/max for y-axis
+  const allValues = data.datasets.flatMap(d => [
+    d.min,
+    d.q1,
+    d.median,
+    d.q3,
+    d.max,
+    ...(d.outliers || []),
+  ]);
+  const minValue = Math.min(...allValues) * 0.9;
+  const maxValue = Math.max(...allValues) * 1.1;
+  const valueRange = maxValue - minValue;
+
+  const yScale = (value: number) => padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
+
+  const boxWidth = (chartWidth / data.datasets.length) * 0.6;
+  const boxSpacing = chartWidth / data.datasets.length;
+
+  const yTicks = useMemo(() => {
+    const tickCount = 5;
+    const ticks: number[] = [];
+    for (let i = 0; i <= tickCount; i++) {
+      ticks.push(minValue + (valueRange / tickCount) * i);
+    }
+    return ticks;
+  }, [minValue, valueRange]);
+
+  const [hoveredBox, setHoveredBox] = useState<number | null>(null);
+
+  return (
+    <svg width={width} height={height} className="chart-svg">
+      {/* Grid lines */}
+      {options.showGrid !== false && (
+        <g className="grid">
+          {yTicks.map((tick, i) => (
+            <line
+              key={i}
+              x1={padding.left}
+              y1={yScale(tick)}
+              x2={width - padding.right}
+              y2={yScale(tick)}
+              stroke={theme.colors.border}
+              strokeOpacity={0.5}
+              strokeWidth={1}
+              strokeDasharray="4 2"
+            />
+          ))}
+        </g>
+      )}
+
+      {/* Axes */}
+      <g className="axes">
+        <line
+          x1={padding.left}
+          y1={padding.top}
+          x2={padding.left}
+          y2={height - padding.bottom}
+          stroke={theme.colors.text}
+          strokeWidth={2}
+        />
+        <line
+          x1={padding.left}
+          y1={height - padding.bottom}
+          x2={width - padding.right}
+          y2={height - padding.bottom}
+          stroke={theme.colors.text}
+          strokeWidth={2}
+        />
+      </g>
+
+      {/* Y-axis labels */}
+      <g className="y-axis-labels">
+        {yTicks.map((tick, i) => (
+          <text
+            key={i}
+            x={padding.left - 10}
+            y={yScale(tick)}
+            textAnchor="end"
+            dominantBaseline="middle"
+            fill={theme.colors.textMuted}
+            fontSize={12}
+            fontFamily={theme.fonts.body}
+          >
+            {formatAxisLabel(tick)}
+          </text>
+        ))}
+      </g>
+
+      {/* Box plots */}
+      <g className="boxes">
+        {data.datasets.map((boxData, i) => {
+          const centerX = padding.left + i * boxSpacing + boxSpacing / 2;
+          const isHovered = hoveredBox === i;
+          const color = colors[i % colors.length];
+
+          // Y positions
+          const yMin = yScale(boxData.min);
+          const yQ1 = yScale(boxData.q1);
+          const yMedian = yScale(boxData.median);
+          const yQ3 = yScale(boxData.q3);
+          const yMax = yScale(boxData.max);
+
+          return (
+            <g key={i}>
+              {/* Whisker lines (min to Q1, Q3 to max) */}
+              <line
+                x1={centerX}
+                y1={yMin}
+                x2={centerX}
+                y2={yQ1}
+                stroke={color}
+                strokeWidth={2}
+              />
+              <line
+                x1={centerX}
+                y1={yQ3}
+                x2={centerX}
+                y2={yMax}
+                stroke={color}
+                strokeWidth={2}
+              />
+
+              {/* Whisker caps */}
+              <line
+                x1={centerX - boxWidth / 4}
+                y1={yMin}
+                x2={centerX + boxWidth / 4}
+                y2={yMin}
+                stroke={color}
+                strokeWidth={2}
+              />
+              <line
+                x1={centerX - boxWidth / 4}
+                y1={yMax}
+                x2={centerX + boxWidth / 4}
+                y2={yMax}
+                stroke={color}
+                strokeWidth={2}
+              />
+
+              {/* IQR box (Q1 to Q3) */}
+              <rect
+                x={centerX - boxWidth / 2}
+                y={yQ3}
+                width={boxWidth}
+                height={yQ1 - yQ3}
+                fill={color}
+                fillOpacity={isHovered ? 0.4 : 0.3}
+                stroke={color}
+                strokeWidth={2}
+                onMouseEnter={() => setHoveredBox(i)}
+                onMouseLeave={() => setHoveredBox(null)}
+                style={{ transition: 'fill-opacity 0.2s', cursor: 'pointer' }}
+              />
+
+              {/* Median line */}
+              <line
+                x1={centerX - boxWidth / 2}
+                y1={yMedian}
+                x2={centerX + boxWidth / 2}
+                y2={yMedian}
+                stroke={theme.colors.text}
+                strokeWidth={3}
+              />
+
+              {/* Outliers */}
+              {boxData.outliers?.map((outlier, oi) => (
+                <circle
+                  key={oi}
+                  cx={centerX}
+                  cy={yScale(outlier)}
+                  r={3}
+                  fill={color}
+                  fillOpacity={0.6}
+                />
+              ))}
+
+              {/* X-axis label */}
+              <text
+                x={centerX}
+                y={height - padding.bottom + 20}
+                textAnchor="middle"
+                fill={theme.colors.textMuted}
+                fontSize={12}
+                fontFamily={theme.fonts.body}
+              >
+                {boxData.label}
+              </text>
+
+              {/* Hover info */}
+              {isHovered && (
+                <g>
+                  <rect
+                    x={centerX + boxWidth / 2 + 10}
+                    y={yQ3 - 10}
+                    width={90}
+                    height={80}
+                    fill={theme.colors.background}
+                    stroke={theme.colors.border}
+                    strokeWidth={1}
+                    rx={4}
+                    opacity={0.95}
+                  />
+                  <text
+                    x={centerX + boxWidth / 2 + 55}
+                    y={yQ3 + 5}
+                    textAnchor="middle"
+                    fill={theme.colors.text}
+                    fontSize={9}
+                    fontFamily={theme.fonts.body}
+                  >
+                    Max: {formatAxisLabel(boxData.max)}
+                  </text>
+                  <text
+                    x={centerX + boxWidth / 2 + 55}
+                    y={yQ3 + 18}
+                    textAnchor="middle"
+                    fill={theme.colors.text}
+                    fontSize={9}
+                    fontFamily={theme.fonts.body}
+                  >
+                    Q3: {formatAxisLabel(boxData.q3)}
+                  </text>
+                  <text
+                    x={centerX + boxWidth / 2 + 55}
+                    y={yQ3 + 31}
+                    textAnchor="middle"
+                    fill={theme.colors.text}
+                    fontSize={9}
+                    fontWeight={600}
+                    fontFamily={theme.fonts.body}
+                  >
+                    Med: {formatAxisLabel(boxData.median)}
+                  </text>
+                  <text
+                    x={centerX + boxWidth / 2 + 55}
+                    y={yQ3 + 44}
+                    textAnchor="middle"
+                    fill={theme.colors.text}
+                    fontSize={9}
+                    fontFamily={theme.fonts.body}
+                  >
+                    Q1: {formatAxisLabel(boxData.q1)}
+                  </text>
+                  <text
+                    x={centerX + boxWidth / 2 + 55}
+                    y={yQ3 + 57}
+                    textAnchor="middle"
+                    fill={theme.colors.text}
+                    fontSize={9}
+                    fontFamily={theme.fonts.body}
+                  >
+                    Min: {formatAxisLabel(boxData.min)}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+      </g>
+
+      {/* Title */}
+      {options.title && (
+        <text
+          x={width / 2}
+          y={20}
+          textAnchor="middle"
+          fill={theme.colors.text}
+          fontSize={16}
+          fontWeight={theme.styles.headingWeight}
+          fontFamily={theme.fonts.heading}
+        >
+          {options.title}
+        </text>
+      )}
+    </svg>
+  );
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
 /**
  * Main chart renderer component for presentation slides
- * Supports bar, line, pie, and donut charts with SVG rendering
+ * Supports bar, horizontal bar, line, area, scatter, bubble, pie, donut, and box plot charts
+ * All charts are rendered with pure SVG (no external dependencies)
  */
 export function SlideChart({
   config,
@@ -946,8 +1861,17 @@ export function SlideChart({
 
       case 'line':
       case 'multi-line':
-      case 'area':
         return <LineChart {...chartProps} />;
+
+      case 'area':
+        return <AreaChart {...chartProps} />;
+
+      case 'scatter':
+      case 'bubble':
+        return <ScatterChart {...chartProps} data={config.data as ChartData & { points?: ScatterPoint[] }} />;
+
+      case 'box-plot':
+        return <BoxPlot data={config.data as unknown as { datasets: BoxPlotData[] }} options={config.options} colors={colors} width={width} height={height} theme={theme} />;
 
       case 'pie':
         return <PieChart {...chartProps} donut={false} />;
@@ -1033,3 +1957,9 @@ export function SlideChart({
     </div>
   );
 }
+
+// Export helper types for external use
+export type { ScatterPoint, BoxPlotData };
+
+// Export StatisticalAnnotation for external use in custom visualizations
+export { StatisticalAnnotation };

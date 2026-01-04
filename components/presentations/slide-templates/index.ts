@@ -7,6 +7,7 @@ export { DataSlide } from './data-slide';
 export { TwoColumnSlide } from './two-column-slide';
 export { SectionDividerSlide } from './section-divider-slide';
 export { ReferencesSlide } from './references-slide';
+export { ProcessSlide } from './process-slide';
 
 // Common props interface for all slides
 export interface SlideProps {
@@ -23,6 +24,7 @@ import { DataSlide } from './data-slide';
 import { TwoColumnSlide } from './two-column-slide';
 import { SectionDividerSlide } from './section-divider-slide';
 import { ReferencesSlide } from './references-slide';
+import { ProcessSlide } from './process-slide';
 
 /**
  * Get the appropriate slide component for a given slide type
@@ -37,9 +39,9 @@ export function getSlideComponent(type: SlideType): React.ComponentType<SlidePro
     'two-column': TwoColumnSlide,
     'section-divider': SectionDividerSlide,
     references: ReferencesSlide,
+    process: ProcessSlide,
     // Default fallback for unsupported types
     comparison: TwoColumnSlide,
-    process: ContentSlide,
     image: ContentSlide,
     quote: ContentSlide,
     timeline: ContentSlide,
@@ -62,6 +64,7 @@ export function isSlideTypeSupported(type: SlideType): boolean {
     'two-column',
     'section-divider',
     'references',
+    'process',
   ];
 
   return supportedTypes.includes(type);

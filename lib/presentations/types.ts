@@ -68,6 +68,7 @@ export interface ChartOptions {
   showGrid?: boolean;
   stacked?: boolean;
   aspectRatio?: number;
+  showTrendLine?: boolean; // For scatter/bubble charts
 }
 
 export interface ChartConfig {
