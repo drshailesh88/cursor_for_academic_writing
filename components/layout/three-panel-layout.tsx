@@ -31,6 +31,9 @@ import { KeyboardShortcuts, useKeyboardShortcuts } from '@/components/ui/keyboar
 import { CommentsSidebar } from '@/components/collaboration/comments-sidebar';
 import { ShareDialog, useShareDialog } from '@/components/collaboration/share-dialog';
 import { SettingsDialog } from '@/components/settings/settings-dialog';
+import { FeatureTabs } from '@/components/layout/feature-tabs';
+import { TabContent } from '@/components/layout/tab-content';
+import type { FeatureTab } from '@/components/layout/feature-tabs';
 import { useDocument } from '@/lib/hooks/use-document';
 import { useAuth } from '@/lib/firebase/auth';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,7 +72,7 @@ function useIsMobile() {
 }
 
 type MobileView = 'documents' | 'editor' | 'chat' | 'comments';
-type RightPanelView = 'chat' | 'comments';
+type RightPanelView = 'chat' | 'research' | 'papers' | 'discovery' | 'comments';
 
 // Paper Library trigger button (must be inside PaperLibraryProvider)
 function PaperLibraryTrigger() {
@@ -116,7 +119,16 @@ function ThreePanelContent() {
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | undefined>();
   const [mobileView, setMobileView] = useState<MobileView>('editor');
-  const [rightPanelView, setRightPanelView] = useState<RightPanelView>('chat');
+  const [rightPanelView, setRightPanelView] = useState<FeatureTab>(() => {
+    // Load from localStorage or default to 'chat'
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('rightPanelView');
+      if (saved && ['chat', 'research', 'papers', 'discovery'].includes(saved)) {
+        return saved as FeatureTab;
+      }
+    }
+    return 'chat';
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { isOpen: shortcutsOpen, setIsOpen: setShortcutsOpen } = useKeyboardShortcuts();
@@ -184,6 +196,11 @@ function ThreePanelContent() {
 
     createInitialDoc();
   }, [user, currentDocumentId, createNew]);
+
+  // Persist right panel view to localStorage
+  useEffect(() => {
+    localStorage.setItem('rightPanelView', rightPanelView);
+  }, [rightPanelView]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -760,7 +777,7 @@ function ThreePanelContent() {
 
           <PanelResizeHandle className="w-1 bg-border hover:bg-primary-300 transition-colors" />
 
-          {/* RIGHT PANEL: Chat & Comments */}
+          {/* RIGHT PANEL: Feature Tabs */}
           <Panel
             defaultSize={30}
             minSize={20}
@@ -770,47 +787,30 @@ function ThreePanelContent() {
             onExpand={() => setIsChatCollapsed(false)}
           >
             <div className="h-full relative bg-card border-l border-border flex flex-col">
-              {/* Tab buttons */}
-              <div className="flex border-b border-border">
-                <button
-                  onClick={() => setRightPanelView('chat')}
-                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                    rightPanelView === 'chat'
-                      ? 'text-primary border-b-2 border-primary bg-primary/5'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  <MessageSquare className="h-4 w-4 inline mr-2" />
-                  AI Chat
-                </button>
-                <button
-                  onClick={() => setRightPanelView('comments')}
-                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                    rightPanelView === 'comments'
-                      ? 'text-primary border-b-2 border-primary bg-primary/5'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  <MessageCircle className="h-4 w-4 inline mr-2" />
-                  Comments
-                </button>
-              </div>
+              {/* Feature Tabs Navigation */}
+              <FeatureTabs
+                activeTab={rightPanelView}
+                onTabChange={setRightPanelView}
+                badges={{
+                  // TODO: Add real badge counts from app state
+                  // chat: unreadMessages,
+                  // research: activeResearchCount,
+                  // papers: paperCount,
+                  // discovery: recommendationCount,
+                }}
+              />
 
-              {/* Panel content */}
+              {/* Tab Content */}
               <div className="flex-1 overflow-hidden">
-                {rightPanelView === 'chat' ? (
-                  <ChatInterface
-                    documentId={currentDocumentId}
-                    onInsertToEditor={handleInsertToEditor}
-                    initialDiscipline={document?.discipline}
-                    onDisciplineChange={handleDisciplineChange}
-                  />
-                ) : (
-                  <CommentsSidebar
-                    documentId={currentDocumentId}
-                    currentUserId={user?.uid}
-                  />
-                )}
+                <TabContent
+                  activeTab={rightPanelView}
+                  documentId={currentDocumentId}
+                  onInsertToEditor={handleInsertToEditor}
+                  initialDiscipline={document?.discipline}
+                  onDisciplineChange={handleDisciplineChange}
+                  documentContent={content}
+                  userId={user?.uid}
+                />
               </div>
 
               {/* Collapse button */}

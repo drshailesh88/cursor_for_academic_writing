@@ -32,30 +32,34 @@ export function ExtractionButtons({
     setLoading(type);
 
     try {
-      // TODO: Implement actual API call to /api/papers/extract
-      // For now, simulate a response
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await fetch('/api/papers/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paperId,
+          extractionType: type,
+          format: 'markdown',
+        }),
+      });
 
-      let content = '';
-      switch (type) {
-        case 'findings':
-          content = `**Key Findings from "${paperTitle}":**\n\n1. First major finding\n2. Second important result\n3. Third key discovery`;
-          break;
-        case 'methods':
-          content = `**Methods Summary:**\n\nThis study employed a quantitative approach using...`;
-          break;
-        case 'limitations':
-          content = `**Study Limitations:**\n\n- Sample size constraint\n- Temporal limitations\n- Methodological considerations`;
-          break;
-        case 'citation':
-          content = `Author et al. (2024). ${paperTitle}. *Journal Name*, 10(2), 123-145.`;
-          break;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Extraction failed');
       }
 
-      const newResult: ExtractionResult = { type, content };
+      const result = await response.json();
+
+      const newResult: ExtractionResult = { type, content: result.content };
       setResults((prev) => [newResult, ...prev]);
     } catch (error) {
       console.error('Extraction error:', error);
+      // Show error to user
+      const errorMessage = error instanceof Error ? error.message : 'Extraction failed';
+      const errorResult: ExtractionResult = {
+        type,
+        content: `**Error:** ${errorMessage}`,
+      };
+      setResults((prev) => [errorResult, ...prev]);
     } finally {
       setLoading(null);
     }

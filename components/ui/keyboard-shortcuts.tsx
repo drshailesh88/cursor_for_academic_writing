@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Keyboard } from 'lucide-react';
 import { Button } from './button';
+import { getAllShortcuts, formatKey } from '@/lib/config/shortcuts';
 
 interface Shortcut {
   keys: string[];
@@ -10,30 +11,39 @@ interface Shortcut {
   category: string;
 }
 
-const SHORTCUTS: Shortcut[] = [
-  // Document
-  { keys: ['Cmd', 'S'], description: 'Save document', category: 'Document' },
-  { keys: ['Cmd', 'N'], description: 'New document', category: 'Document' },
+// Convert config shortcuts to display format
+function getShortcutsForDisplay(): Shortcut[] {
+  const configShortcuts = getAllShortcuts();
 
-  // Text Formatting
-  { keys: ['Cmd', 'B'], description: 'Bold', category: 'Formatting' },
-  { keys: ['Cmd', 'I'], description: 'Italic', category: 'Formatting' },
-  { keys: ['Cmd', 'U'], description: 'Underline', category: 'Formatting' },
+  return configShortcuts.map(shortcut => {
+    // Convert modifiers + key to display keys array
+    const keys = [
+      ...shortcut.modifiers.map(m => m.charAt(0).toUpperCase() + m.slice(1)),
+      shortcut.key.toUpperCase()
+    ];
 
-  // History
-  { keys: ['Cmd', 'Z'], description: 'Undo', category: 'History' },
-  { keys: ['Cmd', 'Shift', 'Z'], description: 'Redo', category: 'History' },
+    return {
+      keys,
+      description: shortcut.description,
+      category: shortcut.category,
+    };
+  });
+}
 
-  // Editing
+// Legacy shortcuts that aren't in config (editor-specific)
+const EDITOR_SHORTCUTS: Shortcut[] = [
+  { keys: ['Tab'], description: 'Indent list item', category: 'Editing' },
+  { keys: ['Shift', 'Tab'], description: 'Outdent list item', category: 'Editing' },
   { keys: ['Cmd', 'A'], description: 'Select all', category: 'Editing' },
   { keys: ['Cmd', 'C'], description: 'Copy', category: 'Editing' },
   { keys: ['Cmd', 'V'], description: 'Paste', category: 'Editing' },
   { keys: ['Cmd', 'X'], description: 'Cut', category: 'Editing' },
+];
 
-  // Navigation
-  { keys: ['Cmd', '/'], description: 'Show keyboard shortcuts', category: 'Navigation' },
-  { keys: ['Tab'], description: 'Indent list item', category: 'Navigation' },
-  { keys: ['Shift', 'Tab'], description: 'Outdent list item', category: 'Navigation' },
+// Combine all shortcuts
+const SHORTCUTS: Shortcut[] = [
+  ...getShortcutsForDisplay(),
+  ...EDITOR_SHORTCUTS,
 ];
 
 interface KeyboardShortcutsProps {
@@ -46,13 +56,6 @@ export function KeyboardShortcuts({ isOpen, onClose }: KeyboardShortcutsProps) {
 
   const categories = [...new Set(SHORTCUTS.map((s) => s.category))];
   const isMac = typeof window !== 'undefined' && navigator.platform.includes('Mac');
-
-  const formatKey = (key: string) => {
-    if (key === 'Cmd') return isMac ? '⌘' : 'Ctrl';
-    if (key === 'Shift') return isMac ? '⇧' : 'Shift';
-    if (key === 'Alt') return isMac ? '⌥' : 'Alt';
-    return key;
-  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
