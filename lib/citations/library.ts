@@ -42,7 +42,7 @@ import {
  * Get user's references collection path
  */
 function getReferencesCollection(userId: string) {
-  return collection(db, COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES);
+  return collection(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES);
 }
 
 /**
@@ -83,7 +83,7 @@ export async function addReferences(
   references: Omit<Reference, 'id' | 'createdAt' | 'updatedAt'>[]
 ): Promise<string[]> {
   try {
-    const batch = writeBatch(db);
+    const batch = writeBatch(db());
     const ids: string[] = [];
     const colRef = getReferencesCollection(userId);
 
@@ -118,7 +118,7 @@ export async function getReference(
   referenceId: string
 ): Promise<Reference | null> {
   try {
-    const docRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, referenceId);
+    const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, referenceId);
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) return null;
@@ -145,7 +145,7 @@ export async function updateReference(
   updates: Partial<Reference>
 ): Promise<void> {
   try {
-    const docRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, referenceId);
+    const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, referenceId);
     await updateDoc(docRef, {
       ...updates,
       updatedAt: serverTimestamp(),
@@ -164,7 +164,7 @@ export async function deleteReference(
   referenceId: string
 ): Promise<void> {
   try {
-    const docRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, referenceId);
+    const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, referenceId);
     await deleteDoc(docRef);
   } catch (error) {
     console.error('Error deleting reference:', error);
@@ -180,10 +180,10 @@ export async function deleteReferences(
   referenceIds: string[]
 ): Promise<void> {
   try {
-    const batch = writeBatch(db);
+    const batch = writeBatch(db());
 
     for (const id of referenceIds) {
-      const docRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, id);
+      const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, id);
       batch.delete(docRef);
     }
 
@@ -421,7 +421,7 @@ export async function getReferencesByLabel(
  * Get folders collection path
  */
 function getFoldersCollection(userId: string) {
-  return collection(db, COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_FOLDERS);
+  return collection(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_FOLDERS);
 }
 
 /**
@@ -482,7 +482,7 @@ export async function updateFolder(
   updates: Partial<LibraryFolder>
 ): Promise<void> {
   try {
-    const docRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_FOLDERS, folderId);
+    const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_FOLDERS, folderId);
     await updateDoc(docRef, {
       ...updates,
       updatedAt: serverTimestamp(),
@@ -500,16 +500,16 @@ export async function deleteFolder(userId: string, folderId: string): Promise<vo
   try {
     // Remove folder from all references that have it
     const refs = await getReferencesByFolder(userId, folderId);
-    const batch = writeBatch(db);
+    const batch = writeBatch(db());
 
     for (const ref of refs) {
-      const docRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, ref.id);
+      const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, ref.id);
       const updatedFolders = (ref.folders || []).filter(f => f !== folderId);
       batch.update(docRef, { folders: updatedFolders, updatedAt: serverTimestamp() });
     }
 
     // Delete the folder
-    const folderRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_FOLDERS, folderId);
+    const folderRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_FOLDERS, folderId);
     batch.delete(folderRef);
 
     await batch.commit();
@@ -527,7 +527,7 @@ export async function deleteFolder(userId: string, folderId: string): Promise<vo
  * Get labels collection path
  */
 function getLabelsCollection(userId: string) {
-  return collection(db, COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_LABELS);
+  return collection(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_LABELS);
 }
 
 /**
@@ -584,10 +584,10 @@ export async function deleteLabel(userId: string, labelName: string): Promise<vo
   try {
     // Remove label from all references
     const refs = await getReferencesByLabel(userId, labelName);
-    const batch = writeBatch(db);
+    const batch = writeBatch(db());
 
     for (const ref of refs) {
-      const docRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, ref.id);
+      const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, ref.id);
       const updatedLabels = (ref.labels || []).filter(l => l !== labelName);
       batch.update(docRef, { labels: updatedLabels, updatedAt: serverTimestamp() });
     }
@@ -596,7 +596,7 @@ export async function deleteLabel(userId: string, labelName: string): Promise<vo
     const labels = await getLabels(userId);
     const labelDoc = labels.find(l => l.name === labelName);
     if (labelDoc) {
-      const labelRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_LABELS, labelDoc.id);
+      const labelRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_LABELS, labelDoc.id);
       batch.delete(labelRef);
     }
 

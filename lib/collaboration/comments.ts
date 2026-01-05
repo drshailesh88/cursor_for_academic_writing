@@ -25,7 +25,7 @@ export async function addComment(
 ): Promise<string> {
   try {
     const commentRef = doc(
-      collection(db, COLLECTIONS.DOCUMENTS, data.documentId, 'comments')
+      collection(db(), COLLECTIONS.DOCUMENTS, data.documentId, 'comments')
     );
 
     const now = Date.now();
@@ -57,7 +57,7 @@ export async function addComment(
 // Get all comments for a document
 export async function getComments(documentId: string): Promise<Comment[]> {
   try {
-    const commentsRef = collection(db, COLLECTIONS.DOCUMENTS, documentId, 'comments');
+    const commentsRef = collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments');
     const q = query(commentsRef, orderBy('createdAt', 'asc'));
     const querySnapshot = await getDocs(q);
 
@@ -83,7 +83,7 @@ export async function updateComment(
   updates: UpdateCommentData
 ): Promise<void> {
   try {
-    const commentRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
+    const commentRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
     await updateDoc(commentRef, {
       ...updates,
       updatedAt: Date.now(),
@@ -100,7 +100,7 @@ export async function deleteComment(
   commentId: string
 ): Promise<void> {
   try {
-    const commentRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
+    const commentRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
     await deleteDoc(commentRef);
   } catch (error) {
     console.error('Error deleting comment:', error);
@@ -128,7 +128,7 @@ export async function addReply(
   reply: Omit<CommentReply, 'id' | 'createdAt'>
 ): Promise<void> {
   try {
-    const commentRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
+    const commentRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
     const commentSnap = await getDoc(commentRef);
 
     if (!commentSnap.exists()) {
@@ -157,7 +157,7 @@ export function subscribeToComments(
   documentId: string,
   callback: (comments: Comment[]) => void
 ): Unsubscribe {
-  const commentsRef = collection(db, COLLECTIONS.DOCUMENTS, documentId, 'comments');
+  const commentsRef = collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments');
   const q = query(commentsRef, orderBy('createdAt', 'asc'));
 
   return onSnapshot(q, (snapshot) => {

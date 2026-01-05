@@ -46,7 +46,7 @@ export async function createShareLink(
   try {
     const shareToken = generateShareToken();
     const now = Date.now();
-    const shareRef = doc(collection(db, COLLECTIONS.DOCUMENTS, documentId, 'shares'));
+    const shareRef = doc(collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares'));
 
     const shareData: Omit<DocumentShare, 'id'> = {
       documentId,
@@ -86,11 +86,11 @@ export async function createEmailShare(
 ): Promise<string> {
   try {
     const now = Date.now();
-    const shareRef = doc(collection(db, COLLECTIONS.DOCUMENTS, documentId, 'shares'));
+    const shareRef = doc(collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares'));
 
     // Look up user by email (if they exist in the system)
     const usersQuery = query(
-      collection(db, COLLECTIONS.USERS),
+      collection(db(), COLLECTIONS.USERS),
       where('email', '==', email)
     );
     const usersSnapshot = await getDocs(usersQuery);
@@ -133,7 +133,7 @@ async function addToSharedWithMe(
 ): Promise<void> {
   try {
     // Get document details
-    const docRef = doc(db, COLLECTIONS.DOCUMENTS, documentId);
+    const docRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId);
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
@@ -144,11 +144,11 @@ async function addToSharedWithMe(
     const now = Date.now();
 
     // Get owner details
-    const ownerRef = doc(db, COLLECTIONS.USERS, docData.userId);
+    const ownerRef = doc(db(), COLLECTIONS.USERS, docData.userId);
     const ownerSnap = await getDoc(ownerRef);
     const ownerData = ownerSnap.exists() ? ownerSnap.data() : null;
 
-    const sharedDocRef = doc(db, COLLECTIONS.USERS, userId, 'sharedWithMe', documentId);
+    const sharedDocRef = doc(db(), COLLECTIONS.USERS, userId, 'sharedWithMe', documentId);
     const sharedDocData: Omit<SharedDocument, 'documentId'> & { shareId: string } = {
       title: docData.title,
       ownerName: ownerData?.displayName || 'Unknown',
@@ -174,7 +174,7 @@ async function addToSharedWithMe(
  */
 export async function getDocumentShares(documentId: string): Promise<DocumentShare[]> {
   try {
-    const sharesRef = collection(db, COLLECTIONS.DOCUMENTS, documentId, 'shares');
+    const sharesRef = collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares');
     const q = query(sharesRef, where('active', '==', true), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
 
@@ -211,7 +211,7 @@ export async function getDocumentShares(documentId: string): Promise<DocumentSha
  */
 export async function getSharedWithMe(userId: string): Promise<SharedDocument[]> {
   try {
-    const sharedRef = collection(db, COLLECTIONS.USERS, userId, 'sharedWithMe');
+    const sharedRef = collection(db(), COLLECTIONS.USERS, userId, 'sharedWithMe');
     const q = query(sharedRef, orderBy('sharedAt', 'desc'));
     const snapshot = await getDocs(q);
 
@@ -244,7 +244,7 @@ export async function getSharedWithMe(userId: string): Promise<SharedDocument[]>
  */
 export async function revokeShare(documentId: string, shareId: string): Promise<void> {
   try {
-    const shareRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'shares', shareId);
+    const shareRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares', shareId);
     const shareSnap = await getDoc(shareRef);
 
     if (!shareSnap.exists()) {
@@ -259,7 +259,7 @@ export async function revokeShare(documentId: string, shareId: string): Promise<
     // If it's an email share, remove from user's sharedWithMe
     if (shareData.type === 'email' && shareData.sharedWithUserId) {
       const sharedDocRef = doc(
-        db,
+        db(),
         COLLECTIONS.USERS,
         shareData.sharedWithUserId,
         'sharedWithMe',
@@ -285,7 +285,7 @@ export async function updateSharePermission(
   permission: SharePermission
 ): Promise<void> {
   try {
-    const shareRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'shares', shareId);
+    const shareRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares', shareId);
     const shareSnap = await getDoc(shareRef);
 
     if (!shareSnap.exists()) {
@@ -300,7 +300,7 @@ export async function updateSharePermission(
     // If it's an email share, update in user's sharedWithMe
     if (shareData.type === 'email' && shareData.sharedWithUserId) {
       const sharedDocRef = doc(
-        db,
+        db(),
         COLLECTIONS.USERS,
         shareData.sharedWithUserId,
         'sharedWithMe',
@@ -325,11 +325,11 @@ export async function validateShareToken(
   try {
     // Query all documents' shares for this token
     // Note: This requires a composite index on shares collection
-    const documentsRef = collection(db, COLLECTIONS.DOCUMENTS);
+    const documentsRef = collection(db(), COLLECTIONS.DOCUMENTS);
     const documentsSnapshot = await getDocs(documentsRef);
 
     for (const docSnapshot of documentsSnapshot.docs) {
-      const sharesRef = collection(db, COLLECTIONS.DOCUMENTS, docSnapshot.id, 'shares');
+      const sharesRef = collection(db(), COLLECTIONS.DOCUMENTS, docSnapshot.id, 'shares');
       const q = query(
         sharesRef,
         where('shareToken', '==', token),
@@ -373,7 +373,7 @@ export async function getUserDocumentPermission(
 ): Promise<SharePermission | null> {
   try {
     // Check if user owns the document
-    const docRef = doc(db, COLLECTIONS.DOCUMENTS, documentId);
+    const docRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId);
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
@@ -386,7 +386,7 @@ export async function getUserDocumentPermission(
     }
 
     // Check if document is shared with user
-    const sharedDocRef = doc(db, COLLECTIONS.USERS, userId, 'sharedWithMe', documentId);
+    const sharedDocRef = doc(db(), COLLECTIONS.USERS, userId, 'sharedWithMe', documentId);
     const sharedDocSnap = await getDoc(sharedDocRef);
 
     if (sharedDocSnap.exists()) {
