@@ -17,7 +17,7 @@ import type { TrackedChange, ChangeType } from '@/lib/collaboration/types';
 
 // Mock the Firebase client module
 vi.mock('@/lib/firebase/client', () => ({
-  db: mockFirestore,
+  db: () => mockFirestore,
 }));
 
 vi.mock('@/lib/firebase/schema', () => ({

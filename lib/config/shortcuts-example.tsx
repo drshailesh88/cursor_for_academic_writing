@@ -6,9 +6,9 @@
  *
  * NOTE: This file is for reference only and is not meant to be compiled.
  * Copy the relevant code snippets into three-panel-layout.tsx.
- *
- * @ts-nocheck
  */
+
+// @ts-nocheck
 
 // ============================================================================
 // STEP 1: Add imports at the top of three-panel-layout.tsx

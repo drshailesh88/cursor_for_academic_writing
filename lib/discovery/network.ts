@@ -258,6 +258,12 @@ export function calculateNetworkMetrics(network: {
   }
 
   return {
+    centralityScore: 0,
+    bridgeScore: 0,
+    influenceScore: 0,
+    noveltyScore: 0,
+    momentumScore: 0,
+    clusterIds: [],
     density,
     avgDegree,
     avgClustering,

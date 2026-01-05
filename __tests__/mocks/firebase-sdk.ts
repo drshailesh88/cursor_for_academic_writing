@@ -17,7 +17,8 @@ export const mockSignOut = vi.fn(async () => {
 });
 
 export const mockOnAuthStateChanged = vi.fn((callback: Function, errorCallback?: Function) => {
-  return mockAuth.onAuthStateChanged(callback as any, errorCallback as any);
+  // Mock auth only supports callback, not errorCallback
+  return mockAuth.onAuthStateChanged(callback as any);
 });
 
 export const mockCreateUserWithEmailAndPassword = vi.fn(async (auth: any, email: string, password: string) => {

@@ -294,10 +294,9 @@ export function createMatrix(
     userId,
     name,
     description,
-    template,
     paperIds,
+    template,
     rows: [],
-    summaries: [],
     createdAt: now,
     updatedAt: now,
   };

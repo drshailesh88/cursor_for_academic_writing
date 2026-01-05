@@ -17,7 +17,7 @@ import type { Comment, CommentReply, CreateCommentData } from '@/lib/collaborati
 
 // Mock the Firebase client module
 vi.mock('@/lib/firebase/client', () => ({
-  db: mockFirestore,
+  db: () => mockFirestore,
 }));
 
 vi.mock('@/lib/firebase/schema', () => ({

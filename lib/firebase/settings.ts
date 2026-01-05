@@ -12,7 +12,7 @@ import { UserSettings, DEFAULT_SETTINGS } from '../settings/types';
  */
 export async function getUserSettings(userId: string): Promise<UserSettings> {
   try {
-    const userRef = doc(db, COLLECTIONS.USERS, userId);
+    const userRef = doc(db(), COLLECTIONS.USERS, userId);
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
@@ -60,7 +60,7 @@ export async function updateUserSettings(
   settings: Partial<UserSettings>
 ): Promise<void> {
   try {
-    const userRef = doc(db, COLLECTIONS.USERS, userId);
+    const userRef = doc(db(), COLLECTIONS.USERS, userId);
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
@@ -94,7 +94,7 @@ export async function updateUserSettings(
  */
 export async function resetToDefaults(userId: string): Promise<void> {
   try {
-    const userRef = doc(db, COLLECTIONS.USERS, userId);
+    const userRef = doc(db(), COLLECTIONS.USERS, userId);
 
     await updateDoc(userRef, {
       settings: DEFAULT_SETTINGS,

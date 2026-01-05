@@ -33,7 +33,7 @@ export async function createTrackedChange(
 ): Promise<string> {
   try {
     const changeRef = doc(
-      collection(db, COLLECTIONS.DOCUMENTS, documentId, 'changes')
+      collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'changes')
     );
 
     const change: Omit<TrackedChange, 'id'> = {
@@ -65,7 +65,7 @@ export async function getTrackedChanges(
   status?: 'pending' | 'accepted' | 'rejected'
 ): Promise<TrackedChange[]> {
   try {
-    const changesRef = collection(db, COLLECTIONS.DOCUMENTS, documentId, 'changes');
+    const changesRef = collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'changes');
     let q = query(changesRef, orderBy('from', 'asc'));
 
     if (status) {
@@ -98,7 +98,7 @@ export async function acceptChange(
   userId: string
 ): Promise<void> {
   try {
-    const changeRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'changes', changeId);
+    const changeRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'changes', changeId);
     await updateDoc(changeRef, {
       status: 'accepted',
       resolvedBy: userId,
@@ -119,7 +119,7 @@ export async function rejectChange(
   userId: string
 ): Promise<void> {
   try {
-    const changeRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'changes', changeId);
+    const changeRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'changes', changeId);
     await updateDoc(changeRef, {
       status: 'rejected',
       resolvedBy: userId,
@@ -139,7 +139,7 @@ export async function deleteTrackedChange(
   changeId: string
 ): Promise<void> {
   try {
-    const changeRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'changes', changeId);
+    const changeRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'changes', changeId);
     await deleteDoc(changeRef);
   } catch (error) {
     console.error('Error deleting tracked change:', error);
@@ -192,7 +192,7 @@ export function subscribeToTrackedChanges(
   documentId: string,
   callback: (changes: TrackedChange[]) => void
 ): Unsubscribe {
-  const changesRef = collection(db, COLLECTIONS.DOCUMENTS, documentId, 'changes');
+  const changesRef = collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'changes');
   const q = query(changesRef, orderBy('from', 'asc'));
 
   return onSnapshot(

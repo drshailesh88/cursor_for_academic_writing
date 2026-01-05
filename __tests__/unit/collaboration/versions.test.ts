@@ -16,7 +16,7 @@ import type { DocumentVersion, CreateVersionOptions } from '@/lib/collaboration/
 
 // Mock the Firebase client module
 vi.mock('@/lib/firebase/client', () => ({
-  db: mockFirestore,
+  db: () => mockFirestore,
 }));
 
 vi.mock('@/lib/firebase/documents', () => ({

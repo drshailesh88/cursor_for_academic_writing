@@ -20,6 +20,7 @@ import type {
 } from './types';
 import { searchSemanticScholar } from '@/lib/research/semantic-scholar';
 import { searchOpenAlex } from '@/lib/research/openalex';
+import { toDiscoveredPapers } from './utils';
 
 /**
  * Generate knowledge map for a research query
@@ -251,7 +252,7 @@ export async function findMissingFromReview(
 
       gaps.push({
         topic: topic.topic,
-        missingPapers: suggestedPapers.slice(0, 5),
+        missingPapers: toDiscoveredPapers(suggestedPapers.slice(0, 5)),
         severity: relevantCitations.length === 0 ? 'high' : 'medium',
         explanation: `Only ${relevantCitations.length} papers cited for this important topic. Consider adding foundational and recent work.`,
       });

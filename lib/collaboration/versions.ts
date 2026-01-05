@@ -45,7 +45,7 @@ export async function createVersion(
     }
 
     // Get current version count to determine next version number
-    const versionsRef = collection(db, 'documents', documentId, 'versions');
+    const versionsRef = collection(db(), 'documents', documentId, 'versions');
     const versionsQuery = query(versionsRef, orderBy('versionNumber', 'desc'), limit(1));
     const versionsSnapshot = await getDocs(versionsQuery);
 
@@ -91,7 +91,7 @@ export async function getVersions(
   limitCount: number = MAX_VERSIONS
 ): Promise<DocumentVersion[]> {
   try {
-    const versionsRef = collection(db, 'documents', documentId, 'versions');
+    const versionsRef = collection(db(), 'documents', documentId, 'versions');
     const versionsQuery = query(
       versionsRef,
       orderBy('createdAt', 'desc'),
@@ -124,7 +124,7 @@ export async function getVersion(
   versionId: string
 ): Promise<DocumentVersion | null> {
   try {
-    const versionRef = doc(db, 'documents', documentId, 'versions', versionId);
+    const versionRef = doc(db(), 'documents', documentId, 'versions', versionId);
     const versionSnap = await getDoc(versionRef);
 
     if (versionSnap.exists()) {
@@ -150,7 +150,7 @@ export async function deleteVersion(
   versionId: string
 ): Promise<void> {
   try {
-    const versionRef = doc(db, 'documents', documentId, 'versions', versionId);
+    const versionRef = doc(db(), 'documents', documentId, 'versions', versionId);
     await deleteDoc(versionRef);
   } catch (error) {
     console.error('Error deleting version:', error);
@@ -195,7 +195,7 @@ export async function restoreVersion(
     );
 
     // Update the document with the version's content
-    const documentRef = doc(db, 'documents', documentId);
+    const documentRef = doc(db(), 'documents', documentId);
     await updateDoc(documentRef, {
       content: version.content,
       title: version.title,
@@ -217,7 +217,7 @@ export async function updateVersionLabel(
   label: string
 ): Promise<void> {
   try {
-    const versionRef = doc(db, 'documents', documentId, 'versions', versionId);
+    const versionRef = doc(db(), 'documents', documentId, 'versions', versionId);
     await updateDoc(versionRef, {
       label,
     });
@@ -236,7 +236,7 @@ export async function updateVersionDescription(
   description: string
 ): Promise<void> {
   try {
-    const versionRef = doc(db, 'documents', documentId, 'versions', versionId);
+    const versionRef = doc(db(), 'documents', documentId, 'versions', versionId);
     await updateDoc(versionRef, {
       description,
     });
@@ -260,7 +260,7 @@ async function cleanupOldVersions(
   }
 
   try {
-    const versionsRef = collection(db, 'documents', documentId, 'versions');
+    const versionsRef = collection(db(), 'documents', documentId, 'versions');
 
     // Get all auto-save versions
     const autoVersionsQuery = query(
@@ -273,7 +273,7 @@ async function cleanupOldVersions(
 
     // If we have more than MAX_VERSIONS auto-saves, delete the oldest ones
     if (autoVersionsSnapshot.size > MAX_VERSIONS) {
-      const batch = writeBatch(db);
+      const batch = writeBatch(db());
       const versionsToDelete = autoVersionsSnapshot.docs.slice(MAX_VERSIONS);
 
       versionsToDelete.forEach((doc) => {

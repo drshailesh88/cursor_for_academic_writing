@@ -1438,8 +1438,8 @@ function AreaChart({ data, options, colors, width, height, theme }: ChartCompone
             {/* Gradient definition */}
             <defs>
               <linearGradient id={`area-gradient-${datasetIndex}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor={fillColor} stopOpacity={0.5} />
-                <stop offset="100%" stopColor={fillColor} stopOpacity={0.05} />
+                <stop offset="0%" stopColor={Array.isArray(fillColor) ? fillColor[0] : fillColor} stopOpacity={0.5} />
+                <stop offset="100%" stopColor={Array.isArray(fillColor) ? fillColor[0] : fillColor} stopOpacity={0.05} />
               </linearGradient>
             </defs>
 

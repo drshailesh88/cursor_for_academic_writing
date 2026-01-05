@@ -13,6 +13,7 @@
  */
 
 import { describe, test, expect, beforeEach, vi, beforeAll } from 'vitest';
+import { MockTimestamp } from '../mocks/firebase';
 
 // ============================================================================
 // MOCKS (must be defined before imports)
@@ -71,9 +72,9 @@ vi.mock('jspdf', () => {
     });
     save = vi.fn((filename: string) => {
       const blob = new Blob(['mock-pdf-content'], { type: 'application/pdf' });
-      mockCreateObjectURL(blob);
+      mockCreateObjectURL();
     });
-    output = vi.fn((type: string) => {
+    output = vi.fn(() => {
       return new Blob(['mock-pdf-content'], { type: 'application/pdf' });
     });
   }
@@ -184,6 +185,7 @@ const createTestPresentation = (overrides: Partial<Presentation> = {}): Presenta
     {
       id: 'slide_1',
       type: 'title',
+      layout: 'centered',
       order: 0,
       content: {
         title: 'Research Presentation',
@@ -197,6 +199,7 @@ const createTestPresentation = (overrides: Partial<Presentation> = {}): Presenta
     {
       id: 'slide_2',
       type: 'content',
+      layout: 'full',
       order: 1,
       content: {
         title: 'Introduction',
@@ -211,6 +214,7 @@ const createTestPresentation = (overrides: Partial<Presentation> = {}): Presenta
     {
       id: 'slide_3',
       type: 'data-visualization',
+      layout: 'full',
       order: 2,
       content: {
         title: 'Results',
@@ -240,11 +244,11 @@ const createTestPresentation = (overrides: Partial<Presentation> = {}): Presenta
     showProgressBar: true,
     autoAdvance: false,
     autoAdvanceInterval: 0,
-    transition: 'slide',
+    transition: 'fade',
     transitionDuration: 300,
   },
-  createdAt: new Date('2024-01-01'),
-  updatedAt: new Date('2024-01-02'),
+  createdAt: MockTimestamp.fromDate(new Date('2024-01-01')),
+  updatedAt: MockTimestamp.fromDate(new Date('2024-01-02')),
   ...overrides,
 });
 
@@ -258,8 +262,8 @@ global.DOMParser = class DOMParser {
     // Simple mock - in real tests this would use jsdom
     const div = {
       body: {
-        children: [],
-        childNodes: [],
+        children: [] as any[],
+        childNodes: [] as any[],
       },
     };
 
@@ -621,6 +625,7 @@ describe('Presentation Export Workflow', () => {
         {
           id: 'slide_chart',
           type: 'data-visualization',
+          layout: 'full',
           order: 0,
           content: {
             title: 'Chart Slide',
@@ -641,6 +646,7 @@ describe('Presentation Export Workflow', () => {
               },
             },
           },
+          speakerNotes: '',
         },
       ],
     });
@@ -657,20 +663,30 @@ describe('Presentation Export Workflow', () => {
         {
           id: 'slide_refs',
           type: 'references',
+          layout: 'full',
           order: 0,
           content: {
             title: 'References',
             citations: [
               {
                 id: 'ref1',
+                authors: 'Smith, J. et al.',
+                year: 2024,
+                title: 'Test Article',
+                journal: 'Nature Medicine',
                 formatted: 'Smith, J. et al. (2024). Test Article. Nature Medicine, 30(3), 456-478.',
               },
               {
                 id: 'ref2',
+                authors: 'Jones, M.',
+                year: 2023,
+                title: 'Another Study',
+                journal: 'Science',
                 formatted: 'Jones, M. (2023). Another Study. Science, 25(2), 123-145.',
               },
             ],
           },
+          speakerNotes: '',
         },
       ],
     });
@@ -957,6 +973,7 @@ describe('Cross-Workflow Integration', () => {
         {
           id: 'slide_content',
           type: 'content',
+          layout: 'full',
           order: 0,
           content: {
             title: 'Research Findings',
@@ -965,20 +982,26 @@ describe('Cross-Workflow Integration', () => {
               { text: 'Finding 2 (Jones, 2023)', level: 0 },
             ],
           },
+          speakerNotes: '',
         },
         {
           id: 'slide_refs',
           type: 'references',
+          layout: 'full',
           order: 1,
           content: {
             title: 'References',
             citations: [
               {
                 id: 'ref1',
+                authors: 'Smith, J. et al.',
+                year: 2024,
+                title: 'Research Article',
                 formatted: 'Smith, J. et al. (2024). Research Article.',
               },
             ],
           },
+          speakerNotes: '',
         },
       ],
     });

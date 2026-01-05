@@ -10,6 +10,16 @@ import type {
   PaperSectionType,
 } from '@/lib/firebase/schema';
 
+// Re-export quality types from quality.ts to avoid duplication
+export type {
+  QualityAssessment,
+  QualityGrade,
+  BiasRisk as BiasRiskLevel,
+  BiasType,
+  QualityComponents,
+  StudyDesign,
+} from './quality';
+
 /**
  * Options for PDF processing
  */
@@ -241,26 +251,6 @@ export interface PaperChunk {
 }
 
 /**
- * Quality assessment for research papers
- */
-export interface QualityAssessment {
-  overallGrade: 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D' | 'F';
-  overallScore: number; // 0-100
-
-  studyDesign: {
-    type: string;
-    evidenceLevel: 1 | 2 | 3 | 4 | 5 | 6;
-    score: number;
-  };
-
-  criteria: QualityCriterion[];
-
-  strengths: string[];
-  limitations: string[];
-  biasRisks: BiasRisk[];
-}
-
-/**
  * Individual quality criterion
  */
 export interface QualityCriterion {
@@ -268,15 +258,6 @@ export interface QualityCriterion {
   score: number;
   maxScore: number;
   notes: string;
-}
-
-/**
- * Bias risk assessment
- */
-export interface BiasRisk {
-  type: string;
-  level: 'low' | 'moderate' | 'high' | 'unclear';
-  explanation: string;
 }
 
 /**

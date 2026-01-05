@@ -38,7 +38,7 @@ import {
 } from '@/lib/citations/library';
 
 import { parseBibtex, parseRis, exportToBibtex } from '@/lib/citations/import-export';
-import { formatCitation, formatBibliography } from '@/lib/citations/csl-formatter';
+import { formatCitation, formatBibliography, type CitationStyleId } from '@/lib/citations/csl-formatter';
 import { searchResultToReference } from '@/lib/citations/types';
 import { addReferences } from '@/lib/citations/library';
 
@@ -726,7 +726,7 @@ describe('Bibliography Generation Workflow', () => {
 
     const refs = await getAllReferences(TEST_USER_ID);
 
-    const styles = ['apa', 'mla', 'chicago', 'vancouver', 'harvard'];
+    const styles: CitationStyleId[] = ['apa-7', 'mla-9', 'chicago-author', 'vancouver', 'harvard'];
 
     for (const style of styles) {
       const bibliography = formatBibliography(refs, style);

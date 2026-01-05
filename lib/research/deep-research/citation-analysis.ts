@@ -11,7 +11,11 @@ import type {
   CitationRelation,
   CitationGraph,
   CitationContext,
+  CitationNode,
 } from './types';
+
+// Re-export types for external use
+export type { CitationGraph, CitationNode };
 
 /**
  * Classify how a paper cites another paper

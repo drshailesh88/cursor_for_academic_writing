@@ -18,6 +18,7 @@ import type {
   PaperRelationship,
   EnhancedLiteratureConnection,
   DisconnectionReason,
+  DiscoveredPaper,
 } from './types';
 import {
   getSemanticScholarById,
@@ -25,6 +26,7 @@ import {
   getReferences,
   getRelatedPapers,
 } from '@/lib/research/semantic-scholar';
+import { toDiscoveredPaper, toDiscoveredPapers } from './utils';
 
 /**
  * Find all paths between two papers
@@ -133,27 +135,30 @@ export async function findMultiPaperConnections(
   paperIds: string[]
 ): Promise<MultiPaperConnection> {
   // Fetch all papers
-  const papers: SearchResult[] = [];
+  const searchResults: SearchResult[] = [];
   for (const id of paperIds) {
     const paper = await getSemanticScholarById(id);
-    if (paper) papers.push(paper);
+    if (paper) searchResults.push(paper);
   }
 
+  // Convert to DiscoveredPaper
+  const papers = toDiscoveredPapers(searchResults);
+
   // Find common ground
-  const commonGround = await findCommonGround(papers);
+  const commonGround = await findCommonGround(searchResults);
 
   // Find pairwise relationships
   const relationships: PaperRelationship[] = [];
-  for (let i = 0; i < papers.length; i++) {
-    for (let j = i + 1; j < papers.length; j++) {
-      const rel = await findRelationship(papers[i], papers[j]);
+  for (let i = 0; i < searchResults.length; i++) {
+    for (let j = i + 1; j < searchResults.length; j++) {
+      const rel = await findRelationship(searchResults[i], searchResults[j]);
       if (rel) relationships.push(rel);
     }
   }
 
   // Generate synthesis opportunities
   const synthesisOpportunities = generateSynthesisOpportunities(
-    papers,
+    searchResults,
     commonGround,
     relationships
   );
@@ -390,7 +395,7 @@ async function findCommonGround(papers: SearchResult[]): Promise<CommonGround> {
     }
   }
 
-  const sharedCitations = findIntersection(allReferences);
+  const sharedCitationsResults = findIntersection(allReferences);
 
   // Find shared topics
   const allTopics = papers.flatMap((p) => [
@@ -419,7 +424,7 @@ async function findCommonGround(papers: SearchResult[]): Promise<CommonGround> {
   };
 
   return {
-    sharedCitations,
+    sharedCitations: toDiscoveredPapers(sharedCitationsResults),
     sharedTopics,
     sharedAuthors,
     timeOverlap: timeOverlap.start <= timeOverlap.end ? timeOverlap : null,

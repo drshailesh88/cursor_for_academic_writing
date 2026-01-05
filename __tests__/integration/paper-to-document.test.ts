@@ -481,9 +481,10 @@ describe('Multi-Paper Comparison → Summary → Insert', () => {
     const matrix: ResearchMatrix = {
       id: 'matrix-123',
       userId: TEST_USER_ID,
-      name: 'Study Comparison',
-      template,
+      title: 'Study Comparison',
+      template: 'clinical_trial',
       paperIds: ['p1', 'p2', 'p3'],
+      columns: template.columns,
       rows: [
         {
           paperId: 'p1',

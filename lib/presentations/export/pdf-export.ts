@@ -141,11 +141,11 @@ async function renderSlideAsPdf(
   const { x, y, width, height } = options;
 
   // Draw slide background
-  doc.setFillColor(hexToRgb(slide.backgroundColor || theme.colors.background));
+  doc.setFillColor(...hexToRgb(slide.backgroundColor || theme.colors.background));
   doc.rect(x, y, width, height, 'F');
 
   // Draw slide border
-  doc.setDrawColor(hexToRgb(theme.colors.border));
+  doc.setDrawColor(...hexToRgb(theme.colors.border));
   doc.setLineWidth(1);
   doc.rect(x, y, width, height, 'S');
 
@@ -208,7 +208,7 @@ function renderTitleSlideContent(
   if (content.title) {
     doc.setFontSize(36);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(hexToRgb(theme.colors.primary));
+    doc.setTextColor(...hexToRgb(theme.colors.primary));
     const titleLines = doc.splitTextToSize(content.title, width);
     titleLines.forEach((line: string) => {
       doc.text(line, x + width / 2, currentY, { align: 'center' });
@@ -221,7 +221,7 @@ function renderTitleSlideContent(
     currentY += 10;
     doc.setFontSize(20);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(hexToRgb(theme.colors.text));
+    doc.setTextColor(...hexToRgb(theme.colors.text));
     const subtitleLines = doc.splitTextToSize(content.subtitle, width);
     subtitleLines.forEach((line: string) => {
       doc.text(line, x + width / 2, currentY, { align: 'center' });
@@ -233,7 +233,7 @@ function renderTitleSlideContent(
   if (content.author) {
     currentY += 15;
     doc.setFontSize(16);
-    doc.setTextColor(hexToRgb(theme.colors.textMuted));
+    doc.setTextColor(...hexToRgb(theme.colors.textMuted));
     doc.text(content.author, x + width / 2, currentY, { align: 'center' });
     currentY += 20;
   }
@@ -268,7 +268,7 @@ function renderContentSlideContent(
   if (content.title) {
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(hexToRgb(theme.colors.primary));
+    doc.setTextColor(...hexToRgb(theme.colors.primary));
     const titleLines = doc.splitTextToSize(content.title, width);
     titleLines.forEach((line: string) => {
       doc.text(line, x, currentY);
@@ -304,7 +304,7 @@ function renderDataSlideContent(
   if (content.title) {
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(hexToRgb(theme.colors.primary));
+    doc.setTextColor(...hexToRgb(theme.colors.primary));
     doc.text(content.title, x, currentY);
     currentY += 40;
   }
@@ -313,7 +313,7 @@ function renderDataSlideContent(
   if (content.chart) {
     doc.setFontSize(14);
     doc.setFont('helvetica', 'italic');
-    doc.setTextColor(hexToRgb(theme.colors.textMuted));
+    doc.setTextColor(...hexToRgb(theme.colors.textMuted));
     doc.text('[Chart: ' + (content.chart.options.title || 'Data Visualization') + ']', x, currentY);
     currentY += 20;
 
@@ -337,7 +337,7 @@ function renderDataSlideContent(
       currentY += 10;
       doc.setFontSize(10);
       doc.setFont('helvetica', 'italic');
-      doc.setTextColor(hexToRgb(theme.colors.textMuted));
+      doc.setTextColor(...hexToRgb(theme.colors.textMuted));
       doc.text(`Source: ${content.chart.source}`, x, currentY);
     }
   }
@@ -358,7 +358,7 @@ function renderReferencesSlideContent(
   // Title
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(hexToRgb(theme.colors.primary));
+  doc.setTextColor(...hexToRgb(theme.colors.primary));
   doc.text(content.title || 'References', x, currentY);
   currentY += 40;
 
@@ -366,7 +366,7 @@ function renderReferencesSlideContent(
   if (content.citations && content.citations.length > 0) {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(hexToRgb(theme.colors.text));
+    doc.setTextColor(...hexToRgb(theme.colors.text));
 
     content.citations.forEach((citation) => {
       const citationLines = doc.splitTextToSize(citation.formatted, width - 20);
@@ -395,7 +395,7 @@ function renderSectionDividerContent(
   if (content.sectionNumber) {
     doc.setFontSize(60);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(hexToRgb(theme.colors.accent));
+    doc.setTextColor(...hexToRgb(theme.colors.accent));
     doc.text(`${content.sectionNumber}`, x + width / 2, centerY - 40, { align: 'center' });
   }
 
@@ -403,7 +403,7 @@ function renderSectionDividerContent(
   if (content.title) {
     doc.setFontSize(32);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(hexToRgb(theme.colors.primary));
+    doc.setTextColor(...hexToRgb(theme.colors.primary));
     doc.text(content.title, x + width / 2, centerY + 20, { align: 'center' });
   }
 
@@ -411,7 +411,7 @@ function renderSectionDividerContent(
   if (content.subtitle) {
     doc.setFontSize(18);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(hexToRgb(theme.colors.textMuted));
+    doc.setTextColor(...hexToRgb(theme.colors.textMuted));
     doc.text(content.subtitle, x + width / 2, centerY + 50, { align: 'center' });
   }
 }
@@ -433,7 +433,7 @@ function renderQuoteSlideContent(
   // Quote text
   doc.setFontSize(20);
   doc.setFont('helvetica', 'italic');
-  doc.setTextColor(hexToRgb(theme.colors.text));
+  doc.setTextColor(...hexToRgb(theme.colors.text));
   const quoteText = `"${content.quote.text}"`;
   const quoteLines = doc.splitTextToSize(quoteText, width * 0.8);
   let currentY = centerY - (quoteLines.length * 25) / 2;
@@ -459,7 +459,7 @@ function renderQuoteSlideContent(
     currentY += 20;
     doc.setFontSize(14);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(hexToRgb(theme.colors.textMuted));
+    doc.setTextColor(...hexToRgb(theme.colors.textMuted));
     doc.text(attribution, x + width * 0.9, currentY, { align: 'right' });
   }
 }
@@ -480,7 +480,7 @@ function renderTwoColumnSlideContent(
   if (content.title) {
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(hexToRgb(theme.colors.primary));
+    doc.setTextColor(...hexToRgb(theme.colors.primary));
     doc.text(content.title, x, currentY);
     currentY += 40;
   }
@@ -519,7 +519,7 @@ function renderBulletsPdf(
 
     doc.setFontSize(16 - bullet.level * 2);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(hexToRgb(theme.colors.text));
+    doc.setTextColor(...hexToRgb(theme.colors.text));
 
     // Bullet point
     if (bullet.level === 0) {
@@ -558,7 +558,7 @@ function renderTablePdf(
     row.cells.forEach((cell) => {
       // Background for headers
       if (cell.isHeader) {
-        doc.setFillColor(hexToRgb(theme.colors.primary));
+        doc.setFillColor(...hexToRgb(theme.colors.primary));
         doc.rect(cellX, currentY - 12, cellWidth, 18, 'F');
       }
 
@@ -566,9 +566,9 @@ function renderTablePdf(
       doc.setFontSize(12);
       doc.setFont('helvetica', cell.isHeader ? 'bold' : 'normal');
       doc.setTextColor(
-        cell.isHeader
+        ...(cell.isHeader
           ? hexToRgb(theme.colors.background)
-          : hexToRgb(theme.colors.text)
+          : hexToRgb(theme.colors.text))
       );
 
       const textAlign = cell.align === 'center' ? 'center' : cell.align === 'right' ? 'right' : 'left';
@@ -582,7 +582,7 @@ function renderTablePdf(
 
       // Border
       if (table.bordered) {
-        doc.setDrawColor(hexToRgb(theme.colors.border));
+        doc.setDrawColor(...hexToRgb(theme.colors.border));
         doc.setLineWidth(0.5);
         doc.rect(cellX, currentY - 12, cellWidth, 18, 'S');
       }
@@ -598,7 +598,7 @@ function renderTablePdf(
     currentY += 5;
     doc.setFontSize(11);
     doc.setFont('helvetica', 'italic');
-    doc.setTextColor(hexToRgb(theme.colors.textMuted));
+    doc.setTextColor(...hexToRgb(theme.colors.textMuted));
     doc.text(table.caption, x + width / 2, currentY, { align: 'center' });
   }
 }
@@ -615,7 +615,7 @@ function renderSlideNumber(
 ): void {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(hexToRgb(theme.colors.textMuted));
+  doc.setTextColor(...hexToRgb(theme.colors.textMuted));
   doc.text(`${slideNumber}`, x + width - 10, y + height - 10, { align: 'right' });
 }
 

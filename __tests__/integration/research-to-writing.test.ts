@@ -27,6 +27,7 @@ import {
   calculateConsensusPercentage,
   determineConfidence,
   type ConsensusData,
+  type EvidenceBreakdown,
 } from '@/lib/research/deep-research/types';
 
 import {
@@ -38,7 +39,7 @@ import {
 
 // Citation imports
 import { addReference, getAllReferences, addReferences } from '@/lib/citations/library';
-import { formatBibliography, formatCitation } from '@/lib/citations/csl-formatter';
+import { formatBibliography, formatCitation, type CitationStyleId } from '@/lib/citations/csl-formatter';
 import type { Reference } from '@/lib/citations/types';
 
 // Document imports
@@ -323,7 +324,7 @@ describe('Multi-Perspective → Consensus → Conclusion', () => {
   });
 
   test('determines confidence level from evidence', () => {
-    const highQualityEvidence = [
+    const highQualityEvidence: EvidenceBreakdown[] = [
       { studyType: 'rct', supporting: 18, neutral: 2, contradicting: 0 },
       { studyType: 'meta-analysis', supporting: 10, neutral: 1, contradicting: 0 },
     ];
@@ -331,7 +332,7 @@ describe('Multi-Perspective → Consensus → Conclusion', () => {
     const confidence = determineConfidence(highQualityEvidence, 31);
     expect(confidence).toBe('high');
 
-    const lowQualityEvidence = [
+    const lowQualityEvidence: EvidenceBreakdown[] = [
       { studyType: 'case-report', supporting: 3, neutral: 1, contradicting: 1 },
     ];
 
@@ -641,7 +642,7 @@ describe('Citation Analysis → Bibliography → Export', () => {
 
     const refs = await getAllReferences(TEST_USER_ID);
 
-    const formats = ['apa-7', 'mla-9', 'chicago-author', 'vancouver', 'harvard'];
+    const formats: CitationStyleId[] = ['apa-7', 'mla-9', 'chicago-author', 'vancouver', 'harvard'];
 
     for (const format of formats) {
       const bib = formatBibliography(refs, format);

@@ -102,19 +102,15 @@ export async function getPresentation(
       return {
         id: presentationSnap.id,
         userId: data.userId,
-        documentId: data.documentId || undefined,
+        documentId: data.documentId ?? undefined,
         title: data.title,
         description: data.description,
         theme: data.theme,
         slides: data.slides || [],
         settings: data.settings || DEFAULT_PRESENTATION_SETTINGS,
-        createdAt: (data.createdAt as Timestamp)?.toDate
-          ? (data.createdAt as Timestamp).toDate()
-          : new Date(data.createdAt),
-        updatedAt: (data.updatedAt as Timestamp)?.toDate
-          ? (data.updatedAt as Timestamp).toDate()
-          : new Date(data.updatedAt),
-      } as Presentation;
+        createdAt: data.createdAt as Timestamp,
+        updatedAt: data.updatedAt as Timestamp,
+      };
     }
 
     return null;
@@ -144,19 +140,15 @@ export async function getUserPresentations(
       presentations.push({
         id: doc.id,
         userId: data.userId,
-        documentId: data.documentId || undefined,
+        documentId: data.documentId ?? undefined,
         title: data.title,
         description: data.description,
         theme: data.theme,
         slides: data.slides || [],
         settings: data.settings || DEFAULT_PRESENTATION_SETTINGS,
-        createdAt: (data.createdAt as Timestamp)?.toDate
-          ? (data.createdAt as Timestamp).toDate()
-          : new Date(data.createdAt),
-        updatedAt: (data.updatedAt as Timestamp)?.toDate
-          ? (data.updatedAt as Timestamp).toDate()
-          : new Date(data.updatedAt),
-      } as Presentation);
+        createdAt: data.createdAt as Timestamp,
+        updatedAt: data.updatedAt as Timestamp,
+      });
     });
 
     return presentations;
@@ -313,19 +305,15 @@ export function subscribeToPresententation(
         callback({
           id: doc.id,
           userId: data.userId,
-          documentId: data.documentId || undefined,
+          documentId: data.documentId ?? undefined,
           title: data.title,
           description: data.description,
           theme: data.theme,
           slides: data.slides || [],
           settings: data.settings || DEFAULT_PRESENTATION_SETTINGS,
-          createdAt: (data.createdAt as Timestamp)?.toDate
-            ? (data.createdAt as Timestamp).toDate()
-            : new Date(data.createdAt),
-          updatedAt: (data.updatedAt as Timestamp)?.toDate
-            ? (data.updatedAt as Timestamp).toDate()
-            : new Date(data.updatedAt),
-        } as Presentation);
+          createdAt: data.createdAt as Timestamp,
+          updatedAt: data.updatedAt as Timestamp,
+        });
       } else {
         callback(null);
       }

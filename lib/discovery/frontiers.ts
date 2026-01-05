@@ -18,6 +18,7 @@ import type {
 } from './types';
 import { searchSemanticScholar } from '@/lib/research/semantic-scholar';
 import { searchOpenAlex } from '@/lib/research/openalex';
+import { toDiscoveredPapers } from './utils';
 
 /**
  * Detect research frontiers in a domain
@@ -261,7 +262,7 @@ async function identifyEmergingTopics(papers: SearchResult[]): Promise<EmergingT
       id: `topic-${emergingTopics.length}`,
       label: topicLabel,
       description: generateTopicDescription(topicPapers),
-      papers: topicPapers,
+      papers: toDiscoveredPapers(topicPapers),
       growthRate,
       citationGrowth,
       recency,

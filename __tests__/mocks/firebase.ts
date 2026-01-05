@@ -18,6 +18,18 @@ export class MockTimestamp {
     return new Date(this.seconds * 1000 + this.nanoseconds / 1000000);
   }
 
+  toMillis(): number {
+    return this.seconds * 1000 + Math.floor(this.nanoseconds / 1000000);
+  }
+
+  isEqual(other: MockTimestamp): boolean {
+    return this.seconds === other.seconds && this.nanoseconds === other.nanoseconds;
+  }
+
+  toJSON(): { seconds: number; nanoseconds: number } {
+    return { seconds: this.seconds, nanoseconds: this.nanoseconds };
+  }
+
   static now(): MockTimestamp {
     const now = Date.now();
     return new MockTimestamp(Math.floor(now / 1000), (now % 1000) * 1000000);
@@ -153,8 +165,9 @@ export class MockCollectionReference {
     const docs = this.store.getCollection(this.path);
     return new MockQuerySnapshot(
       docs.map((doc) => {
-        const ref = new MockDocumentReference(doc.id, `${this.path}/${doc.id}`, this.store);
-        return new MockDocumentSnapshot(doc.id, doc, true, ref);
+        const docId = doc.id as string;
+        const ref = new MockDocumentReference(docId, `${this.path}/${docId}`, this.store);
+        return new MockDocumentSnapshot(docId, doc, true, ref);
       })
     );
   }
@@ -179,8 +192,9 @@ export class MockCollectionReference {
     const docs = this.store.getCollection(this.path);
     callback(
       new MockQuerySnapshot(docs.map((doc) => {
-        const ref = new MockDocumentReference(doc.id, `${this.path}/${doc.id}`, this.store);
-        return new MockDocumentSnapshot(doc.id, doc, true, ref);
+        const docId = doc.id as string;
+        const ref = new MockDocumentReference(docId, `${this.path}/${docId}`, this.store);
+        return new MockDocumentSnapshot(docId, doc, true, ref);
       }))
     );
 
@@ -188,8 +202,9 @@ export class MockCollectionReference {
     const unsubscribe = this.store.addCollectionListener(this.path, (docs) => {
       callback(
         new MockQuerySnapshot(docs.map((doc) => {
-          const ref = new MockDocumentReference(doc.id, `${this.path}/${doc.id}`, this.store);
-          return new MockDocumentSnapshot(doc.id, doc, true, ref);
+          const docId = doc.id as string;
+          const ref = new MockDocumentReference(docId, `${this.path}/${docId}`, this.store);
+          return new MockDocumentSnapshot(docId, doc, true, ref);
         }))
       );
     });
@@ -241,22 +256,23 @@ export class MockQuery {
     // Apply filters
     for (const filter of this.filters) {
       docs = docs.filter((doc) => {
-        const value = doc[filter.field];
+        const value = doc[filter.field] as any;
+        const filterValue = filter.value as any;
         switch (filter.operator) {
           case '==':
-            return value === filter.value;
+            return value === filterValue;
           case '!=':
-            return value !== filter.value;
+            return value !== filterValue;
           case '<':
-            return value < filter.value;
+            return value < filterValue;
           case '<=':
-            return value <= filter.value;
+            return value <= filterValue;
           case '>':
-            return value > filter.value;
+            return value > filterValue;
           case '>=':
-            return value >= filter.value;
+            return value >= filterValue;
           case 'array-contains':
-            return Array.isArray(value) && value.includes(filter.value);
+            return Array.isArray(value) && value.includes(filterValue);
           default:
             return true;
         }
@@ -266,8 +282,8 @@ export class MockQuery {
     // Apply ordering
     for (const orderBy of this.orderBys) {
       docs.sort((a, b) => {
-        let aVal = a[orderBy.field];
-        let bVal = b[orderBy.field];
+        let aVal: any = a[orderBy.field];
+        let bVal: any = b[orderBy.field];
 
         // Handle MockTimestamp objects by converting to dates
         if (aVal instanceof MockTimestamp) {
@@ -289,8 +305,9 @@ export class MockQuery {
 
     return new MockQuerySnapshot(
       docs.map((doc) => {
-        const ref = new MockDocumentReference(doc.id, `${this.path}/${doc.id}`, this.store);
-        return new MockDocumentSnapshot(doc.id, doc, true, ref);
+        const docId = doc.id as string;
+        const ref = new MockDocumentReference(docId, `${this.path}/${docId}`, this.store);
+        return new MockDocumentSnapshot(docId, doc, true, ref);
       })
     );
   }

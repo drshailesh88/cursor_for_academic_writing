@@ -340,5 +340,5 @@ export interface ResearchProgress {
   perspectivesGenerated: number;
   nodesExplored: number;
   sourcesFound: number;
-  currentPhase: 'initialization' | 'perspective-generation' | 'research' | 'analysis' | 'synthesis';
+  currentPhase: 'initialization' | 'perspective-generation' | 'research' | 'analysis' | 'synthesis' | 'timeout';
 }

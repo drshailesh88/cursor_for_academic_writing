@@ -11,6 +11,10 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { SearchResult } from '../types';
 
+// Re-export functions for convenience (avoiding circular dependencies)
+export { executeResearch } from './engine';
+export { synthesizeFindings as generateSynthesis } from './synthesis';
+
 // ============================================================================
 // RESEARCH MODES & CONFIGURATION
 // ============================================================================

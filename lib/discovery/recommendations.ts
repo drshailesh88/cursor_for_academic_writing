@@ -25,6 +25,7 @@ import {
   getCitations,
 } from '@/lib/research/semantic-scholar';
 import { searchOpenAlex } from '@/lib/research/openalex';
+import { toDiscoveredPapers } from './utils';
 
 /**
  * Generate all types of recommendations for a user
@@ -81,7 +82,7 @@ export async function findMissingFromReview(
 
       gaps.push({
         topic,
-        missingPapers: suggested,
+        missingPapers: toDiscoveredPapers(suggested),
         severity: relevantCitations.length === 0 ? 'high' : 'medium',
         explanation: `Only ${relevantCitations.length} citation(s) for "${topic}". Consider adding foundational and recent work.`,
       });
