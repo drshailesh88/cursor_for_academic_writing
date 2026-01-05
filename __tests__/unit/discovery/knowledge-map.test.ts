@@ -694,7 +694,7 @@ describe('KnowledgeMapBuilder', () => {
           id: 'cluster1',
           label: 'Cluster 1',
           description: '',
-          keywords: [],
+          keywords: ['medical', 'imaging', 'learning'], // Add keywords to match paper titles
           paperCount: 2,
           avgCitations: 90,
           growth: 0.5,

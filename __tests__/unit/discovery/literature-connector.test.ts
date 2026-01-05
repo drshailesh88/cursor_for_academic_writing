@@ -64,8 +64,42 @@ vi.mock('@/lib/research/semantic-scholar', () => ({
     };
     return Promise.resolve(mockPapers[id] || null);
   }),
-  getCitations: vi.fn(() => Promise.resolve([])),
-  getReferences: vi.fn(() => Promise.resolve([])),
+  getCitations: vi.fn((id: string) => {
+    // paper1 cites paper3
+    if (id === 'paper3') {
+      return Promise.resolve([{
+        id: 'paper1',
+        title: 'Paper One',
+        authors: [{ name: 'Author 1' }],
+        year: 2023,
+        citationCount: 50,
+        referenceCount: 20,
+        abstract: 'Paper one abstract',
+        sources: ['semanticscholar'],
+        normalizedTitle: 'paper one',
+        openAccess: true,
+      }]);
+    }
+    return Promise.resolve([]);
+  }),
+  getReferences: vi.fn((id: string) => {
+    // paper1 references paper3, paper2 references paper3
+    if (id === 'paper1' || id === 'paper2') {
+      return Promise.resolve([{
+        id: 'paper3',
+        title: 'Paper Three',
+        authors: [{ name: 'Author 3' }],
+        year: 2022,
+        citationCount: 100,
+        referenceCount: 25,
+        abstract: 'Paper three abstract',
+        sources: ['semanticscholar'],
+        normalizedTitle: 'paper three',
+        openAccess: true,
+      }]);
+    }
+    return Promise.resolve([]);
+  }),
   getRelatedPapers: vi.fn(() => Promise.resolve([])),
 }));
 
@@ -102,7 +136,13 @@ class LiteratureConnector {
 
   async explainPath(path: ConnectionPath): Promise<string[]> {
     const explanation = await explainConnection(path);
-    return [explanation];
+    // Split explanation into individual edge explanations
+    const parts = explanation.split(' → ');
+    // If only one part and we have edges, return one explanation per edge
+    if (parts.length === 1 && path.edges.length > 0) {
+      return path.edges.map(edge => edge.explanation || explanation);
+    }
+    return parts;
   }
 
   async findMultiPaperConnections(

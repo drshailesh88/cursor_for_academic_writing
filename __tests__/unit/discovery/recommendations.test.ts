@@ -813,7 +813,7 @@ describe('DraftAnalyzer', () => {
           mentions: 5,
           citedPaperIds: ['paper1', 'paper2', 'paper3'],
           suggestedPaperIds: ['paper1', 'paper2', 'paper3', 'paper4'],
-          coverage: 0,
+          coverage: 0.75, // Set realistic coverage: 3 cited / 4 suggested = 0.75
         },
       ];
 

@@ -30,8 +30,8 @@ import {
 } from '@/lib/research/deep-research/types';
 
 import {
-  analyzeCitationGraph,
-  identifySeminalPapers,
+  identifyKeyCitations,
+  calculateCitationMetrics,
   type CitationGraph,
   type CitationNode,
 } from '@/lib/research/deep-research/citation-analysis';
@@ -220,14 +220,18 @@ performance across diverse populations requires careful validation.
       citationCount: 1,
     };
 
-    // Simulate document update
-    const documentId = 'doc-123';
+    // Create a document first and get its ID
+    const { createDocument } = await import('@/lib/firebase/documents');
+
+    const documentId = await createDocument(TEST_USER_ID, 'Research Synthesis Document');
+
+    // Now update with synthesis findings
     const updatedContent = `
 <h2>Results</h2>
 <p>${synthesis.content}</p>
 `;
 
-    await updateDocument(TEST_USER_ID, documentId, {
+    await updateDocument(documentId, {
       content: updatedContent,
     });
 
@@ -539,11 +543,25 @@ describe('Citation Analysis → Bibliography → Export', () => {
       },
     ];
 
-    const graph: CitationGraph = { nodes, edges: [] };
-    const seminal = identifySeminalPapers(graph);
+    // Build citation graph with edges to simulate citation relationships
+    const graph: CitationGraph = {
+      nodes,
+      edges: [
+        {
+          from: 'p2',
+          to: 'p1',
+          type: 'supporting',
+          confidence: 0.9,
+        },
+      ],
+    };
 
-    expect(seminal.length).toBeGreaterThan(0);
-    expect(seminal[0].id).toBe('p1');
+    // Identify key citations (seminal papers based on citation count in the graph)
+    const keyCitations = identifyKeyCitations(graph, 1);
+
+    expect(keyCitations.length).toBeGreaterThan(0);
+    expect(keyCitations[0].id).toBe('p1');
+    expect(keyCitations[0].citationCount).toBeGreaterThanOrEqual(1);
   });
 
   test('builds bibliography from research sources', async () => {

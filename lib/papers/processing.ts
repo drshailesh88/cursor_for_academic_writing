@@ -8,9 +8,11 @@ import type {
   PaperReference,
   PaperParagraph,
   PaperAuthor,
+  PaperSectionType,
 } from '@/lib/firebase/schema';
 import { PDFProcessor } from './pdf-processor';
 import type { ProcessedPaperResult, PDFProcessingOptions } from './types';
+import { SECTION_PATTERNS } from './types';
 
 /**
  * Process a paper file through the complete pipeline
@@ -73,13 +75,82 @@ export async function extractText(
 }
 
 /**
+ * Detect section type from header text
+ */
+function detectSectionType(headerText: string): PaperSectionType | null {
+  const cleaned = headerText.replace(/^\d+\.?\s*/, '').trim();
+
+  for (const [sectionType, patterns] of Object.entries(SECTION_PATTERNS)) {
+    for (const pattern of patterns) {
+      if (pattern.test(cleaned)) {
+        return sectionType as PaperSectionType;
+      }
+    }
+  }
+
+  // Check if it looks like a header (short, capitalized)
+  if (cleaned.length > 2 && cleaned.length < 100 && /^[A-Z]/.test(cleaned)) {
+    return 'unknown';
+  }
+
+  return null;
+}
+
+/**
  * Identify sections in paper text
  * Detects standard academic sections: Abstract, Methods, Results, Discussion, etc.
  */
 export function identifySections(text: string): PaperSection[] {
-  const processor = new PDFProcessor();
-  // Use the processor's internal method
-  return (processor as any).identifySections(text);
+  const sections: PaperSection[] = [];
+  const lines = text.split('\n');
+
+  let currentSection: PaperSection | null = null;
+  let currentContent: string[] = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // Check if this line is a section header
+    const sectionType = detectSectionType(trimmedLine);
+
+    if (sectionType && sectionType !== 'unknown') {
+      // Save previous section
+      if (currentSection) {
+        currentSection.content = currentContent.join('\n').trim();
+        sections.push(currentSection);
+      }
+
+      // Start new section
+      currentSection = {
+        type: sectionType,
+        title: trimmedLine,
+        content: '',
+      };
+      currentContent = [];
+    } else if (currentSection) {
+      currentContent.push(line);
+    } else {
+      // Content before first section (usually title/authors)
+      // We could create a 'title' section here
+    }
+  }
+
+  // Add last section
+  if (currentSection) {
+    currentSection.content = currentContent.join('\n').trim();
+    sections.push(currentSection);
+  }
+
+  // If no sections found, create one for the whole text
+  if (sections.length === 0) {
+    sections.push({
+      type: 'unknown',
+      title: 'Full Text',
+      content: text,
+    });
+  }
+
+  return sections;
 }
 
 /**

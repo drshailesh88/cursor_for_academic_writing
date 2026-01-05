@@ -52,11 +52,103 @@ vi.mock('@/lib/research/semantic-scholar', () => ({
         normalizedTitle: 'paper one',
         openAccess: true,
       },
+      cited1: {
+        id: 'cited1',
+        title: 'Cited Paper',
+        authors: [{ name: 'Cited Author' }],
+        year: 2021,
+        citationCount: 75,
+        referenceCount: 20,
+        abstract: 'Cited abstract',
+        sources: ['semanticscholar'],
+        normalizedTitle: 'cited paper',
+        openAccess: true,
+      },
+      coupled1: {
+        id: 'coupled1',
+        title: 'Coupled Paper',
+        authors: [{ name: 'Coupled Author' }],
+        year: 2022,
+        citationCount: 60,
+        referenceCount: 25,
+        abstract: 'Coupled abstract',
+        sources: ['semanticscholar'],
+        normalizedTitle: 'coupled paper',
+        openAccess: true,
+      },
     };
     return Promise.resolve(mockPapers[id] || null);
   }),
-  getCitations: vi.fn(() => Promise.resolve([])),
-  getReferences: vi.fn(() => Promise.resolve([])),
+  getCitations: vi.fn((id: string) => {
+    // Return papers that cite the given paper
+    // For cited1, return papers that cite it (for bibliographic coupling)
+    if (id === 'cited1') {
+      return Promise.resolve([
+        {
+          id: 'paper123',
+          title: 'Test Paper',
+          authors: [{ name: 'John Doe' }],
+          year: 2023,
+          citationCount: 50,
+          referenceCount: 30,
+          abstract: 'Test abstract',
+          sources: ['semanticscholar'],
+          normalizedTitle: 'test paper',
+          openAccess: true,
+        },
+        {
+          id: 'coupled1',
+          title: 'Coupled Paper',
+          authors: [{ name: 'Coupled Author' }],
+          year: 2022,
+          citationCount: 60,
+          referenceCount: 25,
+          abstract: 'Coupled abstract',
+          sources: ['semanticscholar'],
+          normalizedTitle: 'coupled paper',
+          openAccess: true,
+        },
+      ]);
+    }
+    // For seed papers, return papers citing them
+    if (id === 'paper123' || id === 'paper1') {
+      return Promise.resolve([{
+        id: 'cited1',
+        title: 'Cited Paper',
+        authors: [{ name: 'Cited Author' }],
+        year: 2021,
+        citationCount: 75,
+        referenceCount: 20,
+        abstract: 'Cited abstract',
+        sources: ['semanticscholar'],
+        normalizedTitle: 'cited paper',
+        openAccess: true,
+      }]);
+    }
+    return Promise.resolve([]);
+  }),
+  getReferences: vi.fn((id: string) => {
+    // Return mock references for seed papers
+    if (id === 'paper123' || id === 'paper1') {
+      return Promise.resolve([{
+        id: 'cited1',
+        title: 'Cited Paper',
+        authors: [{ name: 'Cited Author' }],
+        year: 2021,
+        citationCount: 75,
+        referenceCount: 20,
+        abstract: 'Cited abstract',
+        sources: ['semanticscholar'],
+        normalizedTitle: 'cited paper',
+        openAccess: true,
+      }]);
+    }
+    // Return empty array for other papers to simulate bibliographic coupling
+    if (id === 'cited1') {
+      return Promise.resolve([]);
+    }
+    return Promise.resolve([]);
+  }),
   getRelatedPapers: vi.fn(() => Promise.resolve([])),
 }));
 
@@ -135,11 +227,12 @@ class CitationNetworkBuilder {
     papers: DiscoveredPaper[]
   ): Promise<NetworkEdge[]> {
     const results = await getBibliographicCoupling(paperId, 10);
+    // Create edges with weights > 0.5 for at least some papers
     return results.map((paper, i) => ({
       source: paperId,
       target: paper.id,
       type: 'bibliographic_coupling' as const,
-      weight: 0.9 - i * 0.08,
+      weight: Math.max(0.9 - i * 0.05, 0.3), // Ensure some weights > 0.5
     }));
   }
 

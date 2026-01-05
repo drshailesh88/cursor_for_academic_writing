@@ -295,7 +295,9 @@ export function createMatrix(
     name,
     description,
     template,
+    paperIds,
     rows: [],
+    summaries: [],
     createdAt: now,
     updatedAt: now,
   };

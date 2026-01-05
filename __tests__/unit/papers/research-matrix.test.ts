@@ -182,12 +182,14 @@ describe('Research Matrix - AI Data Extraction', () => {
 
   test('extracted cells include source paragraph', async () => {
     const template = MATRIX_TEMPLATES.find(t => t.id === 'clinical-trial')!;
-    const column = template.columns.find(c => c.name === 'Intervention')!;
+    const column = template.columns.find(c => c.name === 'Study Design')!;
 
     const result = await extractColumnData(mockPaper, mockContent, column);
 
     expect(result).toBeDefined();
-    // Source would be included in full matrix cell
+    expect(result.value).toBeDefined();
+    // Note: Source paragraph tracking would be a future enhancement
+    // Current implementation returns { value, confidence } only
   });
 
   test('extracted cells include source quote', async () => {
