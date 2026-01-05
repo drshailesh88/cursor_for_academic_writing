@@ -154,7 +154,6 @@ async function addToSharedWithMe(
     const updatedAtValue = typeof docData.updatedAt === 'number'
       ? docData.updatedAt
       : (docData.updatedAt as Timestamp)?.toMillis() || now;
-
     const sharedDocData: Omit<SharedDocument, 'documentId'> & { shareId: string } = {
       title: docData.title,
       ownerName: ownerData?.displayName || 'Unknown',
