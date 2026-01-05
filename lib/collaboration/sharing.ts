@@ -136,7 +136,7 @@ async function addToSharedWithMe(
     const docRef = doc(db, COLLECTIONS.DOCUMENTS, documentId);
     const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists) {
+    if (!docSnap.exists()) {
       throw new Error('Document not found');
     }
 
@@ -146,7 +146,7 @@ async function addToSharedWithMe(
     // Get owner details
     const ownerRef = doc(db, COLLECTIONS.USERS, docData.userId);
     const ownerSnap = await getDoc(ownerRef);
-    const ownerData = ownerSnap.exists ? ownerSnap.data() : null;
+    const ownerData = ownerSnap.exists() ? ownerSnap.data() : null;
 
     const sharedDocRef = doc(db, COLLECTIONS.USERS, userId, 'sharedWithMe', documentId);
 
@@ -253,7 +253,7 @@ export async function revokeShare(documentId: string, shareId: string): Promise<
     const shareRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'shares', shareId);
     const shareSnap = await getDoc(shareRef);
 
-    if (!shareSnap.exists) {
+    if (!shareSnap.exists()) {
       throw new Error('Share not found');
     }
 
@@ -294,7 +294,7 @@ export async function updateSharePermission(
     const shareRef = doc(db, COLLECTIONS.DOCUMENTS, documentId, 'shares', shareId);
     const shareSnap = await getDoc(shareRef);
 
-    if (!shareSnap.exists) {
+    if (!shareSnap.exists()) {
       throw new Error('Share not found');
     }
 
@@ -382,7 +382,7 @@ export async function getUserDocumentPermission(
     const docRef = doc(db, COLLECTIONS.DOCUMENTS, documentId);
     const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists) {
+    if (!docSnap.exists()) {
       return null;
     }
 
@@ -395,7 +395,7 @@ export async function getUserDocumentPermission(
     const sharedDocRef = doc(db, COLLECTIONS.USERS, userId, 'sharedWithMe', documentId);
     const sharedDocSnap = await getDoc(sharedDocRef);
 
-    if (sharedDocSnap.exists) {
+    if (sharedDocSnap.exists()) {
       return sharedDocSnap.data().permission;
     }
 

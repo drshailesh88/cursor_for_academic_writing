@@ -51,7 +51,7 @@ describe('Test Infrastructure', () => {
       await docRef.set({ title: 'Test', content: 'Hello' });
 
       const snapshot = await docRef.get();
-      expect(snapshot.exists).toBe(true);
+      expect(snapshot.exists()).toBe(true);
       expect(snapshot.data()?.title).toBe('Test');
     });
 

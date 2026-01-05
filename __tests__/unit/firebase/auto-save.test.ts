@@ -15,6 +15,7 @@ import { mockAuth, mockFirestore, resetFirebaseMocks } from '../../mocks/firebas
 import { createMockUser, createMockDocument } from '../../mocks/test-data';
 import { useDocument } from '@/lib/hooks/use-document';
 import { createDocument, getDocument } from '@/lib/firebase/documents';
+import { updateDoc } from 'firebase/firestore';
 
 // Mock toast notifications - define factory inline to avoid hoisting issues
 vi.mock('sonner', () => ({
@@ -34,7 +35,7 @@ describe('Auto-Save Functionality', () => {
   beforeEach(async () => {
     resetFirebaseMocks();
     vi.clearAllTimers();
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.clearAllMocks();
 
     // Set up authenticated user
@@ -42,8 +43,14 @@ describe('Auto-Save Functionality', () => {
     testUserId = user.uid;
     mockAuth.setUser(user);
 
-    // Create a test document
+    // Create a test document and ensure it exists in mock Firestore
     testDocId = await createDocument(testUserId, 'Test Document');
+
+    // Verify document was created
+    const doc = await getDocument(testDocId);
+    if (!doc) {
+      throw new Error('Failed to create test document in beforeEach');
+    }
   });
 
   afterEach(() => {
@@ -92,33 +99,40 @@ describe('Auto-Save Functionality', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Make rapid changes - each in its own act() to avoid warnings
-      act(() => {
+      // Make rapid changes - each resets the timer
+      await act(async () => {
         result.current.setContent('<p>Change 1</p>');
       });
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(10000);
+        vi.advanceTimersByTime(10000);
       });
 
-      act(() => {
+      await act(async () => {
         result.current.setContent('<p>Change 2</p>');
       });
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(10000);
+        vi.advanceTimersByTime(10000);
       });
 
-      act(() => {
+      await act(async () => {
         result.current.setContent('<p>Change 3</p>');
       });
 
-      // Should not have saved yet
+      // Should not have saved yet (timer keeps resetting)
       expect(result.current.saving).toBe(false);
 
-      // Wait for debounce to complete
+      // Wait for debounce to complete (30 seconds from last change)
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(30000);
+        vi.advanceTimersByTime(30000);
+        // Flush all pending promises
+        await Promise.resolve();
+      });
+
+      // Give the save operation time to complete
+      await waitFor(() => {
+        expect(result.current.saving).toBe(false);
       });
 
       // Should save only the last change
@@ -207,7 +221,7 @@ describe('Auto-Save Functionality', () => {
       });
 
       // Change content
-      act(() => {
+      await act(async () => {
         result.current.setContent('<p>Manual save test</p>');
       });
 
@@ -235,17 +249,25 @@ describe('Auto-Save Functionality', () => {
 
       const originalLastSaved = result.current.lastSaved;
 
-      act(() => {
+      // Advance time slightly to ensure new timestamp is different
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+
+      await act(async () => {
         result.current.setContent('<p>Test</p>');
       });
 
       await act(async () => {
+        vi.advanceTimersByTime(100);
         await result.current.saveNow();
       });
 
-      expect(result.current.lastSaved?.getTime()).toBeGreaterThan(
-        originalLastSaved?.getTime() || 0
-      );
+      await waitFor(() => {
+        expect(result.current.lastSaved?.getTime()).toBeGreaterThan(
+          originalLastSaved?.getTime() || 0
+        );
+      });
     });
 
     test('multiple manual saves work correctly', async () => {
@@ -258,7 +280,7 @@ describe('Auto-Save Functionality', () => {
       });
 
       // First save
-      act(() => {
+      await act(async () => {
         result.current.setContent('<p>Save 1</p>');
       });
       await act(async () => {
@@ -266,7 +288,7 @@ describe('Auto-Save Functionality', () => {
       });
 
       // Second save
-      act(() => {
+      await act(async () => {
         result.current.setContent('<p>Save 2</p>');
       });
       await act(async () => {
@@ -274,7 +296,7 @@ describe('Auto-Save Functionality', () => {
       });
 
       // Third save
-      act(() => {
+      await act(async () => {
         result.current.setContent('<p>Save 3</p>');
       });
       await act(async () => {
@@ -304,11 +326,17 @@ describe('Auto-Save Functionality', () => {
       // Change content and trigger save
       await act(async () => {
         result.current.setContent('<p>Test</p>');
-        await vi.advanceTimersByTimeAsync(30000);
       });
 
-      // Should finish saving
-      expect(result.current.saving).toBe(false);
+      await act(async () => {
+        vi.advanceTimersByTime(30000);
+        await Promise.resolve();
+      });
+
+      // Wait for save to complete
+      await waitFor(() => {
+        expect(result.current.saving).toBe(false);
+      });
     });
 
     test('lastSaved updates after successful save', async () => {
@@ -322,7 +350,7 @@ describe('Auto-Save Functionality', () => {
 
       const before = new Date();
 
-      act(() => {
+      await act(async () => {
         result.current.setContent('<p>Test</p>');
       });
 
@@ -337,27 +365,34 @@ describe('Auto-Save Functionality', () => {
     });
 
     test('error state updates on save failure', async () => {
+      // Use real timers for this test to properly handle async errors
+      vi.useRealTimers();
+
       const { result } = renderHook(() =>
-        useDocument({ documentId: testDocId })
+        useDocument({ documentId: testDocId, autoSaveInterval: 100 })
       );
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Mock Firestore error
-      const updateSpy = vi.spyOn(mockFirestore.doc(`documents/${testDocId}`), 'update')
-        .mockRejectedValueOnce(new Error('Save failed'));
+      // Mock Firestore updateDoc to throw an error
+      const updateDocMock = vi.mocked(updateDoc);
+      updateDocMock.mockRejectedValueOnce(new Error('Save failed'));
 
       await act(async () => {
         result.current.setContent('<p>Test</p>');
-        await vi.advanceTimersByTimeAsync(30000);
       });
 
-      expect(result.current.error).not.toBeNull();
+      // Wait for auto-save to trigger and fail
+      await waitFor(() => {
+        expect(result.current.error).not.toBeNull();
+      }, { timeout: 2000 });
+
       expect(result.current.error?.message).toBe('Save failed');
 
-      updateSpy.mockRestore();
+      // Restore fake timers for subsequent tests
+      vi.useFakeTimers({ shouldAdvanceTime: true });
     });
   });
 
@@ -371,8 +406,8 @@ describe('Auto-Save Functionality', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      act(() => {
-        result.current.setContent('<p>This is a test document with ten words total.</p>');
+      await act(async () => {
+        result.current.setContent('<p>One two three four five six seven eight nine ten.</p>');
       });
 
       await act(async () => {
@@ -392,7 +427,7 @@ describe('Auto-Save Functionality', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      act(() => {
+      await act(async () => {
         result.current.setContent(
           '<p>Hello <strong>world</strong></p><p>This is <em>formatted</em> text.</p>'
         );
@@ -416,7 +451,7 @@ describe('Auto-Save Functionality', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      act(() => {
+      await act(async () => {
         result.current.setContent('');
       });
 
@@ -437,7 +472,7 @@ describe('Auto-Save Functionality', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      act(() => {
+      await act(async () => {
         result.current.setContent('<p>   \n\t\r\n   </p>');
       });
 
@@ -458,12 +493,12 @@ describe('Auto-Save Functionality', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      let newDocId: string;
+      let newDocId: string | undefined;
       await act(async () => {
         newDocId = await result.current.createNew('New Document');
       });
 
-      expect(newDocId!).toBeDefined();
+      expect(newDocId).toBeDefined();
 
       const newDoc = await getDocument(newDocId!);
       expect(newDoc).not.toBeNull();
@@ -564,31 +599,40 @@ describe('Auto-Save Functionality', () => {
 
   describe('Error handling', () => {
     test('handles save errors gracefully', async () => {
+      // Use real timers for this test to properly handle async errors
+      vi.useRealTimers();
+
       const { result } = renderHook(() =>
-        useDocument({ documentId: testDocId })
+        useDocument({ documentId: testDocId, autoSaveInterval: 100 })
       );
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Mock error
-      const updateSpy = vi.spyOn(mockFirestore.doc(`documents/${testDocId}`), 'update')
-        .mockRejectedValueOnce(new Error('Network error'));
+      // Mock Firestore updateDoc to throw an error
+      const updateDocMock = vi.mocked(updateDoc);
+      updateDocMock.mockRejectedValueOnce(new Error('Network error'));
 
       await act(async () => {
         result.current.setContent('<p>Test</p>');
-        await vi.advanceTimersByTimeAsync(30000);
       });
 
-      expect(result.current.error).not.toBeNull();
+      // Wait for auto-save to trigger and fail
+      await waitFor(() => {
+        expect(result.current.error).not.toBeNull();
+      }, { timeout: 2000 });
 
-      updateSpy.mockRestore();
+      // Restore fake timers for subsequent tests
+      vi.useFakeTimers({ shouldAdvanceTime: true });
     });
 
     test('retries failed saves on next content change', async () => {
+      // Use real timers for this test to properly handle async errors
+      vi.useRealTimers();
+
       const { result } = renderHook(() =>
-        useDocument({ documentId: testDocId, autoSaveInterval: 30000 })
+        useDocument({ documentId: testDocId, autoSaveInterval: 100 })
       );
 
       await waitFor(() => {
@@ -596,29 +640,34 @@ describe('Auto-Save Functionality', () => {
       });
 
       // First save fails
-      const updateSpy = vi.spyOn(mockFirestore.doc(`documents/${testDocId}`), 'update')
-        .mockRejectedValueOnce(new Error('Network error'));
+      const updateDocMock = vi.mocked(updateDoc);
+      updateDocMock.mockRejectedValueOnce(new Error('Network error'));
 
       await act(async () => {
         result.current.setContent('<p>First attempt</p>');
-        await vi.advanceTimersByTimeAsync(30000);
       });
 
-      expect(result.current.error).not.toBeNull();
+      // Wait for auto-save to trigger and fail
+      await waitFor(() => {
+        expect(result.current.error).not.toBeNull();
+      }, { timeout: 2000 });
 
-      // Second save succeeds
-      updateSpy.mockRestore();
-
+      // Second save succeeds (mock is restored automatically after one call)
       await act(async () => {
         result.current.setContent('<p>Second attempt</p>');
-        await vi.advanceTimersByTimeAsync(30000);
       });
 
-      expect(result.current.error).toBeNull();
-      expect(result.current.saving).toBe(false);
+      // Wait for auto-save to trigger and succeed
+      await waitFor(() => {
+        expect(result.current.error).toBeNull();
+        expect(result.current.saving).toBe(false);
+      }, { timeout: 2000 });
 
       const savedDoc = await getDocument(testDocId);
       expect(savedDoc?.content).toBe('<p>Second attempt</p>');
+
+      // Restore fake timers for subsequent tests
+      vi.useFakeTimers({ shouldAdvanceTime: true });
     });
 
     test('handles document not found error', async () => {
@@ -647,7 +696,10 @@ describe('Auto-Save Functionality', () => {
       // Change content and wait 9 seconds
       await act(async () => {
         result.current.setContent('<p>Custom interval test</p>');
-        await vi.advanceTimersByTimeAsync(9000);
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(9000);
       });
 
       // Should not have saved yet
@@ -655,10 +707,14 @@ describe('Auto-Save Functionality', () => {
 
       // Wait final 1 second - should trigger save
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(1000);
+        vi.advanceTimersByTime(1000);
+        await Promise.resolve();
       });
 
-      expect(result.current.saving).toBe(false);
+      // Wait for save to complete
+      await waitFor(() => {
+        expect(result.current.saving).toBe(false);
+      });
 
       const savedDoc = await getDocument(testDocId);
       expect(savedDoc?.content).toBe('<p>Custom interval test</p>');
