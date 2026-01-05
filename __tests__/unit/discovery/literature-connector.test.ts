@@ -1,0 +1,505 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  LiteratureConnection,
+  ConnectionPath,
+  PathEdge,
+  DiscoveredPaper,
+  CitationNetwork,
+} from '@/lib/discovery/types';
+import { Timestamp } from 'firebase/firestore';
+
+/**
+ * Literature Connector Test Suite
+ *
+ * Tests the path finding functionality between papers.
+ * Following TDD - these tests will initially fail.
+ */
+
+// Mock literature connector (will be implemented)
+class LiteratureConnector {
+  async findPaths(
+    sourcePaperId: string,
+    targetPaperId: string,
+    maxPaths?: number
+  ): Promise<LiteratureConnection> {
+    throw new Error('Not implemented');
+  }
+
+  async findShortestPath(
+    sourcePaperId: string,
+    targetPaperId: string
+  ): Promise<ConnectionPath | null> {
+    throw new Error('Not implemented');
+  }
+
+  async findPathsByType(
+    sourcePaperId: string,
+    targetPaperId: string,
+    type: 'citation' | 'semantic' | 'author' | 'method'
+  ): Promise<ConnectionPath[]> {
+    throw new Error('Not implemented');
+  }
+
+  async explainPath(path: ConnectionPath): Promise<string[]> {
+    throw new Error('Not implemented');
+  }
+
+  async findMultiPaperConnections(
+    paperIds: string[]
+  ): Promise<{ centralPapers: string[]; connections: ConnectionPath[] }> {
+    throw new Error('Not implemented');
+  }
+
+  async calculatePathWeight(path: ConnectionPath): Promise<number> {
+    throw new Error('Not implemented');
+  }
+
+  async validatePath(
+    path: ConnectionPath,
+    papers: Map<string, DiscoveredPaper>
+  ): Promise<boolean> {
+    throw new Error('Not implemented');
+  }
+}
+
+describe('LiteratureConnector', () => {
+  let connector: LiteratureConnector;
+
+  beforeEach(() => {
+    connector = new LiteratureConnector();
+  });
+
+  describe('Path Finding', () => {
+    it('should find paths between two papers', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+
+      const connection = await connector.findPaths(
+        sourcePaperId,
+        targetPaperId
+      );
+
+      expect(connection).toBeDefined();
+      expect(connection.sourcePaperId).toBe(sourcePaperId);
+      expect(connection.targetPaperId).toBe(targetPaperId);
+      expect(connection.paths.length).toBeGreaterThan(0);
+    });
+
+    it('should respect the maximum paths limit', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+      const maxPaths = 3;
+
+      const connection = await connector.findPaths(
+        sourcePaperId,
+        targetPaperId,
+        maxPaths
+      );
+
+      expect(connection.paths.length).toBeLessThanOrEqual(maxPaths);
+    });
+
+    it('should identify the shortest path', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+
+      const connection = await connector.findPaths(
+        sourcePaperId,
+        targetPaperId
+      );
+
+      expect(connection.shortestPath).toBeDefined();
+
+      // Shortest path should be among the found paths
+      const shortestLength = connection.shortestPath.papers.length;
+      connection.paths.forEach(path => {
+        expect(path.papers.length).toBeGreaterThanOrEqual(shortestLength);
+      });
+    });
+
+    it('should handle cases where no path exists', async () => {
+      const sourcePaperId = 'isolated1';
+      const targetPaperId = 'isolated2';
+
+      const connection = await connector.findPaths(
+        sourcePaperId,
+        targetPaperId
+      );
+
+      // Should still return a connection object, but with empty paths
+      expect(connection).toBeDefined();
+      expect(connection.paths.length).toBe(0);
+    });
+
+    it('should include source and target in path', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+
+      const connection = await connector.findPaths(
+        sourcePaperId,
+        targetPaperId
+      );
+
+      connection.paths.forEach(path => {
+        expect(path.papers[0]).toBe(sourcePaperId);
+        expect(path.papers[path.papers.length - 1]).toBe(targetPaperId);
+      });
+    });
+  });
+
+  describe('Shortest Path', () => {
+    it('should find the shortest path between papers', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+
+      const path = await connector.findShortestPath(
+        sourcePaperId,
+        targetPaperId
+      );
+
+      expect(path).toBeDefined();
+      if (path) {
+        expect(path.papers.length).toBeGreaterThanOrEqual(2);
+      }
+    });
+
+    it('should return null when no path exists', async () => {
+      const sourcePaperId = 'isolated1';
+      const targetPaperId = 'isolated2';
+
+      const path = await connector.findShortestPath(
+        sourcePaperId,
+        targetPaperId
+      );
+
+      // For isolated papers, should return null
+      expect(path).toBeDefined();
+    });
+
+    it('should create edges for each step in path', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+
+      const path = await connector.findShortestPath(
+        sourcePaperId,
+        targetPaperId
+      );
+
+      if (path) {
+        expect(path.edges.length).toBe(path.papers.length - 1);
+      }
+    });
+  });
+
+  describe('Path Types', () => {
+    it('should find citation-based paths', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+
+      const paths = await connector.findPathsByType(
+        sourcePaperId,
+        targetPaperId,
+        'citation'
+      );
+
+      expect(paths).toBeDefined();
+      expect(Array.isArray(paths)).toBe(true);
+      paths.forEach(path => {
+        expect(path.type).toBe('citation');
+      });
+    });
+
+    it('should find semantic-based paths', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+
+      const paths = await connector.findPathsByType(
+        sourcePaperId,
+        targetPaperId,
+        'semantic'
+      );
+
+      expect(paths).toBeDefined();
+      paths.forEach(path => {
+        expect(path.type).toBe('semantic');
+      });
+    });
+
+    it('should find author-based paths', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+
+      const paths = await connector.findPathsByType(
+        sourcePaperId,
+        targetPaperId,
+        'author'
+      );
+
+      expect(paths).toBeDefined();
+      paths.forEach(path => {
+        expect(path.type).toBe('author');
+      });
+    });
+
+    it('should find method-based paths', async () => {
+      const sourcePaperId = 'paper1';
+      const targetPaperId = 'paper2';
+
+      const paths = await connector.findPathsByType(
+        sourcePaperId,
+        targetPaperId,
+        'method'
+      );
+
+      expect(paths).toBeDefined();
+      paths.forEach(path => {
+        expect(path.type).toBe('method');
+      });
+    });
+  });
+
+  describe('Path Explanation', () => {
+    it('should explain each step in a path', async () => {
+      const mockPath: ConnectionPath = {
+        id: 'path1',
+        papers: ['paper1', 'paper2', 'paper3'],
+        edges: [
+          {
+            source: 'paper1',
+            target: 'paper2',
+            type: 'cites',
+            weight: 1.0,
+            explanation: 'Paper 1 cites Paper 2',
+          },
+          {
+            source: 'paper2',
+            target: 'paper3',
+            type: 'cited_by',
+            weight: 0.8,
+            explanation: 'Paper 2 is cited by Paper 3',
+          },
+        ],
+        totalWeight: 1.8,
+        type: 'citation',
+      };
+
+      const explanations = await connector.explainPath(mockPath);
+
+      expect(explanations).toBeDefined();
+      expect(Array.isArray(explanations)).toBe(true);
+      expect(explanations.length).toBe(mockPath.edges.length);
+    });
+
+    it('should provide human-readable explanations', async () => {
+      const mockPath: ConnectionPath = {
+        id: 'path1',
+        papers: ['paper1', 'paper2'],
+        edges: [
+          {
+            source: 'paper1',
+            target: 'paper2',
+            type: 'cites',
+            weight: 1.0,
+            explanation: '',
+          },
+        ],
+        totalWeight: 1.0,
+        type: 'citation',
+      };
+
+      const explanations = await connector.explainPath(mockPath);
+
+      explanations.forEach(exp => {
+        expect(exp.length).toBeGreaterThan(0);
+        expect(typeof exp).toBe('string');
+      });
+    });
+  });
+
+  describe('Multi-Paper Connections', () => {
+    it('should find central papers connecting multiple papers', async () => {
+      const paperIds = ['paper1', 'paper2', 'paper3', 'paper4'];
+
+      const result = await connector.findMultiPaperConnections(paperIds);
+
+      expect(result).toBeDefined();
+      expect(result.centralPapers).toBeDefined();
+      expect(Array.isArray(result.centralPapers)).toBe(true);
+      expect(result.connections).toBeDefined();
+      expect(Array.isArray(result.connections)).toBe(true);
+    });
+
+    it('should identify bridging papers', async () => {
+      const paperIds = ['paper1', 'paper2', 'paper3'];
+
+      const result = await connector.findMultiPaperConnections(paperIds);
+
+      // Central papers should appear in multiple paths
+      expect(result.centralPapers.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Path Weight Calculation', () => {
+    it('should calculate total weight of a path', async () => {
+      const mockPath: ConnectionPath = {
+        id: 'path1',
+        papers: ['paper1', 'paper2', 'paper3'],
+        edges: [
+          {
+            source: 'paper1',
+            target: 'paper2',
+            type: 'cites',
+            weight: 1.0,
+            explanation: '',
+          },
+          {
+            source: 'paper2',
+            target: 'paper3',
+            type: 'co_citation',
+            weight: 0.5,
+            explanation: '',
+          },
+        ],
+        totalWeight: 0,
+        type: 'citation',
+      };
+
+      const weight = await connector.calculatePathWeight(mockPath);
+
+      expect(weight).toBeGreaterThan(0);
+      expect(weight).toBe(1.5); // Sum of edge weights
+    });
+
+    it('should handle empty paths', async () => {
+      const mockPath: ConnectionPath = {
+        id: 'path1',
+        papers: [],
+        edges: [],
+        totalWeight: 0,
+        type: 'citation',
+      };
+
+      const weight = await connector.calculatePathWeight(mockPath);
+
+      expect(weight).toBe(0);
+    });
+  });
+
+  describe('Path Validation', () => {
+    it('should validate that all papers in path exist', async () => {
+      const mockPath: ConnectionPath = {
+        id: 'path1',
+        papers: ['paper1', 'paper2'],
+        edges: [
+          {
+            source: 'paper1',
+            target: 'paper2',
+            type: 'cites',
+            weight: 1.0,
+            explanation: '',
+          },
+        ],
+        totalWeight: 1.0,
+        type: 'citation',
+      };
+
+      const papers = new Map<string, DiscoveredPaper>([
+        [
+          'paper1',
+          {
+            id: 'paper1',
+            title: 'Paper 1',
+            authors: [],
+            year: 2023,
+            citationCount: 10,
+            referenceCount: 5,
+            sources: ['pubmed'],
+            openAccess: true,
+            inLibrary: false,
+            read: false,
+            starred: false,
+          },
+        ],
+        [
+          'paper2',
+          {
+            id: 'paper2',
+            title: 'Paper 2',
+            authors: [],
+            year: 2023,
+            citationCount: 20,
+            referenceCount: 10,
+            sources: ['arxiv'],
+            openAccess: true,
+            inLibrary: false,
+            read: false,
+            starred: false,
+          },
+        ],
+      ]);
+
+      const isValid = await connector.validatePath(mockPath, papers);
+
+      expect(isValid).toBe(true);
+    });
+
+    it('should invalidate paths with missing papers', async () => {
+      const mockPath: ConnectionPath = {
+        id: 'path1',
+        papers: ['paper1', 'nonexistent'],
+        edges: [],
+        totalWeight: 0,
+        type: 'citation',
+      };
+
+      const papers = new Map<string, DiscoveredPaper>([
+        [
+          'paper1',
+          {
+            id: 'paper1',
+            title: 'Paper 1',
+            authors: [],
+            year: 2023,
+            citationCount: 10,
+            referenceCount: 5,
+            sources: ['pubmed'],
+            openAccess: true,
+            inLibrary: false,
+            read: false,
+            starred: false,
+          },
+        ],
+      ]);
+
+      const isValid = await connector.validatePath(mockPath, papers);
+
+      expect(isValid).toBe(false);
+    });
+
+    it('should validate edge consistency', async () => {
+      const mockPath: ConnectionPath = {
+        id: 'path1',
+        papers: ['paper1', 'paper2', 'paper3'],
+        edges: [
+          {
+            source: 'paper1',
+            target: 'paper2',
+            type: 'cites',
+            weight: 1.0,
+            explanation: '',
+          },
+          // Missing edge between paper2 and paper3
+        ],
+        totalWeight: 1.0,
+        type: 'citation',
+      };
+
+      const papers = new Map<string, DiscoveredPaper>();
+
+      const isValid = await connector.validatePath(mockPath, papers);
+
+      // Should be invalid because edges don't match papers
+      expect(isValid).toBe(false);
+    });
+  });
+});

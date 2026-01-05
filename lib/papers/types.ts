@@ -201,3 +201,200 @@ export interface PaperChunk {
     journal?: string;
   };
 }
+
+/**
+ * Quality assessment for research papers
+ */
+export interface QualityAssessment {
+  overallGrade: 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D' | 'F';
+  overallScore: number; // 0-100
+
+  studyDesign: {
+    type: string;
+    evidenceLevel: 1 | 2 | 3 | 4 | 5 | 6;
+    score: number;
+  };
+
+  criteria: QualityCriterion[];
+
+  strengths: string[];
+  limitations: string[];
+  biasRisks: BiasRisk[];
+}
+
+/**
+ * Individual quality criterion
+ */
+export interface QualityCriterion {
+  name: string;
+  score: number;
+  maxScore: number;
+  notes: string;
+}
+
+/**
+ * Bias risk assessment
+ */
+export interface BiasRisk {
+  type: string;
+  level: 'low' | 'moderate' | 'high' | 'unclear';
+  explanation: string;
+}
+
+/**
+ * Highlight/annotation on a paper
+ */
+export interface Highlight {
+  id: string;
+  paperId: string;
+  userId: string;
+
+  type: 'key_finding' | 'methodology' | 'limitation' | 'question' | 'quote' | 'custom';
+  color: string;
+
+  // Position
+  startParagraphId: string;
+  endParagraphId: string;
+  startOffset: number;
+  endOffset: number;
+  selectedText: string;
+  pageNumber: number;
+
+  // Notes
+  notes: HighlightNote[];
+
+  // Linking
+  linkedHighlights: string[]; // Links to other highlights
+  linkedPapers: string[]; // Links to other papers
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Note on a highlight
+ */
+export interface HighlightNote {
+  id: string;
+  userId: string;
+  content: string;
+  createdAt: Date;
+}
+
+/**
+ * Research matrix for comparing papers
+ */
+export interface ResearchMatrix {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+
+  template: 'clinical_trial' | 'systematic_review' | 'diagnostic' | 'ml_study' | 'custom';
+
+  paperIds: string[];
+
+  columns: MatrixColumn[];
+  rows: MatrixRow[];
+
+  // Calculated summaries
+  summaries: MatrixSummary[];
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Column definition in research matrix
+ */
+export interface MatrixColumn {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'percentage' | 'boolean' | 'rating' | 'calculated';
+  extractionPrompt?: string; // AI prompt to extract this data
+  formula?: string; // For calculated columns
+  width: number;
+}
+
+/**
+ * Row in research matrix (one per paper)
+ */
+export interface MatrixRow {
+  paperId: string;
+  values: Record<string, MatrixCell>;
+}
+
+/**
+ * Cell in research matrix
+ */
+export interface MatrixCell {
+  value: string | number | boolean;
+  source?: {
+    paragraphId: string;
+    quote: string;
+  };
+  confidence: number;
+  manualOverride: boolean;
+}
+
+/**
+ * Summary statistics for matrix column
+ */
+export interface MatrixSummary {
+  columnId: string;
+  type: 'mean' | 'median' | 'range' | 'count' | 'percentage';
+  value: string | number;
+}
+
+/**
+ * Audio summary of a paper
+ */
+export interface AudioSummary {
+  id: string;
+  paperId: string;
+  userId: string;
+
+  type: 'quick' | 'deep' | 'discussion' | 'qa';
+  duration: number; // seconds
+
+  audioUrl: string;
+  transcript: string;
+  chapters: AudioChapter[];
+
+  voiceSettings: {
+    voice: string;
+    speed: number;
+  };
+
+  createdAt: Date;
+}
+
+/**
+ * Chapter in audio summary
+ */
+export interface AudioChapter {
+  title: string;
+  startTime: number;
+  endTime: number;
+  content: string;
+}
+
+/**
+ * Collaborator access for shared papers/collections
+ */
+export interface CollaboratorAccess {
+  userId: string;
+  email: string;
+  permission: 'view' | 'annotate' | 'edit' | 'admin';
+  addedAt: Date;
+}
+
+/**
+ * Equation extracted from paper
+ */
+export interface Equation {
+  id: string;
+  latex: string;
+  pageNumber: number;
+  displayMode: boolean; // true for display math, false for inline
+}
