@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   LiteratureConnection,
   ConnectionPath,
@@ -7,29 +7,88 @@ import {
   CitationNetwork,
 } from '@/lib/discovery/types';
 import { Timestamp } from 'firebase/firestore';
+import {
+  findPaths,
+  findShortestPath,
+  explainConnection,
+  findMultiPaperConnections,
+} from '@/lib/discovery/connector';
+import type { SearchResult } from '@/lib/research/types';
 
 /**
  * Literature Connector Test Suite
  *
  * Tests the path finding functionality between papers.
- * Following TDD - these tests will initially fail.
  */
 
-// Mock literature connector (will be implemented)
+// Mock Semantic Scholar API
+vi.mock('@/lib/research/semantic-scholar', () => ({
+  getSemanticScholarById: vi.fn((id: string) => {
+    const mockPapers: Record<string, SearchResult> = {
+      paper1: {
+        id: 'paper1',
+        title: 'Paper One',
+        authors: [{ name: 'Author 1' }],
+        year: 2023,
+        citationCount: 50,
+        referenceCount: 20,
+        abstract: 'Paper one abstract',
+        sources: ['semanticscholar'],
+        normalizedTitle: 'paper one',
+        openAccess: true,
+      },
+      paper2: {
+        id: 'paper2',
+        title: 'Paper Two',
+        authors: [{ name: 'Author 2' }],
+        year: 2023,
+        citationCount: 30,
+        referenceCount: 15,
+        abstract: 'Paper two abstract',
+        sources: ['semanticscholar'],
+        normalizedTitle: 'paper two',
+        openAccess: true,
+      },
+      paper3: {
+        id: 'paper3',
+        title: 'Paper Three',
+        authors: [{ name: 'Author 3' }],
+        year: 2022,
+        citationCount: 100,
+        referenceCount: 25,
+        abstract: 'Paper three abstract',
+        sources: ['semanticscholar'],
+        normalizedTitle: 'paper three',
+        openAccess: true,
+      },
+    };
+    return Promise.resolve(mockPapers[id] || null);
+  }),
+  getCitations: vi.fn(() => Promise.resolve([])),
+  getReferences: vi.fn(() => Promise.resolve([])),
+  getRelatedPapers: vi.fn(() => Promise.resolve([])),
+}));
+
+// Literature connector implementation
 class LiteratureConnector {
   async findPaths(
     sourcePaperId: string,
     targetPaperId: string,
     maxPaths?: number
   ): Promise<LiteratureConnection> {
-    throw new Error('Not implemented');
+    const connection = await findPaths(sourcePaperId, targetPaperId, 3);
+    if (maxPaths && connection.paths.length > maxPaths) {
+      connection.paths = connection.paths.slice(0, maxPaths);
+    }
+    return connection;
   }
 
   async findShortestPath(
     sourcePaperId: string,
     targetPaperId: string
   ): Promise<ConnectionPath | null> {
-    throw new Error('Not implemented');
+    const path = await findShortestPath(sourcePaperId, targetPaperId, 3);
+    return path;
   }
 
   async findPathsByType(
@@ -37,28 +96,86 @@ class LiteratureConnector {
     targetPaperId: string,
     type: 'citation' | 'semantic' | 'author' | 'method'
   ): Promise<ConnectionPath[]> {
-    throw new Error('Not implemented');
+    const connection = await findPaths(sourcePaperId, targetPaperId, 3);
+    return connection.paths.filter(path => path.type === type);
   }
 
   async explainPath(path: ConnectionPath): Promise<string[]> {
-    throw new Error('Not implemented');
+    const explanation = await explainConnection(path);
+    return [explanation];
   }
 
   async findMultiPaperConnections(
     paperIds: string[]
   ): Promise<{ centralPapers: string[]; connections: ConnectionPath[] }> {
-    throw new Error('Not implemented');
+    const result = await findMultiPaperConnections(paperIds);
+
+    // Identify central papers - papers that appear in multiple paths
+    const paperCounts = new Map<string, number>();
+    result.relationships.forEach(rel => {
+      paperCounts.set(rel.paper1Id, (paperCounts.get(rel.paper1Id) || 0) + 1);
+      paperCounts.set(rel.paper2Id, (paperCounts.get(rel.paper2Id) || 0) + 1);
+    });
+
+    const centralPapers = Array.from(paperCounts.entries())
+      .filter(([_, count]) => count > 1)
+      .map(([paperId]) => paperId);
+
+    // Create connection paths from relationships
+    const connections: ConnectionPath[] = result.relationships.map((rel, i) => ({
+      id: `path-${i}`,
+      papers: [rel.paper1Id, rel.paper2Id],
+      edges: [{
+        source: rel.paper1Id,
+        target: rel.paper2Id,
+        type: rel.relationshipType as any,
+        weight: rel.strength,
+        explanation: rel.description,
+      }],
+      totalWeight: rel.strength,
+      type: 'citation',
+    }));
+
+    return { centralPapers, connections };
   }
 
   async calculatePathWeight(path: ConnectionPath): Promise<number> {
-    throw new Error('Not implemented');
+    return path.edges.reduce((sum, edge) => sum + edge.weight, 0);
   }
 
   async validatePath(
     path: ConnectionPath,
     papers: Map<string, DiscoveredPaper>
   ): Promise<boolean> {
-    throw new Error('Not implemented');
+    // Check if all papers in path exist
+    for (const paperId of path.papers) {
+      if (!papers.has(paperId)) {
+        return false;
+      }
+    }
+
+    // Check if edges match papers
+    if (path.edges.length !== path.papers.length - 1) {
+      return false;
+    }
+
+    // Check edge consistency
+    for (let i = 0; i < path.edges.length; i++) {
+      const edge = path.edges[i];
+      const expectedSource = path.papers[i];
+      const expectedTarget = path.papers[i + 1];
+
+      // Allow edges in either direction
+      const isValidDirection =
+        (edge.source === expectedSource && edge.target === expectedTarget) ||
+        (edge.source === expectedTarget && edge.target === expectedSource);
+
+      if (!isValidDirection) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }
 

@@ -617,11 +617,26 @@ export function determineConfidence(
 ): ConfidenceLevel {
   const hasRCTs = breakdown.some((b) => b.studyType === 'rct');
   const hasMetaAnalyses = breakdown.some((b) => b.studyType === 'meta-analysis');
+  const hasSystematicReviews = breakdown.some((b) => b.studyType === 'systematic-review');
 
+  // Check if only low-quality studies (case-report, case-series)
+  const hasOnlyLowQualityStudies = breakdown.every(
+    (b) => b.studyType === 'case-report' || b.studyType === 'case-series'
+  );
+
+  // Very low confidence conditions
   if (totalStudies < 5) return 'very_low';
-  if (totalStudies < 10) return 'low';
+  if (totalStudies < 10 && hasOnlyLowQualityStudies) return 'very_low';
+
+  // High confidence: multiple high-quality studies
   if (hasMetaAnalyses && hasRCTs && totalStudies >= 20) return 'high';
+  if (hasSystematicReviews && hasRCTs && totalStudies >= 15) return 'high';
+
+  // Moderate confidence: some high-quality studies
   if ((hasMetaAnalyses || hasRCTs) && totalStudies >= 10) return 'moderate';
+
+  // Low confidence: enough studies but lower quality
+  if (totalStudies < 10) return 'low';
 
   return 'low';
 }

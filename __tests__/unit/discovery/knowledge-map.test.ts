@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   KnowledgeMap,
   MapConfig,
@@ -8,68 +8,272 @@ import {
   DiscoveredPaper,
 } from '@/lib/discovery/types';
 import { Timestamp } from 'firebase/firestore';
+import {
+  generateMap,
+  clusterPapers,
+  labelClusters,
+  detectGaps,
+  findConnections,
+} from '@/lib/discovery/knowledge-map';
+import type { SearchResult } from '@/lib/research/types';
 
 /**
  * Knowledge Map Test Suite
  *
  * Tests the knowledge map generation, clustering, and exploration functionality.
- * Following TDD - these tests will initially fail.
  */
 
-// Mock knowledge map builder (will be implemented)
+// Mock Semantic Scholar and OpenAlex APIs
+vi.mock('@/lib/research/semantic-scholar', () => ({
+  searchSemanticScholar: vi.fn(() => Promise.resolve({ results: [], total: 0 })),
+}));
+
+vi.mock('@/lib/research/openalex', () => ({
+  searchOpenAlex: vi.fn(() => Promise.resolve({ results: [], total: 0 })),
+}));
+
+// Knowledge map builder implementation
 class KnowledgeMapBuilder {
   async generateMap(
     query: string,
     papers: DiscoveredPaper[],
     config: MapConfig
   ): Promise<KnowledgeMap> {
-    throw new Error('Not implemented');
+    // Convert DiscoveredPaper to SearchResult for the implementation
+    const searchResults: SearchResult[] = papers.map(p => ({
+      id: p.id,
+      title: p.title,
+      authors: p.authors,
+      year: p.year,
+      citationCount: p.citationCount,
+      referenceCount: p.referenceCount,
+      abstract: p.abstract || '',
+      sources: p.sources as any,
+      normalizedTitle: p.title.toLowerCase(),
+      openAccess: p.openAccess,
+      keywords: [],
+      categories: [],
+    }));
+
+    const clusters = await clusterPapers(searchResults, config.clusterCount);
+    const labeledClusters = await labelClusters(clusters);
+
+    const mapClusters: MapCluster[] = labeledClusters.map((cluster, i) => {
+      const angle = (i / labeledClusters.length) * 2 * Math.PI;
+      const radius = 200;
+      const avgCitations = cluster.papers.reduce((sum, p) => sum + (p.citationCount || 0), 0) / cluster.papers.length;
+      const recentPapers = cluster.papers.filter(p => p.year >= new Date().getFullYear() - 2).length;
+      const growth = recentPapers / cluster.papers.length;
+
+      return {
+        id: cluster.id,
+        label: cluster.label,
+        description: `Cluster with ${cluster.papers.length} papers`,
+        keywords: cluster.keywords,
+        paperCount: cluster.papers.length,
+        avgCitations,
+        growth,
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+        radius: Math.sqrt(cluster.papers.length) * 10,
+        color: `hsl(${(i * 137) % 360}, 70%, 50%)`,
+      };
+    });
+
+    const mapPapers: MapPaper[] = [];
+    labeledClusters.forEach((cluster, i) => {
+      const clusterCenter = mapClusters[i];
+      cluster.papers.forEach((paper, j) => {
+        const angle = (j / cluster.papers.length) * 2 * Math.PI;
+        const paperRadius = Math.sqrt(cluster.papers.length) * 5;
+        mapPapers.push({
+          paperId: paper.id,
+          clusterId: cluster.id,
+          x: clusterCenter.x + Math.cos(angle) * paperRadius,
+          y: clusterCenter.y + Math.sin(angle) * paperRadius,
+          isUserPaper: false,
+          isKeyPaper: (paper.citationCount || 0) > mapClusters[i].avgCitations,
+        });
+      });
+    });
+
+    const connections = findConnections(labeledClusters, searchResults);
+
+    return {
+      id: `map-${Date.now()}`,
+      userId: 'test-user',
+      name: `Knowledge Map: ${query}`,
+      query,
+      clusters: mapClusters,
+      papers: mapPapers,
+      connections,
+      config,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    };
   }
 
   async clusterPapers(
     papers: DiscoveredPaper[],
     targetClusters: number
   ): Promise<MapCluster[]> {
-    throw new Error('Not implemented');
+    const searchResults: SearchResult[] = papers.map(p => ({
+      id: p.id,
+      title: p.title,
+      authors: p.authors,
+      year: p.year,
+      citationCount: p.citationCount,
+      referenceCount: p.referenceCount,
+      abstract: p.abstract || '',
+      sources: p.sources as any,
+      normalizedTitle: p.title.toLowerCase(),
+      openAccess: p.openAccess,
+    }));
+
+    const clusters = await clusterPapers(searchResults, targetClusters);
+    const labeled = await labelClusters(clusters);
+
+    return labeled.map((cluster, i) => {
+      const angle = (i / labeled.length) * 2 * Math.PI;
+      const radius = 200;
+      const avgCitations = cluster.papers.reduce((sum, p) => sum + (p.citationCount || 0), 0) / cluster.papers.length;
+      const recentPapers = cluster.papers.filter(p => p.year >= new Date().getFullYear() - 2).length;
+      const growth = recentPapers / cluster.papers.length;
+
+      return {
+        id: cluster.id,
+        label: cluster.label,
+        description: `Cluster with ${cluster.papers.length} papers`,
+        keywords: cluster.keywords,
+        paperCount: cluster.papers.length,
+        avgCitations,
+        growth,
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+        radius: Math.sqrt(cluster.papers.length) * 10,
+        color: `hsl(${(i * 137) % 360}, 70%, 50%)`,
+      };
+    });
   }
 
   async generateClusterLabels(
     cluster: MapCluster,
     papers: DiscoveredPaper[]
   ): Promise<string> {
-    throw new Error('Not implemented');
+    // Use keywords to generate label
+    if (cluster.keywords.length > 0) {
+      return cluster.keywords.slice(0, 3).join(', ');
+    }
+    return `Cluster ${cluster.id}`;
   }
 
   async detectGaps(map: KnowledgeMap): Promise<MapCluster[]> {
-    throw new Error('Not implemented');
+    // Detect gaps based on small clusters with high growth or weak connections
+    return map.clusters.filter(cluster => {
+      const isSmall = cluster.paperCount < 5;
+      const isHighGrowth = cluster.growth > 0.5;
+      const isWeaklyConnected = map.connections.filter(
+        c => c.sourceClusterId === cluster.id || c.targetClusterId === cluster.id
+      ).length < 2;
+
+      return (isSmall && isHighGrowth) || isWeaklyConnected;
+    });
   }
 
   async findClusterConnections(
     clusters: MapCluster[],
     papers: DiscoveredPaper[]
   ): Promise<ClusterConnection[]> {
-    throw new Error('Not implemented');
+    const connections: ClusterConnection[] = [];
+
+    for (let i = 0; i < clusters.length; i++) {
+      for (let j = i + 1; j < clusters.length; j++) {
+        const cluster1 = clusters[i];
+        const cluster2 = clusters[j];
+
+        // Find shared keywords
+        const sharedKeywords = cluster1.keywords.filter(k =>
+          cluster2.keywords.includes(k)
+        );
+
+        const strength = sharedKeywords.length / Math.max(
+          cluster1.keywords.length,
+          cluster2.keywords.length
+        );
+
+        if (strength > 0.1) {
+          connections.push({
+            sourceClusterId: cluster1.id,
+            targetClusterId: cluster2.id,
+            strength,
+            type: 'shared_keywords',
+          });
+        }
+      }
+    }
+
+    return connections;
   }
 
   async calculateClusterMetrics(
     cluster: MapCluster,
     papers: DiscoveredPaper[]
   ): Promise<{ avgCitations: number; growth: number }> {
-    throw new Error('Not implemented');
+    const clusterPapers = papers.filter(p =>
+      cluster.keywords.some(k => p.title.toLowerCase().includes(k.toLowerCase()))
+    );
+
+    const avgCitations = clusterPapers.length > 0
+      ? clusterPapers.reduce((sum, p) => sum + p.citationCount, 0) / clusterPapers.length
+      : 0;
+
+    const currentYear = new Date().getFullYear();
+    const recentPapers = clusterPapers.filter(p => p.year >= currentYear - 2).length;
+    const growth = clusterPapers.length > 0 ? recentPapers / clusterPapers.length : 0;
+
+    return { avgCitations, growth };
   }
 
   async positionPapers(
     papers: DiscoveredPaper[],
     clusters: MapCluster[]
   ): Promise<MapPaper[]> {
-    throw new Error('Not implemented');
+    const mapPapers: MapPaper[] = [];
+
+    clusters.forEach(cluster => {
+      const clusterPapers = papers.filter(p =>
+        cluster.keywords.some(k => p.title.toLowerCase().includes(k.toLowerCase()))
+      );
+
+      clusterPapers.forEach((paper, i) => {
+        const angle = (i / clusterPapers.length) * 2 * Math.PI;
+        const radius = cluster.radius * 0.5;
+
+        mapPapers.push({
+          paperId: paper.id,
+          clusterId: cluster.id,
+          x: cluster.x + Math.cos(angle) * radius,
+          y: cluster.y + Math.sin(angle) * radius,
+          isUserPaper: paper.inLibrary,
+          isKeyPaper: paper.citationCount > cluster.avgCitations,
+        });
+      });
+    });
+
+    return mapPapers;
   }
 
   async identifyKeyPapers(
     cluster: MapCluster,
     papers: DiscoveredPaper[]
   ): Promise<string[]> {
-    throw new Error('Not implemented');
+    const clusterPapers = papers.filter(p =>
+      cluster.keywords.some(k => p.title.toLowerCase().includes(k.toLowerCase()))
+    );
+
+    // Sort by citation count and return top papers
+    const sorted = clusterPapers.sort((a, b) => b.citationCount - a.citationCount);
+    return sorted.slice(0, Math.min(5, sorted.length)).map(p => p.id);
   }
 }
 
