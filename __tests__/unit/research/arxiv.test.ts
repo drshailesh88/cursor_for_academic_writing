@@ -226,7 +226,8 @@ describe('arXiv Client', () => {
 
       const response = await searchArxiv(query);
 
-      expect(response.executionTimeMs).toBeGreaterThan(0);
+      // In mocked environment, execution can be instant (0ms)
+      expect(response.executionTimeMs).toBeGreaterThanOrEqual(0);
       expect(response.executionTimeMs).toBeLessThan(10000); // Should complete in <10s
     });
   });
