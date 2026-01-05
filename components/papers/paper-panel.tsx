@@ -12,6 +12,7 @@ import { ExtractionButtons } from './extraction-buttons';
 import type { Paper, PaperContent, PaperMetadata } from '@/lib/firebase/schema';
 
 interface PaperPanelProps {
+  userId: string;
   papers: PaperMetadata[];
   currentPaper: Paper | null;
   currentContent: PaperContent | null;
@@ -26,6 +27,7 @@ interface PaperPanelProps {
 }
 
 export function PaperPanel({
+  userId,
   papers,
   currentPaper,
   currentContent,
@@ -45,8 +47,7 @@ export function PaperPanel({
     setView('upload');
   };
 
-  const handleUploadComplete = async (file: File) => {
-    await onUploadPaper(file);
+  const handleUploadComplete = (paperId: string) => {
     setView('library');
   };
 
@@ -68,11 +69,7 @@ export function PaperPanel({
   if (view === 'library') {
     return (
       <PaperLibrary
-        papers={papers}
-        onOpenPaper={handleOpenPaper}
-        onDeletePaper={onDeletePaper}
-        onToggleFavorite={onToggleFavorite}
-        onUploadClick={handleUploadClick}
+        userId={userId}
       />
     );
   }
@@ -81,8 +78,8 @@ export function PaperPanel({
   if (view === 'upload') {
     return (
       <PaperUpload
-        onUpload={handleUploadComplete}
-        onCancel={handleCancelUpload}
+        userId={userId}
+        onUploadComplete={handleUploadComplete}
       />
     );
   }
@@ -191,9 +188,7 @@ export function PaperPanel({
 
         <TabsContent value="chat" className="flex-1 mt-0">
           <PaperChat
-            paperId={currentPaper.id}
-            paperTitle={currentPaper.title}
-            onInsertToEditor={onInsertToEditor}
+            userId={userId}
           />
         </TabsContent>
 

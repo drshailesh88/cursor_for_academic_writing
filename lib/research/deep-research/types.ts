@@ -434,7 +434,8 @@ export type SessionStatus =
   | 'reviewing'
   | 'synthesizing'
   | 'complete'
-  | 'failed';
+  | 'failed'
+  | 'error';
 
 /**
  * Clarification Q&A

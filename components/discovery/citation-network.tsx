@@ -293,11 +293,11 @@ export function CitationNetwork({
       {/* Graph */}
       <ForceGraph2D
         ref={graphRef}
-        graphData={filteredData}
+        graphData={{ nodes: filteredData.nodes, links: filteredData.edges }}
         nodeId="id"
         nodeLabel="title"
-        nodeColor={getNodeColor}
-        nodeVal={getNodeSize}
+        nodeColor={getNodeColor as any}
+        nodeVal={getNodeSize as any}
         nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
           const label = node.title;
           const fontSize = 12 / globalScale;
@@ -324,7 +324,7 @@ export function CitationNetwork({
             ctx.fillText(label, node.x, node.y + getNodeSize(node) + fontSize + 2);
           }
         }}
-        linkColor={getEdgeColor}
+        linkColor={getEdgeColor as any}
         linkWidth={(edge: any) => edge.weight * 2}
         linkDirectionalParticles={2}
         linkDirectionalParticleWidth={2}

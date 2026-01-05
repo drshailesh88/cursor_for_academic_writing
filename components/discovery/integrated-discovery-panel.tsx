@@ -109,69 +109,6 @@ export function IntegratedDiscoveryPanel({
   const error = getCurrentViewError();
 
   /**
-   * Keyboard shortcuts handler
-   */
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if user is typing in input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      // Tab navigation: 1-6 keys for quick tab switching
-      if (e.key >= '1' && e.key <= '6' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        const tabs = ['network', 'map', 'recommendations', 'timeline', 'frontiers', 'connector'];
-        const index = parseInt(e.key) - 1;
-        if (index < tabs.length) {
-          setActiveView(tabs[index] as any);
-        }
-      }
-
-      // Arrow keys for navigation
-      if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        const tabs = ['network', 'map', 'recommendations', 'timeline', 'frontiers', 'connector'];
-        const currentIndex = tabs.indexOf(activeView);
-        if (currentIndex > 0) {
-          setActiveView(tabs[currentIndex - 1] as any);
-        }
-      }
-
-      if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        const tabs = ['network', 'map', 'recommendations', 'timeline', 'frontiers', 'connector'];
-        const currentIndex = tabs.indexOf(activeView);
-        if (currentIndex < tabs.length - 1) {
-          setActiveView(tabs[currentIndex + 1] as any);
-        }
-      }
-
-      // R key to refresh
-      if (e.key === 'r' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
-        e.preventDefault();
-        handleRefresh();
-      }
-
-      // Escape to clear error
-      if (e.key === 'Escape' && error) {
-        e.preventDefault();
-        clearError(activeView);
-      }
-
-      // / or Ctrl+K to focus search
-      if ((e.key === '/' || (e.key === 'k' && (e.ctrlKey || e.metaKey))) && activeView !== 'connector') {
-        e.preventDefault();
-        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-        searchInput?.focus();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeView, error, clearError, handleRefresh, setActiveView]);
-
-  /**
    * Handle search/discover action
    */
   const handleDiscover = useCallback(async () => {
@@ -244,6 +181,69 @@ export function IntegratedDiscoveryPanel({
   }, [handleDiscover]);
 
   /**
+   * Keyboard shortcuts handler
+   */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if user is typing in input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Tab navigation: 1-6 keys for quick tab switching
+      if (e.key >= '1' && e.key <= '6' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const tabs = ['network', 'map', 'recommendations', 'timeline', 'frontiers', 'connector'];
+        const index = parseInt(e.key) - 1;
+        if (index < tabs.length) {
+          setActiveView(tabs[index] as any);
+        }
+      }
+
+      // Arrow keys for navigation
+      if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const tabs = ['network', 'map', 'recommendations', 'timeline', 'frontiers', 'connector'];
+        const currentIndex = tabs.indexOf(activeView);
+        if (currentIndex > 0) {
+          setActiveView(tabs[currentIndex - 1] as any);
+        }
+      }
+
+      if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const tabs = ['network', 'map', 'recommendations', 'timeline', 'frontiers', 'connector'];
+        const currentIndex = tabs.indexOf(activeView);
+        if (currentIndex < tabs.length - 1) {
+          setActiveView(tabs[currentIndex + 1] as any);
+        }
+      }
+
+      // R key to refresh
+      if (e.key === 'r' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault();
+        handleRefresh();
+      }
+
+      // Escape to clear error
+      if (e.key === 'Escape' && error) {
+        e.preventDefault();
+        clearError(activeView);
+      }
+
+      // / or Ctrl+K to focus search
+      if ((e.key === '/' || (e.key === 'k' && (e.ctrlKey || e.metaKey))) && activeView !== 'connector') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+        searchInput?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeView, error, clearError, handleRefresh, setActiveView]);
+
+  /**
    * Handle key press in search input
    */
   const handleKeyPress = useCallback(
@@ -312,15 +312,20 @@ export function IntegratedDiscoveryPanel({
         id: cluster.id,
         label: cluster.label,
         description: cluster.description,
+        keywords: cluster.keywords,
+        paperCount: cluster.paperCount,
+        avgCitations: cluster.avgCitations,
+        growth: cluster.growth,
         x: cluster.x,
         y: cluster.y,
         radius: cluster.radius,
         color: cluster.color,
-        paperCount: cluster.paperCount,
       })),
       papers: mapData.papers.map(paper => ({
         paperId: paper.paperId,
         clusterId: paper.clusterId,
+        title: '', // Would need to fetch from paper details
+        year: 2024, // Would need from paper details
         x: paper.x,
         y: paper.y,
         isUserPaper: paper.isUserPaper,
@@ -336,13 +341,12 @@ export function IntegratedDiscoveryPanel({
   const recommendationsData: RecommendationsData | undefined = useMemo(() => {
     if (!recommendations) return undefined;
 
-    return {
-      trending: recommendations.hotNow,
-      missing: recommendations.missingFromReview,
-      recent: recommendations.newThisWeek,
-      sameAuthors: recommendations.sameAuthors,
-      extending: recommendations.extendingWork,
-    };
+    // Transform lib Recommendation to component Recommendation
+    // The lib Recommendation only has paperId, score, reason, type
+    // We need to fetch paper details to get title, authors, etc.
+    // For now, return undefined to show empty state
+    // TODO: Fetch paper details for recommendations
+    return undefined;
   }, [recommendations]);
 
   /**
@@ -351,11 +355,27 @@ export function IntegratedDiscoveryPanel({
   const timelineViewData: TimelineData | undefined = useMemo(() => {
     if (!timelineData) return undefined;
 
+    // Transform TimelinePaper to match the expected format
+    const transformedPapers = timelineData.papers.map(paper => ({
+      paperId: paper.paperId,
+      title: '', // Would need to fetch from paper details
+      authors: [], // Would need from paper details
+      year: paper.year,
+      citationCount: 0, // Would need from paper details
+      isSeminal: paper.importance > 0.8,
+      isSeed: false,
+    }));
+
+    // Transform Trend to match the expected format (add endYear)
+    const transformedTrends = timelineData.trends.map(trend => ({
+      ...trend,
+      endYear: new Date().getFullYear(), // Use current year as endYear
+    }));
+
     return {
-      periods: timelineData.periods,
+      papers: transformedPapers,
       milestones: timelineData.milestones,
-      papers: timelineData.papers,
-      trends: timelineData.trends,
+      trends: transformedTrends,
     };
   }, [timelineData]);
 
@@ -367,9 +387,11 @@ export function IntegratedDiscoveryPanel({
 
     return {
       emergingTopics: frontiersData.frontiers,
-      gaps: frontiersData.gaps,
-      opportunities: frontiersData.opportunities,
+      researchGaps: frontiersData.gaps,
+      futureDirections: frontiersData.opportunities,
+      trendingPapers: [], // Would need to be computed from emerging topics
       metrics: frontiersData.metrics,
+      generatedAt: new Date(frontiersData.generatedAt?.toDate?.() || Date.now()),
     };
   }, [frontiersData]);
 

@@ -56,6 +56,7 @@ export interface ResearchMatrix {
   userId: string;
   name: string;
   description?: string;
+  paperIds: string[];
   template: MatrixTemplate;
   rows: MatrixRow[];
   createdAt: Date;
