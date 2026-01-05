@@ -9,7 +9,12 @@
 import { unifiedSearch, type SearchResult, type UnifiedSearchOptions } from '../index';
 import type { Perspective, ExplorationTree, ResearchNode, ResearchConfig, ResearchSession } from './types';
 import { generatePerspectivesWithAgent } from './agents';
-import { deduplicateAcrossSources } from './utils';
+import {
+  deduplicateAcrossSources,
+  isTopicTooBroad,
+  generateAlternativeSearchTerms,
+  estimateTimeRemaining,
+} from './utils';
 
 /**
  * Research modes
@@ -25,7 +30,7 @@ function getModeConfig(mode: ResearchMode): ResearchConfig {
 }
 
 /**
- * Start a deep research session
+ * Start a deep research session with edge case validation
  */
 export async function startResearch(
   topic: string,
@@ -37,6 +42,19 @@ export async function startResearch(
     ...getDefaultConfig(mode),
     ...customConfig,
   };
+
+  // Edge Case: Check if topic is too broad
+  const broadCheck = isTopicTooBroad(topic);
+  if (broadCheck.isBroad) {
+    throw new Error(
+      `Topic too broad: ${broadCheck.suggestion}\n\nExamples:\n${broadCheck.examples?.join('\n')}`
+    );
+  }
+
+  // Edge Case: Validate topic is not empty
+  if (!topic.trim() || topic.trim().length < 5) {
+    throw new Error('Research topic must be at least 5 characters long');
+  }
 
   const sessionId = generateSessionId();
   const startTime = Date.now();
@@ -128,20 +146,43 @@ export function buildExplorationTree(
 }
 
 /**
- * Execute research across the exploration tree
+ * Execute research across the exploration tree with timeout handling
  */
 export async function executeResearch(
   tree: ExplorationTree,
   config: ResearchConfig,
-  onProgress?: (progress: ResearchProgress) => void
+  onProgress?: (progress: ResearchProgress) => void,
+  options?: {
+    timeoutMs?: number;
+    startTime?: number;
+  }
 ): Promise<SearchResult[]> {
   const allSources: SearchResult[] = [];
   const rootNode = tree.nodes[tree.rootId];
   const nodesToExplore = rootNode.children.map((id) => tree.nodes[id]);
 
+  // Edge Case: Set timeout based on mode
+  const timeoutMs = options?.timeoutMs || getTimeoutForMode(config);
+  const startTime = options?.startTime || Date.now();
+
   // Execute research in parallel batches
   const batchSize = config.breadth;
   for (let i = 0; i < nodesToExplore.length; i += batchSize) {
+    // Edge Case: Check for timeout
+    const elapsed = Date.now() - startTime;
+    if (elapsed > timeoutMs) {
+      console.warn(`Research timeout after ${elapsed}ms. Returning partial results.`);
+      if (onProgress) {
+        onProgress({
+          perspectivesGenerated: nodesToExplore.length,
+          nodesExplored: tree.completedNodes,
+          sourcesFound: allSources.length,
+          currentPhase: 'timeout',
+        });
+      }
+      break;
+    }
+
     const batch = nodesToExplore.slice(i, i + batchSize);
 
     const batchPromises = batch.map(async (node) => {
@@ -162,8 +203,14 @@ export async function executeResearch(
 
       tree.completedNodes++;
 
-      // Report progress
+      // Report progress with time estimate
       if (onProgress) {
+        const timeEstimate = estimateTimeRemaining(
+          tree.completedNodes,
+          tree.totalNodes,
+          Date.now() - startTime
+        );
+
         onProgress({
           perspectivesGenerated: nodesToExplore.length,
           nodesExplored: tree.completedNodes,
@@ -185,11 +232,31 @@ export async function executeResearch(
     }
   }
 
+  // Edge Case: Handle no sources found
+  if (allSources.length === 0) {
+    const alternatives = generateAlternativeSearchTerms(rootNode.topic);
+    throw new Error(
+      `No sources found for "${rootNode.topic}". Try these alternative search terms:\n${alternatives.join('\n')}`
+    );
+  }
+
   return allSources;
 }
 
 /**
- * Execute research for a single node
+ * Get timeout duration based on research mode
+ */
+function getTimeoutForMode(config: ResearchConfig): number {
+  // Timeout in milliseconds based on depth and breadth
+  const baseTimeout = 60000; // 1 minute
+  const perNodeTimeout = 5000; // 5 seconds per node
+  const estimatedNodes = config.depth * config.breadth;
+
+  return Math.min(baseTimeout + estimatedNodes * perNodeTimeout, 600000); // Max 10 minutes
+}
+
+/**
+ * Execute research for a single node with retry logic
  */
 async function executeNodeResearch(
   node: ResearchNode,
@@ -205,10 +272,32 @@ async function executeNodeResearch(
 
   try {
     const response = await unifiedSearch(searchOptions);
+
+    // Edge Case: Handle empty results for this node
+    if (response.results.length === 0) {
+      console.warn(`No results found for node ${node.id} (${node.topic})`);
+
+      // Try alternative search if available
+      const alternatives = generateAlternativeSearchTerms(node.topic);
+      if (alternatives.length > 0) {
+        // Try first alternative
+        const altResponse = await unifiedSearch({
+          ...searchOptions,
+          text: alternatives[0],
+        });
+        if (altResponse.results.length > 0) {
+          console.info(`Found ${altResponse.results.length} results using alternative: ${alternatives[0]}`);
+          return altResponse.results;
+        }
+      }
+    }
+
     return response.results;
   } catch (error) {
     console.error(`Research error for node ${node.id}:`, error);
     node.status = 'failed';
+
+    // Edge Case: Don't fail entire research if one node fails
     return [];
   }
 }

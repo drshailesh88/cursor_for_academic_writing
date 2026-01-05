@@ -21,6 +21,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import type { Paper, PaperMetadata, PaperProcessingStatus } from '@/lib/firebase/schema';
+import { DeletePaperDialog } from './delete-paper-dialog';
 
 interface PaperCardProps {
   paper: Paper | PaperMetadata;
@@ -93,7 +94,7 @@ export function PaperCard({
   selected = false,
 }: PaperCardProps) {
   const [showMenu, setShowMenu] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const status = statusConfig[paper.processingStatus];
   const StatusIcon = status.icon;
@@ -109,15 +110,10 @@ export function PaperCard({
     return `${paper.authors[0].lastName || paper.authors[0].name} et al.`;
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (paperId: string) => {
     if (!onDelete) return;
-    setIsDeleting(true);
-    try {
-      await onDelete(paper.id);
-    } finally {
-      setIsDeleting(false);
-      setShowMenu(false);
-    }
+    await onDelete(paperId);
+    setShowMenu(false);
   };
 
   if (compact) {
@@ -213,15 +209,13 @@ export function PaperCard({
                   )}
                   {onDelete && (
                     <button
-                      onClick={handleDelete}
-                      disabled={isDeleting}
+                      onClick={() => {
+                        setShowDeleteDialog(true);
+                        setShowMenu(false);
+                      }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                     >
-                      {isDeleting ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
+                      <Trash2 className="w-4 h-4" />
                       Delete paper
                     </button>
                   )}
@@ -302,6 +296,16 @@ export function PaperCard({
             </button>
           )}
         </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {'id' in paper && (
+        <DeletePaperDialog
+          paper={paper as Paper}
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          onConfirmDelete={handleDelete}
+        />
       )}
     </motion.div>
   );

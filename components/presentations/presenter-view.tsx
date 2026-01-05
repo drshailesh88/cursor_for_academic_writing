@@ -133,6 +133,7 @@ export function PresenterView({
 }: PresenterViewProps) {
   const [currentSlide, setCurrentSlide] = useState(startSlide);
   const slideAreaRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
   const theme = getTheme(presentation.theme);
 
   const currentSlideData = presentation.slides[currentSlide];
@@ -225,12 +226,38 @@ export function PresenterView({
     goToNext();
   }, [goToNext]);
 
+  // Touch gesture support
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartX.current === null) return;
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const deltaX = touchEndX - touchStartX.current;
+
+      // Swipe threshold
+      if (Math.abs(deltaX) > 50) {
+        if (deltaX > 0) {
+          goToPrevious();
+        } else {
+          goToNext();
+        }
+      }
+
+      touchStartX.current = null;
+    },
+    [goToNext, goToPrevious]
+  );
+
   const SlideComponent = getSlideComponent(currentSlideData.type);
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+    <div className="fixed inset-0 bg-black z-50 flex flex-col presenter-slide-in">
       {/* Top Bar */}
-      <header className="flex items-center justify-between px-6 py-3 bg-gradient-to-b from-black/60 to-transparent">
+      <header className="flex items-center justify-between px-6 py-3 bg-gradient-to-b from-black/60 to-transparent safe-area-top">
         <button
           onClick={onExit}
           className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
@@ -247,13 +274,15 @@ export function PresenterView({
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex gap-6 p-6 pt-2 overflow-hidden">
+      <div className="flex-1 flex gap-4 md:gap-6 p-4 md:p-6 pt-2 overflow-hidden flex-col lg:flex-row">
         {/* Left Side - Current Slide + Speaker Notes */}
-        <div className="flex-1 flex flex-col gap-4 min-w-0">
+        <div className="flex-1 flex flex-col gap-3 md:gap-4 min-w-0">
           {/* Current Slide */}
           <div
             ref={slideAreaRef}
             onClick={handleSlideClick}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
             className="flex-1 flex items-center justify-center cursor-pointer group"
           >
             <div
@@ -294,8 +323,8 @@ export function PresenterView({
           </div>
         </div>
 
-        {/* Right Side - Next Slide Preview + Timer Controls */}
-        <div className="flex flex-col gap-4 w-[340px]">
+        {/* Right Side - Next Slide Preview + Timer Controls (hidden on mobile) */}
+        <div className="flex-col gap-3 md:gap-4 w-full lg:w-[340px] hidden lg:flex">
           {/* Next Slide Preview */}
           {nextSlideData ? (
             <SlidePreview slide={nextSlideData} theme={theme} label="Next Slide" />
@@ -311,7 +340,7 @@ export function PresenterView({
           )}
 
           {/* Slide Thumbnails Grid (Optional, for quick navigation) */}
-          <div className="bg-black/40 rounded-lg p-3 backdrop-blur-sm border border-white/10 flex-1 overflow-y-auto">
+          <div className="bg-black/40 rounded-lg p-3 backdrop-blur-sm border border-white/10 flex-1 overflow-y-auto scrollbar-thin">
             <div className="text-xs text-white/60 uppercase tracking-wide font-semibold mb-3">
               All Slides
             </div>
@@ -349,7 +378,7 @@ export function PresenterView({
       </div>
 
       {/* Bottom Navigation Bar */}
-      <footer className="flex items-center justify-between px-6 py-4 bg-gradient-to-t from-black/60 to-transparent">
+      <footer className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-gradient-to-t from-black/60 to-transparent safe-area-bottom">
         {/* Previous Button */}
         <button
           onClick={goToPrevious}

@@ -14,17 +14,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Settings, X, Download, FileText, AlertCircle } from 'lucide-react';
+import { Search, Settings, X, Download, FileText, AlertCircle, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDeepResearch } from '@/lib/hooks/use-deep-research';
 import { ModeSelector } from './mode-selector';
 import { ResearchSettings } from './research-settings';
 import { ProgressTracker } from './progress-tracker';
 import { ResearchResults as ResearchResultsComponent } from './research-results';
+import { ResearchHistory } from './research-history';
 import type { ResearchMode, DatabaseSource, ArticleType } from '@/lib/research/deep-research/types';
 import { getDefaultConfig } from '@/lib/research/deep-research/types';
+import { getResearchSession } from '@/lib/firebase/research-sessions';
 
 /**
  * Props for IntegratedResearchPanel
@@ -66,6 +69,7 @@ export function IntegratedResearchPanel({
   const [topic, setTopic] = useState('');
   const [mode, setMode] = useState<ResearchMode>('standard');
   const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
 
   // Advanced settings state
   const defaultConfig = getDefaultConfig(mode);
@@ -116,6 +120,46 @@ export function IntegratedResearchPanel({
   const handleNewResearch = () => {
     clearResults();
     setTopic('');
+    setActiveTab('new');
+  };
+
+  /**
+   * Handle view session from history
+   */
+  const handleViewSession = async (sessionId: string) => {
+    try {
+      const session = await getResearchSession(sessionId);
+      if (!session) return;
+
+      // Load session data into results view
+      // This would require updating the useDeepResearch hook to support loading existing sessions
+      // For now, just switch to new tab and populate topic
+      setTopic(session.topic);
+      setMode(session.mode);
+      setActiveTab('new');
+    } catch (error) {
+      console.error('Error viewing session:', error);
+    }
+  };
+
+  /**
+   * Handle continue session from history
+   */
+  const handleContinueSession = async (sessionId: string) => {
+    try {
+      const session = await getResearchSession(sessionId);
+      if (!session) return;
+
+      // Load session configuration and continue research
+      setTopic(session.topic);
+      setMode(session.mode);
+      setActiveTab('new');
+
+      // Optionally start research automatically
+      // await startResearch(session.topic, session.mode);
+    } catch (error) {
+      console.error('Error continuing session:', error);
+    }
   };
 
   /**
@@ -259,19 +303,34 @@ export function IntegratedResearchPanel({
   // Show input form (default state)
   return (
     <div className={className}>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Search className="w-5 h-5 text-primary" />
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'new' | 'history')}>
+        {/* Header with tabs */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Search className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">Deep Research</h2>
+              <p className="text-sm text-muted-foreground">
+                Multi-perspective academic research synthesis
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-semibold">Deep Research</h2>
-            <p className="text-sm text-muted-foreground">
-              Multi-perspective academic research synthesis
-            </p>
-          </div>
+          <TabsList>
+            <TabsTrigger value="new">
+              <Search className="w-4 h-4 mr-2" />
+              New Research
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="w-4 h-4 mr-2" />
+              History
+            </TabsTrigger>
+          </TabsList>
         </div>
+
+        {/* New Research Tab */}
+        <TabsContent value="new" className="space-y-6 mt-0">
 
         {/* Error display */}
         {error && (
@@ -365,7 +424,16 @@ export function IntegratedResearchPanel({
             <span className="font-medium">{breadth} perspectives</span>
           </div>
         </div>
-      </div>
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="mt-0">
+          <ResearchHistory
+            onViewSession={handleViewSession}
+            onContinueSession={handleContinueSession}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

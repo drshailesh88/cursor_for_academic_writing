@@ -70,12 +70,68 @@ export const FEATURE_SHORTCUTS: Record<string, ShortcutDefinition> = {
   // Note: Discovery requires a selected paper to explore citations
   // This shortcut is handled differently in the UI
 
-  // Presentation shortcuts (Cmd/Ctrl + Shift + G)
+  // Presentation shortcuts
   generatePresentation: {
     key: 'g',
     modifiers: ['cmd', 'shift'],
     description: 'Generate Presentation',
     category: 'Presentations',
+  },
+  openPresentationMode: {
+    key: 'p',
+    modifiers: ['cmd', 'shift'],
+    description: 'Open Presentation Mode',
+    category: 'Presentations',
+  },
+
+  // Presentation navigation (only active in presentation mode)
+  previousSlide: {
+    key: 'ArrowLeft',
+    modifiers: [],
+    description: 'Previous slide',
+    category: 'Presentation Navigation',
+  },
+  nextSlide: {
+    key: 'ArrowRight',
+    modifiers: [],
+    description: 'Next slide',
+    category: 'Presentation Navigation',
+  },
+  nextSlideSpace: {
+    key: ' ',
+    modifiers: [],
+    description: 'Next slide (Space)',
+    category: 'Presentation Navigation',
+  },
+  firstSlide: {
+    key: 'Home',
+    modifiers: [],
+    description: 'Jump to first slide',
+    category: 'Presentation Navigation',
+  },
+  lastSlide: {
+    key: 'End',
+    modifiers: [],
+    description: 'Jump to last slide',
+    category: 'Presentation Navigation',
+  },
+  exitPresenter: {
+    key: 'Escape',
+    modifiers: [],
+    description: 'Exit presenter view',
+    category: 'Presentation Navigation',
+  },
+  fullscreenPresentation: {
+    key: 'f',
+    modifiers: [],
+    description: 'Toggle fullscreen',
+    category: 'Presentation Navigation',
+  },
+  toggleSpeakerNotes: {
+    key: 'n',
+    modifiers: [],
+    description: 'Toggle speaker notes',
+    category: 'Presentation Navigation',
   },
 
   // General shortcuts
@@ -194,6 +250,20 @@ export function formatKey(key: string): string {
       return 'Esc';
     case 'tab':
       return 'Tab';
+    case 'arrowleft':
+      return '←';
+    case 'arrowright':
+      return '→';
+    case 'arrowup':
+      return '↑';
+    case 'arrowdown':
+      return '↓';
+    case 'home':
+      return 'Home';
+    case 'end':
+      return 'End';
+    case ' ':
+      return 'Space';
     default:
       return key.toUpperCase();
   }

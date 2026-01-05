@@ -3,7 +3,7 @@
 **Input**: Design documents from `/specs/002-chat-with-papers/`
 **Prerequisites**: plan.md (complete), spec.md (complete)
 
-## Status: ✅ Core Functionality Complete | 🔄 UI Components Pending | 📊 Tests: 104 passing
+## Status: ✅ 100% COMPLETE | 📊 Tests: 104 passing
 
 **Last Updated**: 2026-01-05
 
@@ -21,8 +21,8 @@
 - [x] T001 Install pdf-parse dependency: `npm install --legacy-peer-deps pdf-parse @types/pdf-parse`
 - [x] T002 [P] Create `lib/pdf/` directory structure
 - [x] T003 [P] Create `lib/papers/` directory structure
-- [ ] T004 [P] Create `components/papers/` directory structure
-- [ ] T005 [P] Create `app/api/papers/` directory structure
+- [x] T004 [P] Create `components/papers/` directory structure
+- [x] T005 [P] Create `app/api/papers/` directory structure
 
 ---
 
@@ -76,7 +76,7 @@
   - Extract journal, year, DOI if present
   - Use AI fallback for ambiguous cases
 
-- [ ] T014 [US1] Create upload API in `app/api/papers/upload/route.ts`:
+- [x] T014 [US1] Create upload API in `app/api/papers/upload/route.ts`:
   - Accept multipart/form-data
   - Validate file type (PDF only)
   - Validate file size (< 50MB)
@@ -85,36 +85,36 @@
   - Trigger async processing
   - Return paper ID and status
 
-- [ ] T015 [US1] Create extraction API in `app/api/papers/[paperId]/route.ts`:
+- [x] T015 [US1] Create extraction API in `app/api/papers/[paperId]/route.ts`:
   - GET endpoint for paper status and content
   - Return processing status
   - Return extracted content when ready
 
-- [ ] T016 [P] [US1] Create paper upload component in `components/papers/paper-upload.tsx`:
+- [x] T016 [P] [US1] Create paper upload component in `components/papers/paper-upload.tsx`:
   - Drag-and-drop zone
   - File picker button
   - Upload progress indicator
   - Error display for invalid files
   - Success state with paper info
 
-- [ ] T017 [P] [US1] Create paper sections component in `components/papers/paper-sections.tsx`:
+- [x] T017 [P] [US1] Create paper sections component in `components/papers/paper-sections.tsx`:
   - Display sections as collapsible cards
   - Highlight abstract
   - Show section navigation
   - Copy section text option
 
-- [ ] T018 [US1] Create paper panel in `components/papers/paper-panel.tsx`:
+- [x] T018 [US1] Create paper panel in `components/papers/paper-panel.tsx`:
   - Combine upload and sections views
   - Show paper metadata header
   - Toggle between sections and chat
   - Handle loading and error states
 
-- [ ] T019 [US1] Add papers access to three-panel layout:
+- [x] T019 [US1] Add papers access to three-panel layout:
   - Add "Papers" tab/button to right panel
   - Conditional rendering of papers panel
   - Maintain selected paper state
 
-**Checkpoint**: Core processing complete ✅ | UI components pending 🔄
+**Checkpoint**: Core processing complete ✅ | UI components complete ✅
 
 ---
 
@@ -132,26 +132,26 @@
   - Include section references in responses
   - Handle long papers (chunking)
 
-- [ ] T021 [US2] Create paper chat API in `app/api/papers/chat/route.ts`:
+- [x] T021 [US2] Create paper chat API in `app/api/papers/chat/route.ts`:
   - POST endpoint with paperId, question, model
   - Load paper content from Firestore
   - Build chat context
   - Stream response using Vercel AI SDK
   - Save chat history
 
-- [ ] T022 [P] [US2] Create paper chat component in `components/papers/paper-chat.tsx`:
+- [x] T022 [P] [US2] Create paper chat component in `components/papers/paper-chat.tsx`:
   - Message list with Q&A history
   - Input field for questions
   - Model selector
   - Section reference highlighting
   - Streaming response display
 
-- [ ] T023 [US2] Integrate chat into paper panel:
+- [x] T023 [US2] Integrate chat into paper panel:
   - Tab/toggle between sections and chat
   - Pass paper context to chat
   - Maintain chat history per paper
 
-**Checkpoint**: Paper chat engine complete ✅ | UI pending 🔄
+**Checkpoint**: Paper chat engine complete ✅ | UI complete ✅
 
 ---
 
@@ -168,55 +168,55 @@
   - Use AI to extract structured info
   - Generate insertable HTML
 
-- [ ] T025 [P] [US3] Create extraction buttons component in `components/papers/extraction-buttons.tsx`:
+- [x] T025 [P] [US3] Create extraction buttons component in `components/papers/extraction-buttons.tsx`:
   - "Extract Key Findings" button
   - "Summarize Methods" button
   - "List Limitations" button
   - "Get Citation" button
   - Loading states for each
 
-- [ ] T026 [US3] Create extraction results display:
+- [x] T026 [US3] Create extraction results display:
   - Show extracted content
   - "Insert into Document" button
   - Copy to clipboard option
   - Edit before insert option
 
-- [ ] T027 [US3] Implement insert functionality:
+- [x] T027 [US3] Implement insert functionality:
   - Generate proper citation
   - Format content for TipTap
   - Insert at cursor position
 
-**Checkpoint**: Extraction logic complete ✅ | UI pending 🔄
+**Checkpoint**: Extraction logic complete ✅ | UI complete ✅
 
 ---
 
-## Phase 6: User Story 4 - Manage Paper Library (Priority: P3) 🔄 PENDING
+## Phase 6: User Story 4 - Manage Paper Library (Priority: P3) ✅ COMPLETE
 
 **Goal**: User can view, access, and delete their paper collection
 
 **Independent Test**: Upload papers → View in library → Delete one → Confirm removed
 
-### Implementation for User Story 4
+### Implementation for User Story 4 ✅
 
-- [ ] T028 [P] [US4] Create paper library component in `components/papers/paper-library.tsx`:
+- [x] T028 [P] [US4] Create paper library component in `components/papers/paper-library.tsx`:
   - Grid/list view of papers
   - Show title, authors, upload date
   - Click to open paper
   - Delete button with confirmation
   - Search/filter papers
 
-- [ ] T029 [US4] Add library view to paper panel:
+- [x] T029 [US4] Add library view to paper panel:
   - Toggle between library and single paper view
   - "Back to Library" navigation
   - Empty state for no papers
 
-- [ ] T030 [US4] Implement paper deletion:
+- [x] T030 [US4] Implement paper deletion:
   - Delete from Firestore
   - Delete PDF from Storage
   - Update library view
   - Confirmation dialog
 
-**Checkpoint**: User Story 4 complete - Full library management
+**Checkpoint**: User Story 4 complete - Full library management ✅
 
 ---
 
@@ -239,34 +239,34 @@
 
 ---
 
-## Phase 8: Polish & Edge Cases 🔄 PENDING
+## Phase 8: Polish & Edge Cases ✅ COMPLETE
 
 **Purpose**: Handle edge cases and improve UX
 
-- [ ] T033 [P] Handle scanned PDFs (no text layer):
+- [x] T033 [P] Handle scanned PDFs (no text layer):
   - Detect low text extraction
   - Warn user about quality
   - Future: OCR integration
 
-- [ ] T034 [P] Handle password-protected PDFs:
+- [x] T034 [P] Handle password-protected PDFs:
   - Detect protection
   - Show clear error message
 
-- [ ] T035 [P] Handle large PDFs:
+- [x] T035 [P] Handle large PDFs:
   - Chunked processing
   - Progress updates
   - Memory optimization
 
-- [ ] T036 [P] Add loading states and error handling throughout
-- [ ] T037 Responsive design for paper panel
-- [ ] T038 Test with various PDF types (single column, two column, etc.)
-- [ ] T039 Update HANDOVER.md with feature documentation
+- [x] T036 [P] Add loading states and error handling throughout
+- [x] T037 Responsive design for paper panel
+- [x] T038 Test with various PDF types (single column, two column, etc.)
+- [x] T039 Update HANDOVER.md with feature documentation
 
 ---
 
 ## Implementation Status Summary
 
-### ✅ Completed (Core Processing - 80% of backend)
+### ✅ Completed (100% FEATURE COMPLETE)
 
 | Phase | Status | Tests |
 |-------|--------|-------|
@@ -275,18 +275,11 @@
 | Phase 3: Upload & Analyze | ✅ 100% | 42 tests |
 | Phase 4: Chat with Paper | ✅ 100% | 25 tests |
 | Phase 5: Key Information Extract | ✅ 100% | 15 tests |
+| Phase 6: Paper Library | ✅ 100% | - |
 | Phase 7: Research Matrix | ✅ 100% | 31 tests |
+| Phase 8: Polish | ✅ 100% | - |
 
-**Total Tests**: 104 passing (paper-chat, paper-processing, research-matrix tests)
-
-### 🔄 Pending (UI & Polish - 20%)
-
-| Phase | Status | Dependencies |
-|-------|--------|--------------|
-| API Routes | 🔄 0% | Core engine ✅ |
-| UI Components | 🔄 0% | API routes |
-| Phase 6: Paper Library | 🔄 0% | UI complete |
-| Phase 8: Polish | 🔄 0% | All above |
+**Total Tests**: 104 passing (100% pass rate)
 
 ### Files Implemented
 

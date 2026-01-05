@@ -14,9 +14,24 @@ import {
   type PDFProcessingOptions,
   type ProcessedPaperResult,
   type RawExtractionResult,
+  type PDFProcessingError,
+  type ProcessingWarning,
   DEFAULT_PROCESSING_OPTIONS,
   SECTION_PATTERNS,
 } from './types';
+
+/**
+ * Custom error class for PDF processing
+ */
+export class PDFProcessingException extends Error {
+  constructor(
+    public readonly error: PDFProcessingError,
+    message?: string
+  ) {
+    super(message || error.userMessage);
+    this.name = 'PDFProcessingException';
+  }
+}
 
 /**
  * PDF Processor Service
@@ -40,15 +55,38 @@ export class PDFProcessor {
   ): Promise<ProcessedPaperResult> {
     const startTime = Date.now();
     const fileSize = fileBuffer.byteLength;
+    const warnings: ProcessingWarning[] = [];
 
     onProgress?.('Starting extraction...', 0);
+
+    // Edge Case 1: Check file size (50MB limit)
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+    if (fileSize > MAX_FILE_SIZE) {
+      warnings.push({
+        type: 'large_file',
+        message: 'Large PDF file detected. Processing may be slow.',
+        impact: 'medium',
+      });
+      onProgress?.('Processing large file...', 5);
+    }
 
     // Step 1: Extract raw text
     onProgress?.('Extracting text...', 10);
     const rawResult = await this.extractText(fileBuffer);
 
-    // Step 2: Detect if OCR is needed
+    // Step 2: Detect if OCR is needed and check for scanned PDFs
+    const textDensity = rawResult.text.length / Math.max(rawResult.pageCount, 1);
+    const isScanned = this.isScannedPDF(rawResult.text, rawResult.pageCount);
     const ocrRequired = this.needsOCR(rawResult.text, rawResult.pageCount);
+
+    if (isScanned) {
+      warnings.push({
+        type: 'low_text_density',
+        message: `This appears to be a scanned PDF with low text density (${textDensity.toFixed(0)} chars/page). Text extraction may be incomplete.`,
+        impact: 'high',
+      });
+    }
+
     if (ocrRequired && this.options.ocrEnabled) {
       onProgress?.('Performing OCR...', 20);
       // OCR would be performed here if enabled
@@ -95,6 +133,24 @@ export class PDFProcessor {
       equations = this.extractEquations(rawResult.text);
     }
 
+    // Check for missing metadata
+    if (!metadata.abstract || metadata.authors.length === 0) {
+      warnings.push({
+        type: 'missing_metadata',
+        message: 'Some metadata (abstract or authors) could not be extracted.',
+        impact: 'low',
+      });
+    }
+
+    // Check for poor structure
+    if (sections.length < 3) {
+      warnings.push({
+        type: 'poor_structure',
+        message: 'Document structure is unclear. Fewer than 3 sections identified.',
+        impact: 'medium',
+      });
+    }
+
     onProgress?.('Complete', 100);
 
     const processingTimeMs = Date.now() - startTime;
@@ -119,7 +175,10 @@ export class PDFProcessor {
       equations,
       extractionQuality: this.assessQuality(rawResult.text, sections),
       ocrRequired,
+      isScanned,
       processingTimeMs,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      textDensity,
     };
   }
 
@@ -160,7 +219,45 @@ export class PDFProcessor {
       };
     } catch (error) {
       console.error('PDF extraction failed:', error);
-      throw new Error('Failed to extract text from PDF');
+
+      // Detect specific error types
+      const errorMessage = error instanceof Error ? error.message.toLowerCase() : '';
+
+      // Password protected PDF
+      if (errorMessage.includes('password') || errorMessage.includes('encrypted')) {
+        throw new PDFProcessingException({
+          type: 'password_protected',
+          message: 'PDF is password protected',
+          userMessage: 'This PDF is password protected and cannot be processed.',
+          suggestion: 'Please provide an unlocked version of this PDF.',
+          recoverable: false,
+        });
+      }
+
+      // Corrupted PDF
+      if (
+        errorMessage.includes('invalid') ||
+        errorMessage.includes('corrupt') ||
+        errorMessage.includes('damaged') ||
+        errorMessage.includes('parse')
+      ) {
+        throw new PDFProcessingException({
+          type: 'corrupted',
+          message: 'PDF file appears to be corrupted',
+          userMessage: 'This PDF file appears to be corrupted or damaged.',
+          suggestion: 'Try re-downloading the PDF from the original source.',
+          recoverable: false,
+        });
+      }
+
+      // Generic extraction failure
+      throw new PDFProcessingException({
+        type: 'extraction_failed',
+        message: 'Failed to extract text from PDF',
+        userMessage: 'Unable to extract text from this PDF.',
+        suggestion: 'This PDF may be in an unsupported format. Try converting it or using a different file.',
+        recoverable: false,
+      });
     }
   }
 
@@ -173,6 +270,60 @@ export class PDFProcessor {
     // Average characters per page for academic papers is ~3000-4000
     const charsPerPage = text.length / pageCount;
     return charsPerPage < 500; // Very low character count suggests scanned PDF
+  }
+
+  /**
+   * Detect if PDF is scanned (image-based) with low extractable text
+   */
+  private isScannedPDF(text: string, pageCount: number): boolean {
+    if (!text || pageCount === 0) return true;
+
+    const MIN_CHARS_PER_PAGE = 100; // Threshold for scanned detection
+    const charsPerPage = text.length / pageCount;
+
+    // Very low text density suggests scanned document
+    if (charsPerPage < MIN_CHARS_PER_PAGE) {
+      return true;
+    }
+
+    // Check for garbled text (common in poor OCR or scanned docs)
+    const garbledTextRatio = this.detectGarbledText(text);
+    if (garbledTextRatio > 0.3) {
+      // More than 30% garbled
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Detect garbled or nonsensical text (common in scanned PDFs)
+   */
+  private detectGarbledText(text: string): number {
+    if (!text || text.length === 0) return 1;
+
+    // Sample first 1000 characters
+    const sample = text.slice(0, 1000);
+    let garbledCount = 0;
+    let totalWords = 0;
+
+    const words = sample.split(/\s+/).filter(Boolean);
+    totalWords = words.length;
+
+    for (const word of words) {
+      // Check for excessive special characters
+      const specialCharRatio = (word.match(/[^a-zA-Z0-9\s]/g) || []).length / word.length;
+      if (specialCharRatio > 0.5) {
+        garbledCount++;
+      }
+
+      // Check for random character sequences (no vowels)
+      if (word.length > 5 && !/[aeiouAEIOU]/.test(word)) {
+        garbledCount++;
+      }
+    }
+
+    return totalWords > 0 ? garbledCount / totalWords : 0;
   }
 
   /**

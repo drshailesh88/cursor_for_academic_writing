@@ -242,6 +242,7 @@ function inferStudyType(source: SearchResult): string {
 
 /**
  * Identify contradictions in the literature
+ * Edge Case: Detect and clearly present conflicting findings
  */
 async function identifyContradictions(
   sources: SearchResult[]
@@ -249,7 +250,56 @@ async function identifyContradictions(
   const contradictions: Contradiction[] = [];
 
   // This would use an LLM to identify contradictory findings
-  // For now, return empty array as placeholder
+  // For now, use heuristic-based detection
+
+  // Group sources by conclusion indicators
+  const positiveIndicators = ['effective', 'beneficial', 'improved', 'significant improvement'];
+  const negativeIndicators = ['ineffective', 'no benefit', 'no improvement', 'no significant'];
+  const mixedIndicators = ['mixed results', 'conflicting', 'inconsistent'];
+
+  const positiveSources: SearchResult[] = [];
+  const negativeSources: SearchResult[] = [];
+  const mixedSources: SearchResult[] = [];
+
+  for (const source of sources) {
+    const text = `${source.title} ${source.abstract}`.toLowerCase();
+
+    const hasPositive = positiveIndicators.some((ind) => text.includes(ind));
+    const hasNegative = negativeIndicators.some((ind) => text.includes(ind));
+    const hasMixed = mixedIndicators.some((ind) => text.includes(ind));
+
+    if (hasMixed) {
+      mixedSources.push(source);
+    } else if (hasPositive && !hasNegative) {
+      positiveSources.push(source);
+    } else if (hasNegative && !hasPositive) {
+      negativeSources.push(source);
+    }
+  }
+
+  // Edge Case: Detect significant contradictions
+  if (positiveSources.length > 2 && negativeSources.length > 2) {
+    contradictions.push({
+      claim1: `${positiveSources.length} studies report positive outcomes`,
+      claim2: `${negativeSources.length} studies report negative or no outcomes`,
+      sources1: positiveSources.slice(0, 5),
+      sources2: negativeSources.slice(0, 5),
+      explanation: 'Contradictory findings detected. This may be due to differences in study design, population, dosage, or measurement methods. Further analysis of methodological differences is recommended.',
+      resolved: false,
+    });
+  }
+
+  // Edge Case: Flag mixed results
+  if (mixedSources.length > 0) {
+    contradictions.push({
+      claim1: 'Some studies report mixed or inconsistent results',
+      claim2: 'Clear consensus not established',
+      sources1: mixedSources.slice(0, 5),
+      sources2: [],
+      explanation: `${mixedSources.length} studies explicitly report mixed or inconsistent findings, suggesting heterogeneity in outcomes.`,
+      resolved: false,
+    });
+  }
 
   return contradictions;
 }

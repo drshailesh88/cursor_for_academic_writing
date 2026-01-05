@@ -259,3 +259,235 @@ export function calculateStats(sources: SearchResult[]): {
     dateRange,
   };
 }
+
+/**
+ * Edge Case: Detect if a topic is too broad
+ */
+export function isTopicTooBroad(topic: string): {
+  isBroad: boolean;
+  suggestion?: string;
+  examples?: string[];
+} {
+  const broadTerms = [
+    'medicine',
+    'science',
+    'biology',
+    'physics',
+    'chemistry',
+    'health',
+    'disease',
+    'treatment',
+    'research',
+    'study',
+    'analysis',
+    'technology',
+    'artificial intelligence',
+    'machine learning',
+    'cancer',
+  ];
+
+  const topicLower = topic.toLowerCase().trim();
+
+  // Check if topic is just one or two broad words
+  const words = topicLower.split(/\s+/).filter((w) => w.length > 2);
+
+  if (words.length <= 2) {
+    const isBroad = broadTerms.some((term) => topicLower === term || topicLower.includes(term));
+
+    if (isBroad) {
+      return {
+        isBroad: true,
+        suggestion: 'Your topic is quite broad. Consider narrowing it to a specific aspect, disease, technique, or application.',
+        examples: [
+          `${topic} in cardiovascular disease`,
+          `${topic} treatments for elderly patients`,
+          `Recent advances in ${topic} therapy`,
+          `${topic} mechanisms in diabetes`,
+        ],
+      };
+    }
+  }
+
+  return { isBroad: false };
+}
+
+/**
+ * Edge Case: Suggest alternative search terms when no sources found
+ */
+export function generateAlternativeSearchTerms(originalTopic: string): string[] {
+  const alternatives: string[] = [];
+
+  // Add broader terms
+  alternatives.push(originalTopic.split(/\s+/).slice(0, -1).join(' ')); // Remove last word
+
+  // Add synonyms for common medical terms
+  const synonymMap: Record<string, string[]> = {
+    'treatment': ['therapy', 'intervention', 'management'],
+    'disease': ['disorder', 'condition', 'syndrome'],
+    'effect': ['impact', 'outcome', 'consequence'],
+    'cause': ['etiology', 'risk factor', 'mechanism'],
+    'diagnosis': ['detection', 'screening', 'identification'],
+  };
+
+  for (const [term, synonyms] of Object.entries(synonymMap)) {
+    if (originalTopic.toLowerCase().includes(term)) {
+      synonyms.forEach((synonym) => {
+        alternatives.push(originalTopic.replace(new RegExp(term, 'gi'), synonym));
+      });
+    }
+  }
+
+  return alternatives.filter((a) => a.length > 0 && a !== originalTopic).slice(0, 3);
+}
+
+/**
+ * Edge Case: Retry with exponential backoff
+ */
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number;
+    initialDelayMs?: number;
+    maxDelayMs?: number;
+    onRetry?: (attempt: number, error: Error) => void;
+  } = {}
+): Promise<T> {
+  const {
+    maxRetries = 3,
+    initialDelayMs = 1000,
+    maxDelayMs = 10000,
+    onRetry,
+  } = options;
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+
+      // Don't retry on last attempt
+      if (attempt === maxRetries) {
+        break;
+      }
+
+      // Check if error is retryable (rate limit or network error)
+      const isRetryable =
+        lastError.message.includes('rate limit') ||
+        lastError.message.includes('429') ||
+        lastError.message.includes('503') ||
+        lastError.message.includes('timeout') ||
+        lastError.message.includes('network');
+
+      if (!isRetryable) {
+        throw lastError;
+      }
+
+      // Calculate delay with exponential backoff
+      const delay = Math.min(initialDelayMs * Math.pow(2, attempt), maxDelayMs);
+
+      // Call retry callback if provided
+      if (onRetry) {
+        onRetry(attempt + 1, lastError);
+      }
+
+      // Wait before retrying
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError || new Error('Retry failed');
+}
+
+/**
+ * Edge Case: Detect context overflow and summarize
+ */
+export function detectContextOverflow(
+  text: string,
+  maxTokens: number = 8000
+): {
+  overflows: boolean;
+  estimatedTokens: number;
+  suggestion?: string;
+} {
+  // Rough estimate: 1 token ≈ 4 characters
+  const estimatedTokens = Math.ceil(text.length / 4);
+
+  if (estimatedTokens > maxTokens) {
+    return {
+      overflows: true,
+      estimatedTokens,
+      suggestion: 'Content is too large. Consider summarizing intermediate findings or reducing the number of sources.',
+    };
+  }
+
+  return {
+    overflows: false,
+    estimatedTokens,
+  };
+}
+
+/**
+ * Edge Case: Truncate text to fit token limit
+ */
+export function truncateToTokenLimit(
+  text: string,
+  maxTokens: number = 8000
+): string {
+  const estimatedTokens = Math.ceil(text.length / 4);
+
+  if (estimatedTokens <= maxTokens) {
+    return text;
+  }
+
+  // Calculate how many characters to keep
+  const maxChars = maxTokens * 4;
+  const truncated = text.slice(0, maxChars);
+
+  // Try to truncate at sentence boundary
+  const lastPeriod = truncated.lastIndexOf('.');
+  if (lastPeriod > maxChars * 0.8) {
+    return truncated.slice(0, lastPeriod + 1) + '\n\n[Content truncated to fit context limit]';
+  }
+
+  return truncated + '\n\n[Content truncated to fit context limit]';
+}
+
+/**
+ * Calculate estimated time remaining
+ */
+export function estimateTimeRemaining(
+  nodesComplete: number,
+  nodesTotal: number,
+  elapsedMs: number
+): {
+  remainingMs: number;
+  remainingFormatted: string;
+} {
+  if (nodesComplete === 0 || nodesTotal === 0) {
+    return {
+      remainingMs: 0,
+      remainingFormatted: 'Calculating...',
+    };
+  }
+
+  const avgTimePerNode = elapsedMs / nodesComplete;
+  const nodesRemaining = nodesTotal - nodesComplete;
+  const remainingMs = avgTimePerNode * nodesRemaining;
+
+  // Format as human-readable
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  if (remainingSeconds < 60) {
+    return {
+      remainingMs,
+      remainingFormatted: `${remainingSeconds} seconds`,
+    };
+  }
+
+  const remainingMinutes = Math.ceil(remainingSeconds / 60);
+  return {
+    remainingMs,
+    remainingFormatted: `${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}`,
+  };
+}

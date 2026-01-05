@@ -63,6 +63,38 @@ export interface RawExtractionResult {
 }
 
 /**
+ * PDF processing error types
+ */
+export type PDFErrorType =
+  | 'password_protected'
+  | 'corrupted'
+  | 'scanned'
+  | 'too_large'
+  | 'unsupported_format'
+  | 'extraction_failed'
+  | 'unknown';
+
+/**
+ * PDF processing error
+ */
+export interface PDFProcessingError {
+  type: PDFErrorType;
+  message: string;
+  userMessage: string;
+  suggestion?: string;
+  recoverable: boolean;
+}
+
+/**
+ * Processing warnings
+ */
+export interface ProcessingWarning {
+  type: 'low_text_density' | 'missing_metadata' | 'poor_structure' | 'large_file';
+  message: string;
+  impact: 'low' | 'medium' | 'high';
+}
+
+/**
  * Processed paper result
  */
 export interface ProcessedPaperResult {
@@ -94,7 +126,13 @@ export interface ProcessedPaperResult {
   // Quality metrics
   extractionQuality: 'high' | 'medium' | 'low';
   ocrRequired: boolean;
+  isScanned: boolean;
   processingTimeMs: number;
+
+  // Warnings and issues
+  warnings?: ProcessingWarning[];
+  hasPasswordProtection?: boolean;
+  textDensity?: number; // Characters per page
 }
 
 /**

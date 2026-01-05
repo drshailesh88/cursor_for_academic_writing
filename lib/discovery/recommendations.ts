@@ -15,6 +15,8 @@ import type {
   CitationGap,
   LearningEvent,
   RecommendationBasis,
+  EnhancedRecommendations,
+  EmptyResultInfo,
 } from './types';
 import {
   searchSemanticScholar,
@@ -421,4 +423,163 @@ function applyLearning(
       score: Math.min(rec.score + boost, 1),
     };
   }).sort((a, b) => b.score - a.score);
+}
+
+// ============================================================================
+// Edge Case Handling: Empty Recommendations
+// ============================================================================
+
+/**
+ * Generate enhanced recommendations with empty result handling
+ */
+export async function generateEnhancedRecommendations(
+  userId: string,
+  userPapers: SearchResult[] = [],
+  learningHistory: LearningEvent[] = []
+): Promise<EnhancedRecommendations> {
+  // Generate regular recommendations
+  const recommendations = await generateRecommendations(userId, userPapers, learningHistory);
+
+  // Check if recommendations are empty
+  const totalRecommendations =
+    recommendations.hotNow.length +
+    recommendations.missingFromReview.length +
+    recommendations.newThisWeek.length +
+    recommendations.sameAuthors.length +
+    recommendations.extendingWork.length;
+
+  const isEmpty = totalRecommendations === 0;
+
+  if (isEmpty) {
+    const emptyInfo = analyzeEmptyRecommendations(userPapers);
+
+    return {
+      ...recommendations,
+      isEmpty: true,
+      emptyReason: emptyInfo,
+      suggestedActions: emptyInfo.suggestions,
+    };
+  }
+
+  return {
+    ...recommendations,
+    isEmpty: false,
+  };
+}
+
+/**
+ * Analyze why recommendations are empty and provide suggestions
+ */
+export function analyzeEmptyRecommendations(
+  userPapers: SearchResult[]
+): EmptyResultInfo {
+  // No papers in library
+  if (userPapers.length === 0) {
+    return {
+      reason: 'insufficient_data',
+      explanation: 'Your library is empty. Add papers to get personalized recommendations.',
+      suggestions: [
+        'Search for papers in your research area and add them to your library',
+        'Import papers from your reference manager (Zotero, Mendeley, etc.)',
+        'Upload a bibliography file to quickly populate your library',
+      ],
+    };
+  }
+
+  // Very few papers (< 3)
+  if (userPapers.length < 3) {
+    return {
+      reason: 'insufficient_data',
+      explanation: `Only ${userPapers.length} paper(s) in library. More papers will improve recommendation quality.`,
+      suggestions: [
+        'Add at least 5-10 papers for better recommendations',
+        'Include papers from different aspects of your research',
+        'Add both foundational and recent papers',
+      ],
+    };
+  }
+
+  // Papers might be too old or obscure
+  const avgYear = userPapers.reduce((sum, p) => sum + p.year, 0) / userPapers.length;
+  const currentYear = new Date().getFullYear();
+
+  if (currentYear - avgYear > 10) {
+    return {
+      reason: 'no_papers_found',
+      explanation: 'Your library contains mostly older papers. Recent recommendations may be limited.',
+      suggestions: [
+        'Add some recent papers (last 3-5 years) to see trending work',
+        'Search for recent reviews in your field',
+        'Check for papers citing your older papers',
+      ],
+      relaxedCriteria: ['Expand year range', 'Include preprints', 'Lower citation requirements'],
+    };
+  }
+
+  // Papers might be from very niche field
+  const avgCitations = userPapers.reduce((sum, p) => sum + (p.citationCount || 0), 0) / userPapers.length;
+
+  if (avgCitations < 10) {
+    return {
+      reason: 'no_papers_found',
+      explanation: 'Papers in your library are from a specialized field with limited citation data.',
+      suggestions: [
+        'Enable semantic search to find conceptually similar papers',
+        'Try broader search terms related to your field',
+        'Include papers from adjacent research areas',
+      ],
+      relaxedCriteria: ['Enable semantic similarity', 'Expand to related fields', 'Include preprints'],
+    };
+  }
+
+  // Generic case - API issues or other problems
+  return {
+    reason: 'no_papers_found',
+    explanation: 'Unable to find recommendations. This might be temporary.',
+    suggestions: [
+      'Try refreshing in a few moments',
+      'Check your internet connection',
+      'Add more diverse papers to your library',
+      'Try searching manually for papers in your field',
+    ],
+  };
+}
+
+/**
+ * Get suggestions for improving recommendation quality
+ */
+export function getRecommendationImprovementSuggestions(
+  recommendations: Recommendations,
+  userPapers: SearchResult[]
+): string[] {
+  const suggestions: string[] = [];
+
+  const totalRecommendations =
+    recommendations.hotNow.length +
+    recommendations.missingFromReview.length +
+    recommendations.newThisWeek.length +
+    recommendations.sameAuthors.length +
+    recommendations.extendingWork.length;
+
+  // Few recommendations
+  if (totalRecommendations < 10) {
+    suggestions.push('Add more papers to your library for better recommendations');
+  }
+
+  // No trending papers
+  if (recommendations.hotNow.length === 0) {
+    suggestions.push('Add recent papers to discover trending work in your field');
+  }
+
+  // No author recommendations
+  if (recommendations.sameAuthors.length === 0) {
+    suggestions.push('Papers by your frequently-cited authors could not be found');
+  }
+
+  // No extending work
+  if (recommendations.extendingWork.length === 0) {
+    suggestions.push('Enable citation tracking to find papers that cite your work');
+  }
+
+  return suggestions;
 }

@@ -129,7 +129,9 @@ function toSearchResult(paper: SemanticScholarPaper): SearchResult {
 }
 
 /**
- * Search Semantic Scholar
+ * Search Semantic Scholar with retry logic
+ * Rate Limit: 100 requests per 5 minutes (without API key)
+ *             1000 requests per 5 minutes (with API key)
  */
 export async function searchSemanticScholar(query: SearchQuery): Promise<SearchResponse> {
   const startTime = Date.now();
@@ -162,20 +164,55 @@ export async function searchSemanticScholar(query: SearchQuery): Promise<SearchR
     url.searchParams.set('fieldsOfStudy', query.categories.join(','));
   }
 
-  try {
-    const response = await fetch(url.toString(), {
-      headers: getHeaders(),
-    });
+  // Edge Case: Retry with exponential backoff for rate limiting
+  const fetchWithRetry = async (attempt = 0): Promise<SemanticScholarSearchResponse> => {
+    try {
+      // Add delay for retries
+      if (attempt > 0) {
+        const delay = Math.min(2000 * Math.pow(2, attempt), 30000); // Max 30 seconds
+        console.info(`Waiting ${delay}ms before retry (attempt ${attempt + 1}/3)...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
 
-    if (!response.ok) {
+      const response = await fetch(url.toString(), {
+        headers: getHeaders(),
+      });
+
+      // Edge Case: Handle 429 rate limit with retry
       if (response.status === 429) {
+        if (attempt < 3) {
+          console.warn(`Semantic Scholar rate limit hit, retrying (attempt ${attempt + 1}/3)...`);
+          return fetchWithRetry(attempt + 1);
+        }
         throw new Error('Semantic Scholar rate limit exceeded. Please try again in a few minutes.');
       }
-      throw new Error(`Semantic Scholar API error: ${response.status} ${response.statusText}`);
+
+      // Edge Case: Handle 503 service unavailable with retry
+      if (response.status === 503) {
+        if (attempt < 2) {
+          console.warn(`Semantic Scholar service unavailable, retrying (attempt ${attempt + 1}/2)...`);
+          return fetchWithRetry(attempt + 1);
+        }
+        throw new Error('Semantic Scholar service temporarily unavailable. Please try again later.');
+      }
+
+      if (!response.ok) {
+        throw new Error(`Semantic Scholar API error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      // Edge Case: Retry on network errors
+      if (attempt < 3 && (error instanceof TypeError || (error as Error).message.includes('network'))) {
+        console.warn(`Semantic Scholar network error, retrying (attempt ${attempt + 1}/3)...`);
+        return fetchWithRetry(attempt + 1);
+      }
+      throw error;
     }
+  };
 
-    const data: SemanticScholarSearchResponse = await response.json();
-
+  try {
+    const data = await fetchWithRetry();
     const results = data.data.map(toSearchResult);
 
     return {

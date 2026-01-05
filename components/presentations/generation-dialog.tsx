@@ -59,6 +59,9 @@ export function GenerationDialog({
     generateVisualizations: true,
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [generationStatus, setGenerationStatus] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const formatOptions = [
     {
@@ -89,6 +92,10 @@ export function GenerationDialog({
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setError(null);
+    setGenerationProgress(0);
+    setGenerationStatus('Initializing...');
+
     try {
       const config: GenerationConfig = {
         source,
@@ -98,10 +105,46 @@ export function GenerationDialog({
         theme,
         options,
       };
+
+      // Simulate progress updates
+      const progressSteps = [
+        { progress: 20, status: 'Analyzing content...' },
+        { progress: 40, status: 'Extracting key points...' },
+        { progress: 60, status: 'Generating slides...' },
+        { progress: 80, status: 'Applying theme...' },
+        { progress: 95, status: 'Finalizing presentation...' },
+      ];
+
+      let currentStep = 0;
+      const progressInterval = setInterval(() => {
+        if (currentStep < progressSteps.length) {
+          setGenerationProgress(progressSteps[currentStep].progress);
+          setGenerationStatus(progressSteps[currentStep].status);
+          currentStep++;
+        }
+      }, 800);
+
       await onGenerate(config);
-      onOpenChange(false);
+
+      clearInterval(progressInterval);
+      setGenerationProgress(100);
+      setGenerationStatus('Complete!');
+
+      // Close dialog after a brief delay
+      setTimeout(() => {
+        onOpenChange(false);
+        setGenerationProgress(0);
+        setGenerationStatus('');
+      }, 500);
     } catch (error) {
       console.error('Failed to generate presentation:', error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate presentation. Please try again.'
+      );
+      setGenerationProgress(0);
+      setGenerationStatus('');
     } finally {
       setIsGenerating(false);
     }
@@ -331,10 +374,36 @@ export function GenerationDialog({
           </div>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          </div>
+        )}
+
+        {/* Progress Bar */}
+        {isGenerating && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{generationStatus}</span>
+              <span className="font-medium">{generationProgress}%</span>
+            </div>
+            <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-purple-600 dark:bg-purple-500 progress-bar-fill export-progress"
+                style={{ width: `${generationProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              onOpenChange(false);
+              setError(null);
+            }}
             disabled={isGenerating}
           >
             Cancel
@@ -342,6 +411,7 @@ export function GenerationDialog({
           <Button
             onClick={handleGenerate}
             disabled={!isValid() || isGenerating}
+            className="button-press"
           >
             {isGenerating ? (
               <>

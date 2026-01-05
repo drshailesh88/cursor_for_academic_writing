@@ -4,12 +4,65 @@ An AI-powered academic writing platform with PubMed research integration, authen
 
 ## 🎯 Features
 
-- **Dual Interface:** Claude Code skill + Web application
-- **Research Integration:** Direct PubMed search and citation management
-- **Authentic Writing:** Eric Topol-style conversational academic prose
-- **Vancouver Citations:** Proper medical citation formatting
-- **Multi-LLM Support:** OpenAI, Anthropic, Google, OpenRouter, xAI
-- **Professional Export:** DOCX and PDF with proper formatting
+### Core Writing & Editing
+- **Rich Text Editor:** TipTap-based academic editor with tables, formatting, auto-save
+- **AI Writing Assistance:** 16 AI-powered actions (paraphrase, simplify, expand, etc.)
+- **Writing Analysis:** Real-time readability, style, vocabulary analysis
+- **Plagiarism Detection:** N-gram fingerprinting, similarity scoring, pattern detection
+- **Track Changes:** Collaborative editing with insertion/deletion tracking
+- **Templates:** 6 academic templates (Research Article, Systematic Review, etc.)
+
+### Research & Discovery (NEW)
+- **Deep Research Agent:** Multi-agent research system with 4 modes (Quick/Standard/Deep/Exhaustive)
+  - 7 specialized agents (Clarifier, Planner, Researcher, Reviewer, Synthesizer, Writer, Orchestrator)
+  - Multi-perspective exploration (STORM-inspired)
+  - Tree-based iterative research
+  - 85 passing tests
+
+- **Chat with Papers:** Upload and analyze PDFs with AI
+  - PDF text extraction and section detection
+  - Grounded Q&A with section references
+  - Key information extraction (findings, methods, limitations)
+  - Research matrix for multi-paper comparison
+  - 104 passing tests
+
+- **Connected Papers Discovery:** Citation network and knowledge graph exploration
+  - Citation network analysis with metrics
+  - Knowledge map clustering
+  - Smart paper recommendations
+  - Literature path finding
+  - Research timeline and frontier detection
+  - 115 passing tests
+
+### Citations & References
+- **Paperpile-Style Citation Management:** 30+ reference types, CSL formatting
+- **Cite-While-You-Write:** Cmd+Shift+P keyboard shortcut
+- **10 Citation Styles:** APA, MLA, Chicago, Vancouver, Harvard, IEEE, AMA, Nature, Cell
+- **BibTeX/RIS Import/Export**
+
+### AI & Multi-LLM Support
+- **14 AI Models:** Claude, GPT-4o, Gemini, Llama, Qwen, DeepSeek, and more
+- **Multi-Database Research:** PubMed, arXiv, Semantic Scholar, OpenAlex
+- **15 Scientific Disciplines:** Field-specific AI prompts and conventions
+
+### Export & Presentation (NEW)
+- **AI Presentation Generator:** Generate slides from documents
+  - SVG-based charts and flowcharts
+  - PPTX and PDF export
+  - Presenter view with timer
+  - 52 passing tests
+- **Professional Export:** DOCX and PDF with formatting, page numbers, TOC
+
+### Collaboration
+- **Comments & Suggestions:** Real-time commenting system
+- **Version History:** Auto-save versions with restore capability
+- **Document Sharing:** Link and email-based sharing with permissions
+- **Track Changes:** Accept/reject workflow
+
+### Testing & Quality
+- **1,822 Tests Passing:** 100% pass rate across all features
+- **TypeScript Strict Mode:** No `any` types
+- **Full Firebase Integration:** Auth, Firestore, Storage
 
 ## 🚀 Quick Start
 

@@ -229,7 +229,8 @@ function buildQuery(query: SearchQuery): string {
 }
 
 /**
- * Search arXiv
+ * Search arXiv with retry logic and rate limiting
+ * Rate Limit: 1 request per second (we add delay between requests)
  */
 export async function searchArxiv(query: SearchQuery): Promise<SearchResponse> {
   const startTime = Date.now();
@@ -245,17 +246,46 @@ export async function searchArxiv(query: SearchQuery): Promise<SearchResponse> {
   url.searchParams.set('sortBy', 'relevance');
   url.searchParams.set('sortOrder', 'descending');
 
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        'User-Agent': 'AcademicWritingPlatform/1.0 (mailto:contact@academicwriting.app)',
-      },
-    });
+  // Edge Case: Add retry with exponential backoff for rate limiting
+  const fetchWithRetry = async (attempt = 0): Promise<Response> => {
+    try {
+      // Add delay to respect rate limit (1 request/second)
+      if (attempt > 0) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 10000); // Max 10 seconds
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
 
-    if (!response.ok) {
-      throw new Error(`arXiv API error: ${response.status} ${response.statusText}`);
+      const response = await fetch(url.toString(), {
+        headers: {
+          'User-Agent': 'AcademicWritingPlatform/1.0 (mailto:contact@academicwriting.app)',
+        },
+      });
+
+      // Edge Case: Handle 429 (rate limit) and 503 (service unavailable)
+      if (response.status === 429 || response.status === 503) {
+        if (attempt < 3) {
+          console.warn(`arXiv rate limit or service unavailable, retrying (attempt ${attempt + 1}/3)...`);
+          return fetchWithRetry(attempt + 1);
+        }
+        throw new Error(`arXiv API rate limit exceeded. Please try again in a few minutes.`);
+      }
+
+      if (!response.ok) {
+        throw new Error(`arXiv API error: ${response.status} ${response.statusText}`);
+      }
+
+      return response;
+    } catch (error) {
+      if (attempt < 3 && (error instanceof TypeError || (error as Error).message.includes('network'))) {
+        console.warn(`arXiv network error, retrying (attempt ${attempt + 1}/3)...`);
+        return fetchWithRetry(attempt + 1);
+      }
+      throw error;
     }
+  };
 
+  try {
+    const response = await fetchWithRetry();
     const xml = await response.text();
     const entries = parseAtomFeed(xml);
 

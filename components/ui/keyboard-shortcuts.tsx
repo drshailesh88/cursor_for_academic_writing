@@ -19,7 +19,7 @@ function getShortcutsForDisplay(): Shortcut[] {
     // Convert modifiers + key to display keys array
     const keys = [
       ...shortcut.modifiers.map(m => m.charAt(0).toUpperCase() + m.slice(1)),
-      shortcut.key.toUpperCase()
+      shortcut.key
     ];
 
     return {

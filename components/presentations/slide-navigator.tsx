@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Plus, Trash2, Copy, GripVertical, FileText, BarChart3, Image, Quote, List, Split, Clock, FileQuestion } from 'lucide-react';
 import { Slide, Theme } from '@/lib/presentations/types';
 import { cn } from '@/lib/utils/cn';
@@ -135,6 +135,37 @@ function SlideThumbnail({
   onDragOver,
   onDragEnd
 }: SlideThumbnailProps) {
+  const thumbnailRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  // Lazy load slide thumbnails using intersection observer
+  useEffect(() => {
+    if (!thumbnailRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasLoaded) {
+            setIsVisible(true);
+            setHasLoaded(true);
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: '50px', // Load slides 50px before they come into view
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(thumbnailRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasLoaded]);
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     onDragOver();
@@ -150,6 +181,7 @@ function SlideThumbnail({
 
   return (
     <div
+      ref={thumbnailRef}
       draggable
       onClick={handleClick}
       onDragStart={(e) => {
@@ -182,7 +214,13 @@ function SlideThumbnail({
         className="aspect-video rounded overflow-hidden border border-gray-200 dark:border-gray-700"
         style={{ backgroundColor: slide.backgroundColor || theme.colors.background }}
       >
-        <MiniSlidePreview slide={slide} theme={theme} />
+        {isVisible ? (
+          <MiniSlidePreview slide={slide} theme={theme} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-gray-300 dark:border-gray-600 border-t-purple-500 rounded-full animate-spin" />
+          </div>
+        )}
       </div>
 
       {/* Context Menu (on hover) */}

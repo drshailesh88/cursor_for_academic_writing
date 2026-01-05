@@ -568,3 +568,107 @@ export interface RecommendationBasis {
   weight: number;
   description: string;
 }
+
+// ============================================================================
+// Edge Case Handling Types
+// ============================================================================
+
+/**
+ * Pagination information for large datasets
+ */
+export interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  totalItems: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+/**
+ * Progressive loading state for network
+ */
+export interface NetworkLoadingProgress {
+  phase: 'initializing' | 'fetching_seeds' | 'building_edges' | 'clustering' | 'positioning' | 'complete';
+  progress: number; // 0-100
+  message: string;
+  itemsProcessed?: number;
+  totalItems?: number;
+}
+
+/**
+ * Network quality metrics for sparse network detection
+ */
+export interface NetworkQuality {
+  nodeCount: number;
+  edgeCount: number;
+  density: number;
+  avgDegree: number;
+  largestComponentSize: number;
+  isSparse: boolean;
+  isEmpty: boolean;
+  suggestions: string[];
+}
+
+/**
+ * Suggestions for improving sparse networks
+ */
+export interface NetworkImprovement {
+  type: 'add_seed_papers' | 'expand_criteria' | 'try_different_algorithms' | 'use_semantic_search';
+  title: string;
+  description: string;
+  actionable: boolean;
+  suggestedPaperIds?: string[];
+}
+
+/**
+ * Disconnection explanation when papers can't be connected
+ */
+export interface DisconnectionReason {
+  type: 'no_citation_path' | 'different_fields' | 'temporal_gap' | 'sparse_data' | 'disconnected_components';
+  explanation: string;
+  suggestions: string[];
+  intermediateTopics?: string[];
+  bridgePapers?: DiscoveredPaper[];
+}
+
+/**
+ * Empty result explanation
+ */
+export interface EmptyResultInfo {
+  reason: 'no_papers_found' | 'no_connections' | 'insufficient_data' | 'filters_too_strict';
+  explanation: string;
+  suggestions: string[];
+  relaxedCriteria?: string[];
+}
+
+/**
+ * Paginated network result for large networks
+ */
+export interface PaginatedNetwork {
+  network: CitationNetwork;
+  pagination: PaginationInfo;
+  quality: NetworkQuality;
+  improvements?: NetworkImprovement[];
+}
+
+/**
+ * Enhanced connection result with disconnection info
+ */
+export interface EnhancedLiteratureConnection extends LiteratureConnection {
+  disconnectionReason?: DisconnectionReason;
+  quality: {
+    pathCount: number;
+    avgPathLength: number;
+    strongestConnection: number;
+  };
+}
+
+/**
+ * Enhanced recommendations with empty handling
+ */
+export interface EnhancedRecommendations extends Recommendations {
+  isEmpty: boolean;
+  emptyReason?: EmptyResultInfo;
+  suggestedActions?: string[];
+}

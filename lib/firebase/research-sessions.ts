@@ -17,42 +17,46 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './client';
+import { COLLECTIONS } from './schema';
 import type {
-  ResearchSession,
   ResearchMode,
-  ResearchConfig,
-  ResearchStatus,
-  ResearchSource,
-  SynthesisResult,
-  Clarification,
+  SessionStatus,
   Perspective,
-} from '@/lib/deep-research/types';
-
-// Collection name
-const RESEARCH_SESSIONS = 'researchSessions';
+} from '@/lib/research/deep-research/types';
 
 /**
  * Firestore document shape for research sessions
+ * Simplified version that stores JSON data
  */
 interface ResearchSessionDoc {
   id: string;
   userId: string;
   topic: string;
   mode: ResearchMode;
-  config: ResearchConfig;
-  status: ResearchStatus;
+  status: SessionStatus;
   progress: number;
+  sourcesCollected: number;
 
-  // Research data
-  clarifications: Clarification[];
-  perspectives: Perspective[];
-  sources: ResearchSource[];
-  synthesis: SynthesisResult | null;
+  // Research data (stored as JSON)
+  perspectives?: any[];
+  sources?: any[];
+  synthesis?: {
+    content: string;
+    qualityScore: number;
+    wordCount: number;
+    citationCount: number;
+  };
+
+  // Quality
+  qualityScore?: number;
 
   // Timestamps
   createdAt: Timestamp;
   updatedAt: Timestamp;
   completedAt?: Timestamp;
+
+  // Error tracking
+  error?: string;
 }
 
 /**
@@ -61,10 +65,10 @@ interface ResearchSessionDoc {
 export async function createResearchSession(
   userId: string,
   topic: string,
-  mode: ResearchMode,
-  config: ResearchConfig
+  mode: ResearchMode
 ): Promise<string> {
-  const sessionsRef = collection(getFirebaseDb(), RESEARCH_SESSIONS);
+  const db = getFirebaseDb();
+  const sessionsRef = collection(db, COLLECTIONS.RESEARCH_SESSIONS);
   const sessionDoc = doc(sessionsRef);
   const sessionId = sessionDoc.id;
 
@@ -73,13 +77,9 @@ export async function createResearchSession(
     userId,
     topic,
     mode,
-    config,
-    status: 'clarifying',
+    status: 'planning',
     progress: 0,
-    clarifications: [],
-    perspectives: [],
-    sources: [],
-    synthesis: null,
+    sourcesCollected: 0,
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
   };
@@ -92,33 +92,45 @@ export async function createResearchSession(
  * Get a research session by ID
  */
 export async function getResearchSession(sessionId: string): Promise<ResearchSessionDoc | null> {
-  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
-  const snapshot = await getDoc(sessionRef);
+  try {
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
+    const snapshot = await getDoc(sessionRef);
 
-  if (!snapshot.exists()) {
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return snapshot.data() as ResearchSessionDoc;
+  } catch (error) {
+    console.error('Error getting research session:', error);
     return null;
   }
-
-  return snapshot.data() as ResearchSessionDoc;
 }
 
 /**
- * Get user's research sessions
+ * Get user's research sessions (metadata only for list view)
  */
 export async function getUserResearchSessions(
   userId: string,
-  maxResults: number = 20
+  maxResults: number = 50
 ): Promise<ResearchSessionDoc[]> {
-  const sessionsRef = collection(getFirebaseDb(), RESEARCH_SESSIONS);
-  const q = query(
-    sessionsRef,
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc'),
-    limit(maxResults)
-  );
+  try {
+    const db = getFirebaseDb();
+    const sessionsRef = collection(db, COLLECTIONS.RESEARCH_SESSIONS);
+    const q = query(
+      sessionsRef,
+      where('userId', '==', userId),
+      orderBy('updatedAt', 'desc'),
+      limit(maxResults)
+    );
 
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => doc.data() as ResearchSessionDoc);
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as ResearchSessionDoc);
+  } catch (error) {
+    console.error('Error getting user research sessions:', error);
+    return [];
+  }
 }
 
 /**
@@ -126,36 +138,58 @@ export async function getUserResearchSessions(
  */
 export async function updateSessionStatus(
   sessionId: string,
-  status: ResearchStatus,
+  status: SessionStatus,
   progress: number
 ): Promise<void> {
-  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
+  try {
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
 
-  const updates: Partial<ResearchSessionDoc> = {
-    status,
-    progress,
-    updatedAt: Timestamp.now(),
-  };
+    const updates: Partial<ResearchSessionDoc> = {
+      status,
+      progress,
+      updatedAt: Timestamp.now(),
+    };
 
-  if (status === 'complete') {
-    updates.completedAt = Timestamp.now();
+    if (status === 'complete') {
+      updates.completedAt = Timestamp.now();
+    }
+
+    await updateDoc(sessionRef, updates);
+  } catch (error) {
+    console.error('Error updating session status:', error);
+    throw error;
   }
-
-  await updateDoc(sessionRef, updates);
 }
 
 /**
- * Add clarifications to session
+ * Update session progress during research
  */
-export async function addSessionClarifications(
+export async function updateSessionProgress(
   sessionId: string,
-  clarifications: Clarification[]
+  progress: number,
+  sourcesCollected: number,
+  sources?: any[]
 ): Promise<void> {
-  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
-  await updateDoc(sessionRef, {
-    clarifications,
-    updatedAt: Timestamp.now(),
-  });
+  try {
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
+
+    const updates: Partial<ResearchSessionDoc> = {
+      progress,
+      sourcesCollected,
+      updatedAt: Timestamp.now(),
+    };
+
+    if (sources) {
+      updates.sources = sources;
+    }
+
+    await updateDoc(sessionRef, updates);
+  } catch (error) {
+    console.error('Error updating session progress:', error);
+    throw error;
+  }
 }
 
 /**
@@ -165,69 +199,187 @@ export async function addSessionPerspectives(
   sessionId: string,
   perspectives: Perspective[]
 ): Promise<void> {
-  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
-  await updateDoc(sessionRef, {
-    perspectives,
-    updatedAt: Timestamp.now(),
-  });
+  try {
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
+    await updateDoc(sessionRef, {
+      perspectives,
+      updatedAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error adding session perspectives:', error);
+    throw error;
+  }
 }
 
 /**
- * Add sources to session
+ * Complete a research session with synthesis
  */
-export async function addSessionSources(
+export async function completeSession(
   sessionId: string,
-  sources: ResearchSource[]
+  synthesis: {
+    content: string;
+    qualityScore: number;
+    wordCount: number;
+    citationCount: number;
+  },
+  perspectives?: any[],
+  sources?: any[]
 ): Promise<void> {
-  const session = await getResearchSession(sessionId);
-  if (!session) return;
+  try {
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
 
-  const updatedSources = [...session.sources, ...sources];
-  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
-  await updateDoc(sessionRef, {
-    sources: updatedSources,
-    updatedAt: Timestamp.now(),
-  });
+    const updates: Partial<ResearchSessionDoc> = {
+      status: 'complete',
+      progress: 100,
+      synthesis,
+      qualityScore: synthesis.qualityScore,
+      completedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    };
+
+    if (perspectives) {
+      updates.perspectives = perspectives;
+    }
+
+    if (sources) {
+      updates.sources = sources;
+    }
+
+    await updateDoc(sessionRef, updates);
+  } catch (error) {
+    console.error('Error completing session:', error);
+    throw error;
+  }
 }
 
 /**
- * Set synthesis result
+ * Mark session as failed
  */
-export async function setSessionSynthesis(
+export async function failSession(
   sessionId: string,
-  synthesis: SynthesisResult
+  error: string
 ): Promise<void> {
-  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
-  await updateDoc(sessionRef, {
-    synthesis,
-    updatedAt: Timestamp.now(),
-  });
+  try {
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
+
+    await updateDoc(sessionRef, {
+      status: 'failed',
+      error,
+      updatedAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error marking session as failed:', error);
+    throw error;
+  }
 }
 
 /**
  * Delete a research session
  */
 export async function deleteResearchSession(sessionId: string): Promise<void> {
-  const sessionRef = doc(getFirebaseDb(), RESEARCH_SESSIONS, sessionId);
-  await deleteDoc(sessionRef);
+  try {
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
+    await deleteDoc(sessionRef);
+  } catch (error) {
+    console.error('Error deleting research session:', error);
+    throw error;
+  }
 }
 
 /**
- * Convert Firestore document to ResearchSession type
+ * Add clarifications to session (for backward compatibility)
  */
-export function toResearchSession(doc: ResearchSessionDoc): Partial<ResearchSession> {
+export async function addSessionClarifications(
+  sessionId: string,
+  clarifications: any[]
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
+    await updateDoc(sessionRef, {
+      clarifications,
+      updatedAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error adding session clarifications:', error);
+    throw error;
+  }
+}
+
+/**
+ * Add sources to session (for backward compatibility)
+ */
+export async function addSessionSources(
+  sessionId: string,
+  sources: any[]
+): Promise<void> {
+  try {
+    const session = await getResearchSession(sessionId);
+    if (!session) return;
+
+    const updatedSources = [...(session.sources || []), ...sources];
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
+    await updateDoc(sessionRef, {
+      sources: updatedSources,
+      sourcesCollected: updatedSources.length,
+      updatedAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error adding session sources:', error);
+    throw error;
+  }
+}
+
+/**
+ * Set synthesis result (for backward compatibility)
+ */
+export async function setSessionSynthesis(
+  sessionId: string,
+  synthesis: any
+): Promise<void> {
+  try {
+    const db = getFirebaseDb();
+    const sessionRef = doc(db, COLLECTIONS.RESEARCH_SESSIONS, sessionId);
+
+    // Convert to simplified synthesis format
+    const simplifiedSynthesis = {
+      content: synthesis.content || '',
+      qualityScore: synthesis.qualityScore || 0,
+      wordCount: synthesis.wordCount || 0,
+      citationCount: synthesis.sections?.reduce((count: number, s: any) =>
+        count + (s.sourceIds?.length || 0), 0) || 0,
+    };
+
+    await updateDoc(sessionRef, {
+      synthesis: simplifiedSynthesis,
+      qualityScore: simplifiedSynthesis.qualityScore,
+      updatedAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Error setting session synthesis:', error);
+    throw error;
+  }
+}
+
+/**
+ * Convert Firestore document to partial ResearchSession (for backward compatibility)
+ */
+export function toResearchSession(doc: ResearchSessionDoc): any {
   return {
     id: doc.id,
     userId: doc.userId,
     topic: doc.topic,
     mode: doc.mode,
-    config: doc.config,
     status: doc.status,
     progress: doc.progress,
-    clarifications: doc.clarifications,
-    perspectives: doc.perspectives,
-    sources: doc.sources,
-    synthesis: doc.synthesis as any,
+    perspectives: doc.perspectives || [],
+    sources: doc.sources || [],
+    synthesis: doc.synthesis,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     completedAt: doc.completedAt,

@@ -12,6 +12,8 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 
 interface PaperUploadProps {
@@ -24,12 +26,16 @@ interface PaperUploadProps {
 
 interface UploadingFile {
   id: string;
+  file: File;
   name: string;
   size: number;
-  status: 'uploading' | 'processing' | 'complete' | 'error';
+  status: 'uploading' | 'processing' | 'complete' | 'error' | 'warning';
   progress: number;
   paperId?: string;
   error?: string;
+  errorType?: 'password_protected' | 'corrupted' | 'too_large' | 'scanned' | 'unknown';
+  suggestion?: string;
+  warnings?: string[];
 }
 
 export function PaperUpload({
@@ -58,11 +64,33 @@ export function PaperUpload({
   const uploadFile = async (file: File): Promise<void> => {
     const fileId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+    // Check file size before upload (100MB limit)
+    const MAX_UPLOAD_SIZE = 100 * 1024 * 1024; // 100MB
+    if (file.size > MAX_UPLOAD_SIZE) {
+      setUploadingFiles((prev) => [
+        ...prev,
+        {
+          id: fileId,
+          file,
+          name: file.name,
+          size: file.size,
+          status: 'error',
+          progress: 0,
+          error: 'File too large',
+          errorType: 'too_large',
+          suggestion: 'Please upload a file smaller than 100MB.',
+        },
+      ]);
+      onUploadError?.('File too large. Maximum size is 100MB.');
+      return;
+    }
+
     // Add to uploading files
     setUploadingFiles((prev) => [
       ...prev,
       {
         id: fileId,
+        file,
         name: file.name,
         size: file.size,
         status: 'uploading',
@@ -88,36 +116,69 @@ export function PaperUpload({
         body: formData,
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        throw new Error(responseData.error || 'Upload failed');
       }
 
-      const { paperId } = await response.json();
+      const { paperId, warnings } = responseData;
 
-      // Mark as complete (processing happens in background)
-      setUploadingFiles((prev) =>
-        prev.map((f) =>
-          f.id === fileId
-            ? { ...f, status: 'processing', progress: 100, paperId }
-            : f
-        )
-      );
+      // Check for warnings
+      if (warnings && warnings.length > 0) {
+        setUploadingFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId
+              ? {
+                  ...f,
+                  status: 'warning',
+                  progress: 100,
+                  paperId,
+                  warnings: warnings.map((w: { message: string }) => w.message),
+                }
+              : f
+          )
+        );
+      } else {
+        // Mark as complete (processing happens in background)
+        setUploadingFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId
+              ? { ...f, status: 'processing', progress: 100, paperId }
+              : f
+          )
+        );
+      }
 
       onUploadComplete?.(paperId);
 
       // Remove from list after a delay
       setTimeout(() => {
         setUploadingFiles((prev) => prev.filter((f) => f.id !== fileId));
-      }, 3000);
+      }, 5000);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Upload failed';
 
+      // Determine error type
+      let errorType: UploadingFile['errorType'] = 'unknown';
+      let suggestion: string | undefined;
+
+      if (errorMessage.toLowerCase().includes('password')) {
+        errorType = 'password_protected';
+        suggestion = 'Please provide an unlocked version of this PDF.';
+      } else if (errorMessage.toLowerCase().includes('corrupt')) {
+        errorType = 'corrupted';
+        suggestion = 'Try re-downloading the PDF from the original source.';
+      } else if (errorMessage.toLowerCase().includes('scanned')) {
+        errorType = 'scanned';
+        suggestion = 'Consider using a version with embedded text or OCR.';
+      }
+
       setUploadingFiles((prev) =>
         prev.map((f) =>
           f.id === fileId
-            ? { ...f, status: 'error', error: errorMessage }
+            ? { ...f, status: 'error', error: errorMessage, errorType, suggestion }
             : f
         )
       );
@@ -172,6 +233,17 @@ export function PaperUpload({
 
   const removeFile = (fileId: string) => {
     setUploadingFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
+
+  const retryUpload = async (fileId: string) => {
+    const uploadingFile = uploadingFiles.find((f) => f.id === fileId);
+    if (!uploadingFile) return;
+
+    // Remove the failed upload
+    removeFile(fileId);
+
+    // Retry with the same file
+    await uploadFile(uploadingFile.file);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -254,12 +326,16 @@ export function PaperUpload({
                   className={`
                     p-2 rounded-lg
                     ${file.status === 'complete' ? 'bg-green-100 dark:bg-green-900/20' : ''}
+                    ${file.status === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}
                     ${file.status === 'error' ? 'bg-red-100 dark:bg-red-900/20' : ''}
                     ${file.status === 'uploading' || file.status === 'processing' ? 'bg-primary/10' : ''}
                   `}
                 >
                   {file.status === 'complete' && (
                     <CheckCircle className="w-4 h-4 text-green-600" />
+                  )}
+                  {file.status === 'warning' && (
+                    <AlertTriangle className="w-4 h-4 text-yellow-600" />
                   )}
                   {file.status === 'error' && (
                     <AlertCircle className="w-4 h-4 text-red-600" />
@@ -271,27 +347,55 @@ export function PaperUpload({
 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{file.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{formatFileSize(file.size)}</span>
-                    {file.status === 'uploading' && <span>Uploading...</span>}
-                    {file.status === 'processing' && <span>Processing...</span>}
-                    {file.status === 'complete' && (
-                      <span className="text-green-600">Complete</span>
-                    )}
+                  <div className="flex flex-col gap-1 text-xs">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span>{formatFileSize(file.size)}</span>
+                      {file.status === 'uploading' && <span>Uploading...</span>}
+                      {file.status === 'processing' && <span>Processing...</span>}
+                      {file.status === 'complete' && (
+                        <span className="text-green-600">Complete</span>
+                      )}
+                    </div>
                     {file.status === 'error' && (
-                      <span className="text-red-600">{file.error}</span>
+                      <div className="space-y-1">
+                        <span className="text-red-600 font-medium">{file.error}</span>
+                        {file.suggestion && (
+                          <p className="text-muted-foreground">{file.suggestion}</p>
+                        )}
+                      </div>
+                    )}
+                    {file.status === 'warning' && file.warnings && (
+                      <div className="space-y-1">
+                        {file.warnings.map((warning, i) => (
+                          <p key={i} className="text-yellow-600">
+                            {warning}
+                          </p>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {(file.status === 'error' || file.status === 'complete') && (
-                  <button
-                    onClick={() => removeFile(file.id)}
-                    className="p-1 hover:bg-muted rounded-lg transition-colors"
-                  >
-                    <X className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                )}
+                <div className="flex gap-1">
+                  {file.status === 'error' && (
+                    <button
+                      onClick={() => retryUpload(file.id)}
+                      className="p-1 hover:bg-muted rounded-lg transition-colors"
+                      title="Retry upload"
+                    >
+                      <RefreshCw className="w-4 h-4 text-primary" />
+                    </button>
+                  )}
+                  {(file.status === 'error' || file.status === 'complete' || file.status === 'warning') && (
+                    <button
+                      onClick={() => removeFile(file.id)}
+                      className="p-1 hover:bg-muted rounded-lg transition-colors"
+                      title="Remove"
+                    >
+                      <X className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
               </motion.div>
             ))}
           </motion.div>

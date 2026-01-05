@@ -360,6 +360,64 @@ export function timestampToDate(timestamp: any): Date {
   return new Date(timestamp);
 }
 
+// ============================================================================
+// RESEARCH SESSION TYPES (Deep Research)
+// ============================================================================
+
+/**
+ * Research session stored in Firestore
+ * Simplified version of the full ResearchSession from deep-research/types.ts
+ */
+export interface ResearchSession {
+  id: string;
+  userId: string;
+
+  // Basic configuration
+  topic: string;
+  mode: 'quick' | 'standard' | 'deep' | 'exhaustive' | 'systematic';
+  status: 'clarifying' | 'planning' | 'researching' | 'analyzing' | 'reviewing' | 'synthesizing' | 'complete' | 'failed';
+
+  // Progress tracking
+  progress: number; // 0-100
+  sourcesCollected: number;
+
+  // Results (stored as JSON)
+  perspectives?: any[]; // Perspective[]
+  sources?: any[]; // ResearchSource[]
+  synthesis?: {
+    content: string;
+    qualityScore: number;
+    wordCount: number;
+    citationCount: number;
+  };
+
+  // Quality metrics
+  qualityScore?: number;
+
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt?: Date;
+
+  // Errors
+  error?: string;
+}
+
+/**
+ * Research session metadata for list display
+ */
+export interface ResearchSessionMetadata {
+  id: string;
+  topic: string;
+  mode: 'quick' | 'standard' | 'deep' | 'exhaustive' | 'systematic';
+  status: ResearchSession['status'];
+  progress: number;
+  sourcesCollected: number;
+  qualityScore?: number;
+  createdAt: Date;
+  completedAt?: Date;
+}
+
 // Helper function to create a new document
 export function createNewDocument(userId: string, title: string = 'Untitled Document'): Omit<Document, 'id'> {
   const now = new Date();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Presentation, Slide, ThemeId } from '@/lib/presentations/types';
 import { getTheme, THEMES } from '@/lib/presentations/themes';
 import { Button } from '@/components/ui/button';
@@ -68,6 +68,9 @@ export function PresentationMode({
   const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null);
   const [slideToDelete, setSlideToDelete] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportProgress, setExportProgress] = useState(0);
 
   const theme = getTheme(presentation.theme);
   const currentSlide = presentation.slides[selectedSlideIndex];
@@ -181,8 +184,19 @@ export function PresentationMode({
   // Save presentation
   const handleSave = useCallback(async () => {
     setIsSaving(true);
+    setSaveError(null);
     try {
       await onSave();
+      // Auto-dismiss success (no visible message needed for save)
+    } catch (error) {
+      console.error('Save failed:', error);
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to save presentation. Please try again.'
+      );
+      // Auto-dismiss error after 5 seconds
+      setTimeout(() => setSaveError(null), 5000);
     } finally {
       setIsSaving(false);
     }
@@ -192,8 +206,38 @@ export function PresentationMode({
   const handleExport = useCallback(
     async (format: 'pptx' | 'pdf') => {
       setIsExporting(true);
+      setExportError(null);
+      setExportProgress(0);
+
       try {
+        // Simulate export progress
+        const progressInterval = setInterval(() => {
+          setExportProgress((prev) => {
+            if (prev >= 90) {
+              clearInterval(progressInterval);
+              return prev;
+            }
+            return prev + 10;
+          });
+        }, 200);
+
         await onExport(format);
+
+        clearInterval(progressInterval);
+        setExportProgress(100);
+
+        // Reset progress after completion
+        setTimeout(() => setExportProgress(0), 1000);
+      } catch (error) {
+        console.error('Export failed:', error);
+        setExportError(
+          error instanceof Error
+            ? error.message
+            : `Failed to export presentation as ${format.toUpperCase()}. Please try again.`
+        );
+        setExportProgress(0);
+        // Auto-dismiss error after 5 seconds
+        setTimeout(() => setExportError(null), 5000);
       } finally {
         setIsExporting(false);
       }
@@ -255,6 +299,72 @@ export function PresentationMode({
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
+      {/* Error/Status Notifications */}
+      {saveError && (
+        <div className="fixed top-4 right-4 z-50 toast-slide-in">
+          <div className="bg-red-50 dark:bg-red-950/90 border border-red-200 dark:border-red-800 rounded-lg shadow-lg p-4 max-w-md">
+            <div className="flex items-start gap-3">
+              <X className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">
+                  Save Failed
+                </h4>
+                <p className="text-sm text-red-700 dark:text-red-300">{saveError}</p>
+              </div>
+              <button
+                onClick={() => setSaveError(null)}
+                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {exportError && (
+        <div className="fixed top-4 right-4 z-50 toast-slide-in">
+          <div className="bg-red-50 dark:bg-red-950/90 border border-red-200 dark:border-red-800 rounded-lg shadow-lg p-4 max-w-md">
+            <div className="flex items-start gap-3">
+              <X className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">
+                  Export Failed
+                </h4>
+                <p className="text-sm text-red-700 dark:text-red-300">{exportError}</p>
+              </div>
+              <button
+                onClick={() => setExportError(null)}
+                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isExporting && exportProgress > 0 && exportProgress < 100 && (
+        <div className="fixed top-4 right-4 z-50 toast-slide-in">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg p-4 w-80">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                Exporting presentation...
+              </h4>
+              <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                {exportProgress}%
+              </span>
+            </div>
+            <div className="h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-purple-600 dark:bg-purple-500 progress-bar-fill"
+                style={{ width: `${exportProgress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Bar */}
       <TopBar
         title={presentation.title}
@@ -271,10 +381,10 @@ export function PresentationMode({
 
       {/* Main Content - 3 panels */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Slide Navigator */}
-        <aside className="w-64 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col">
+        {/* Left Panel - Slide Navigator (collapsible on mobile) */}
+        <aside className="w-64 md:w-64 sm:w-20 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col hidden sm:flex">
           <div className="p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Slides</h2>
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 hidden md:block">Slides</h2>
             <Button size="sm" variant="ghost" onClick={handleAddSlide} title="Add slide">
               <Plus className="h-4 w-4" />
             </Button>
@@ -339,9 +449,9 @@ export function PresentationMode({
           </div>
         </main>
 
-        {/* Right Panel - AI Assist */}
+        {/* Right Panel - AI Assist (hidden on mobile) */}
         {showAIAssist && (
-          <aside className="w-72 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex flex-col">
+          <aside className="w-72 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex-col hidden lg:flex">
             <div className="p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">AI Assist</h2>
               <Button
@@ -719,7 +829,7 @@ function SlideThumb({
         e.preventDefault();
         onDrop(index);
       }}
-      className={`group relative rounded-lg border-2 transition-all cursor-pointer ${
+      className={`group relative rounded-lg border-2 transition-all cursor-pointer slide-thumbnail ${
         isSelected
           ? 'border-purple-600 dark:border-purple-500 shadow-md'
           : 'border-gray-200 dark:border-gray-800 hover:border-purple-400 dark:hover:border-purple-600'
@@ -791,29 +901,29 @@ interface SlideCanvasProps {
 function SlideCanvas({ slide, theme, onUpdate }: SlideCanvasProps) {
   return (
     <div
-      className="rounded-lg shadow-xl overflow-hidden aspect-[16/9]"
+      className="rounded-lg shadow-xl overflow-hidden aspect-[16/9] slide-canvas"
       style={{
         backgroundColor: theme.colors.background,
         color: theme.colors.text,
       }}
     >
-      <div className="h-full flex flex-col p-12">
+      <div className="h-full flex flex-col p-6 sm:p-8 md:p-12">
         {/* Title */}
         <Input
           value={slide.title}
           onChange={(e) => onUpdate({ ...slide, title: e.target.value })}
           placeholder="Slide title..."
-          className="text-4xl font-bold border-none bg-transparent shadow-none focus-visible:ring-0 px-0"
+          className="text-2xl sm:text-3xl md:text-4xl font-bold border-none bg-transparent shadow-none focus-visible:ring-0 px-0"
           style={{ color: theme.colors.primary }}
         />
 
         {/* Content */}
-        <div className="flex-1 mt-8">
+        <div className="flex-1 mt-4 sm:mt-6 md:mt-8">
           <Textarea
             value={slide.content}
             onChange={(e) => onUpdate({ ...slide, content: e.target.value })}
             placeholder="Slide content..."
-            className="h-full text-xl border-none bg-transparent shadow-none focus-visible:ring-0 px-0 resize-none"
+            className="h-full text-base sm:text-lg md:text-xl border-none bg-transparent shadow-none focus-visible:ring-0 px-0 resize-none"
             style={{ color: theme.colors.text }}
           />
         </div>
@@ -839,7 +949,10 @@ function PreviewOverlay({
   onSlideChange,
 }: PreviewOverlayProps) {
   const currentSlide = slides[currentIndex];
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -856,11 +969,48 @@ function PreviewOverlay({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, slides.length, onClose, onSlideChange]);
 
+  // Touch gesture support for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return;
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+
+      const deltaX = touchEndX - touchStartX.current;
+      const deltaY = touchEndY - touchStartY.current;
+
+      // Only trigger if horizontal swipe is dominant
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        if (deltaX > 0) {
+          // Swipe right - previous slide
+          onSlideChange(Math.max(0, currentIndex - 1));
+        } else {
+          // Swipe left - next slide
+          onSlideChange(Math.min(slides.length - 1, currentIndex + 1));
+        }
+      }
+
+      touchStartX.current = null;
+      touchStartY.current = null;
+    },
+    [currentIndex, slides.length, onSlideChange]
+  );
+
   return (
-    <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+    <div
+      className="fixed inset-0 bg-black z-50 flex items-center justify-center modal-backdrop"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10 button-press safe-area-top"
       >
         <X className="h-6 w-6 text-white" />
       </button>
@@ -869,7 +1019,7 @@ function PreviewOverlay({
       {currentIndex > 0 && (
         <button
           onClick={() => onSlideChange(currentIndex - 1)}
-          className="absolute left-4 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+          className="absolute left-4 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10 button-press hidden sm:flex"
         >
           <ChevronLeft className="h-8 w-8 text-white" />
         </button>
@@ -879,29 +1029,29 @@ function PreviewOverlay({
       {currentIndex < slides.length - 1 && (
         <button
           onClick={() => onSlideChange(currentIndex + 1)}
-          className="absolute right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+          className="absolute right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10 button-press hidden sm:flex"
         >
           <ChevronRight className="h-8 w-8 text-white" />
         </button>
       )}
 
       {/* Slide Content */}
-      <div className="w-[90vw] h-[90vh] max-w-7xl">
+      <div className="w-[95vw] sm:w-[90vw] h-[85vh] sm:h-[90vh] max-w-7xl">
         <div
-          className="w-full h-full rounded-lg shadow-2xl flex flex-col p-16"
+          className="w-full h-full rounded-lg shadow-2xl flex flex-col p-6 sm:p-12 md:p-16 slide-scale-in"
           style={{
             backgroundColor: theme.colors.background,
             color: theme.colors.text,
           }}
         >
           <h1
-            className="text-6xl font-bold mb-12"
+            className="text-3xl sm:text-5xl md:text-6xl font-bold mb-6 sm:mb-12"
             style={{ color: theme.colors.primary }}
           >
             {currentSlide.title}
           </h1>
           <div
-            className="text-3xl leading-relaxed whitespace-pre-wrap"
+            className="text-lg sm:text-2xl md:text-3xl leading-relaxed whitespace-pre-wrap overflow-auto"
             style={{ color: theme.colors.text }}
           >
             {currentSlide.content}
