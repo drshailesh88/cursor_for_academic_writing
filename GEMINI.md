@@ -301,6 +301,93 @@ npm run build        # Production build
 
 ---
 
+## 🔒 Git Workflow (REQUIRED FOR ALL AIs)
+
+> **CRITICAL:** Follow this workflow for ALL code changes. Protects the user's work.
+> **Full guide:** See `CLAUDE.md` → "GIT WORKFLOW" section for complete details.
+
+### When to Use Git
+
+✅ **Before** starting any feature
+✅ **After** completing a working feature
+✅ **End** of each coding session
+❌ **Never** commit broken code
+
+### Safety-First Workflow (9 Steps)
+
+```bash
+# 1. Check status
+git status
+
+# 2. Create backup branch (timestamped)
+git checkout -b backup/before-[feature]-$(date +%Y%m%d)
+git add -A && git commit -m "backup: Before [feature]"
+git checkout main
+
+# 3. Create feature branch
+git checkout -b feature/[description]
+
+# 4-5. Make changes, test thoroughly
+npm run dev && npx tsc --noEmit
+
+# 6. Commit with clear message
+git add -A
+git commit -m "feat: [what you added]"
+# OR: "fix: [what you fixed]"
+# OR: "improve: [what you improved]"
+
+# 7. Switch back to main
+git checkout main
+
+# 8. Merge feature
+git merge feature/[description]
+
+# 9. Push to GitHub
+git push origin main
+```
+
+### Emergency Recovery
+
+**If something breaks:**
+```bash
+# Option 1: Undo last commit (keep changes)
+git reset --soft HEAD~1
+
+# Option 2: Abandon ALL changes since last commit
+git reset --hard HEAD
+
+# Option 3: Return to backup branch
+git branch | grep backup  # List backups
+git checkout backup/[name]
+```
+
+### AI Assistant Rules
+
+**I MUST:**
+- ✅ Create backup branch before ANY changes
+- ✅ Work on feature branches, not main
+- ✅ Test before committing
+- ✅ Use clear commit messages
+- ✅ Explain Git commands to user
+
+**I MUST NEVER:**
+- ❌ Commit broken code
+- ❌ Force-push without warning
+- ❌ Delete code without permission
+- ❌ Skip testing before merge
+
+### Protected Files (Never Commit)
+
+```gitignore
+.env.local          # API keys
+node_modules/       # Dependencies
+.next/              # Build output
+```
+
+**Full detailed guide with examples:** `CLAUDE.md` (400+ lines)
+
+---
+
 ## Critical Rules
 
 ### Security
