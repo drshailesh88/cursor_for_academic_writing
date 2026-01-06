@@ -2,7 +2,7 @@
 
 import { useChat } from 'ai/react';
 import { useState, useCallback } from 'react';
-import { Send, Loader2, Copy, Check, ClipboardPaste, Search } from 'lucide-react';
+import { Send, Loader2, Copy, Check, ClipboardPaste, Search, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -39,7 +39,7 @@ export function ChatInterface({
     [setDiscipline, onDisciplineChange]
   );
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload } = useChat({
     api: '/api/chat',
     body: {
       model: selectedModel,
@@ -228,6 +228,31 @@ export function ChatInterface({
                 <span className="text-sm text-muted-foreground">
                   Searching {disciplineConfig.databases[0]}...
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="flex justify-start">
+            <div className="bg-destructive/10 text-destructive border border-destructive/20 max-w-[90%] rounded-lg px-4 py-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium mb-1">Chat Error</p>
+                  <p className="text-sm opacity-90 mb-2">
+                    {error.message || 'Failed to get a response. Please check your API configuration.'}
+                  </p>
+                  <p className="text-xs opacity-75 mb-3">
+                    Make sure you have configured API keys in your .env.local file (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)
+                  </p>
+                  <button
+                    onClick={() => reload()}
+                    className="flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-destructive/20 hover:bg-destructive/30 transition-colors"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Retry
+                  </button>
+                </div>
               </div>
             </div>
           </div>
