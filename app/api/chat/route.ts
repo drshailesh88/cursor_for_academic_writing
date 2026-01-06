@@ -279,7 +279,25 @@ export async function POST(req: Request) {
     return result.toDataStreamResponse();
   } catch (error) {
     console.error('Chat API error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to process chat request' }), {
+
+    // Provide more specific error messages
+    let errorMessage = 'Failed to process chat request';
+
+    if (error instanceof Error) {
+      if (error.message.includes('API key is missing')) {
+        errorMessage = 'API key not configured. Please add your API keys to .env.local file.';
+      } else if (error.message.includes('invalid_api_key') || error.message.includes('Incorrect API key')) {
+        errorMessage = 'Invalid API key. Please check your API key configuration.';
+      } else if (error.message.includes('rate_limit') || error.message.includes('Rate limit')) {
+        errorMessage = 'Rate limit exceeded. Please try again in a moment.';
+      } else if (error.message.includes('insufficient_quota')) {
+        errorMessage = 'API quota exceeded. Please check your billing or try a different model.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
