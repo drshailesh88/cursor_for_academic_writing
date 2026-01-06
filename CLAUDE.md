@@ -237,6 +237,419 @@ npm run type-check   # Type checking only
 
 ---
 
+## 🔒 GIT WORKFLOW - COMPLETE HAND-HOLDING GUIDE
+
+> **CRITICAL: Follow this EVERY time you make changes. This protects your work and prevents breaking things.**
+> **Read this section carefully - it's your safety net!**
+
+### 🎯 When to Use Git (Simple Rules)
+
+**Use Git in these situations:**
+1. ✅ Before starting any new feature or improvement
+2. ✅ After completing a working feature (even if small)
+3. ✅ Before trying something experimental that might break things
+4. ✅ At the end of each coding session
+5. ✅ When the app is working and you want to "lock in" that state
+
+**DON'T use Git:**
+- ❌ In the middle of writing code (wait until feature works)
+- ❌ When things are broken (fix first, then commit)
+- ❌ Multiple times per hour (batch related changes)
+
+---
+
+### 📖 Git Basics (No Prior Knowledge Required)
+
+**What is Git?**
+- Git = Time machine for your code
+- It saves snapshots of your code at different points
+- You can go back to any previous snapshot if something breaks
+
+**Key Concepts:**
+- **Repository (repo)** = Your project folder with Git enabled
+- **Commit** = A saved snapshot of your code
+- **Branch** = A separate timeline/version of your code
+- **Main branch** = The "official" version of your code
+- **Backup branch** = A safety copy you can always return to
+- **Remote (origin)** = Your code stored on GitHub (cloud backup)
+- **Push** = Upload your commits to GitHub
+- **Pull** = Download commits from GitHub
+- **Merge** = Combine changes from two branches
+
+---
+
+### 🛡️ SAFETY-FIRST WORKFLOW (Follow Every Time)
+
+#### **STEP 1: Check Current Status (ALWAYS DO THIS FIRST)**
+
+```bash
+# See what files you changed
+git status
+
+# See what changes you made line-by-line
+git diff
+
+# See what branch you're on
+git branch --show-current
+```
+
+**What to look for:**
+- Red files = Changed but not saved to Git yet
+- Green files = Saved to Git, ready to commit
+- Branch name = Make sure you're on `main` or a feature branch
+
+---
+
+#### **STEP 2: Create a Safety Backup Branch**
+
+**BEFORE making any changes, create a backup:**
+
+```bash
+# This creates a timestamped backup of your current state
+git checkout -b backup/before-[feature-name]-$(date +%Y%m%d)
+
+# Example: backup/before-new-export-feature-20260106
+```
+
+**Why?** If you mess up, you can always return to this backup.
+
+**Commit the backup:**
+```bash
+git add -A
+git commit -m "backup: Working state before [feature-name]"
+git checkout main
+```
+
+---
+
+#### **STEP 3: Create a Feature Branch (Work Here, Not on Main)**
+
+```bash
+# Create and switch to a new feature branch
+git checkout -b feature/[short-description]
+
+# Examples:
+# git checkout -b feature/add-export-button
+# git checkout -b feature/fix-chat-error
+# git checkout -b feature/improve-styling
+```
+
+**Why?** Working on a branch keeps `main` safe. If you break something, `main` is still clean.
+
+---
+
+#### **STEP 4: Make Your Changes**
+
+- Work on your feature
+- Test thoroughly
+- Make sure everything works BEFORE committing
+
+---
+
+#### **STEP 5: Save Your Work (Commit)**
+
+```bash
+# See what you changed
+git status
+git diff
+
+# Add all changed files
+git add -A
+
+# Create a commit with a clear message
+git commit -m "feat: [what you added]"
+
+# OR for fixes:
+git commit -m "fix: [what you fixed]"
+
+# OR for improvements:
+git commit -m "improve: [what you improved]"
+```
+
+**Good commit messages:**
+- ✅ "feat: Add DOCX export button to toolbar"
+- ✅ "fix: Resolve chat API error handling"
+- ✅ "improve: Better error messages for missing API keys"
+
+**Bad commit messages:**
+- ❌ "changes"
+- ❌ "update"
+- ❌ "wip"
+
+---
+
+#### **STEP 6: Test That Everything Still Works**
+
+```bash
+# Start the dev server
+npm run dev
+
+# Check for TypeScript errors
+npm run type-check
+
+# Test in browser
+# Go to http://localhost:2550 and test your feature
+```
+
+**If something is broken:** Fix it before proceeding!
+
+---
+
+#### **STEP 7: Merge Your Feature Branch into Main**
+
+**Only do this if everything works!**
+
+```bash
+# Switch to main
+git checkout main
+
+# Merge your feature branch
+git merge feature/[your-feature-name]
+
+# If there are conflicts, DON'T PANIC:
+# 1. Open the conflicting files in your editor
+# 2. Look for <<<<<<< and >>>>>>>
+# 3. Decide which version to keep
+# 4. Remove the conflict markers
+# 5. git add [fixed-files]
+# 6. git commit -m "merge: Resolved conflicts in [files]"
+```
+
+---
+
+#### **STEP 8: Push to GitHub (Cloud Backup)**
+
+```bash
+# Upload your changes to GitHub
+git push origin main
+
+# If it's your first push of a new branch:
+git push -u origin main
+```
+
+**Why?** This backs up your code to the cloud. If your computer dies, your code is safe.
+
+---
+
+#### **STEP 9: Clean Up Old Branches (Optional)**
+
+```bash
+# Delete the feature branch (only after merging to main!)
+git branch -d feature/[your-feature-name]
+
+# Keep backup branches - never delete them!
+```
+
+---
+
+### 🆘 EMERGENCY PROCEDURES
+
+#### **"Oh no, I broke everything!"**
+
+**Option 1: Undo your last commit (keep the changes)**
+```bash
+git reset --soft HEAD~1
+# This undoes the commit but keeps your changes
+# Fix the issues, then commit again
+```
+
+**Option 2: Abandon all changes and go back to last commit**
+```bash
+# WARNING: This deletes ALL changes since last commit!
+git reset --hard HEAD
+
+# If you want to go back to a specific commit:
+git log --oneline  # Find the commit hash
+git reset --hard [commit-hash]
+```
+
+**Option 3: Return to a backup branch**
+```bash
+# See all backup branches
+git branch | grep backup
+
+# Switch to a backup
+git checkout backup/[name]
+
+# Copy the backup to main
+git checkout -b temp-recovery
+git checkout main
+git reset --hard temp-recovery
+```
+
+---
+
+#### **"I committed to the wrong branch!"**
+
+```bash
+# 1. Copy the commit hash
+git log --oneline -1  # Copy the hash (first 7 characters)
+
+# 2. Switch to the correct branch
+git checkout [correct-branch]
+
+# 3. Apply the commit here
+git cherry-pick [commit-hash]
+
+# 4. Go back and remove it from wrong branch
+git checkout [wrong-branch]
+git reset --hard HEAD~1
+```
+
+---
+
+#### **"I need to see what changed between versions"**
+
+```bash
+# Compare two commits
+git diff [commit1-hash] [commit2-hash]
+
+# Compare your current state to a commit
+git diff [commit-hash]
+
+# Compare two branches
+git diff main..feature/my-feature
+```
+
+---
+
+#### **"I want to see the history"**
+
+```bash
+# Simple one-line history
+git log --oneline -10
+
+# Visual branching history
+git log --oneline --all --graph -20
+
+# See commits from a specific person
+git log --author="Shailesh"
+```
+
+---
+
+### 📅 DAILY WORKFLOW CHECKLIST
+
+**Start of day:**
+```bash
+☐ git status                    # See what's changed
+☐ git pull origin main          # Get latest from GitHub
+☐ npm run dev                   # Start dev server, test it works
+☐ git checkout -b backup/today-$(date +%Y%m%d)  # Create daily backup
+☐ git add -A && git commit -m "backup: Start of day $(date)"
+☐ git checkout main
+```
+
+**When starting a new feature:**
+```bash
+☐ git status                                    # Check current state
+☐ git checkout main                             # Start from main
+☐ git checkout -b feature/[description]         # Create feature branch
+☐ [Work on feature]
+☐ npm run dev                                   # Test it works
+```
+
+**When feature is complete and working:**
+```bash
+☐ git status                                    # Review changes
+☐ git add -A                                    # Stage all changes
+☐ git commit -m "feat: [description]"           # Commit with message
+☐ git checkout main                             # Switch to main
+☐ git merge feature/[name]                      # Merge feature
+☐ npm run dev                                   # Test merged code
+☐ git push origin main                          # Backup to GitHub
+☐ git branch -d feature/[name]                  # Delete feature branch
+```
+
+**End of day:**
+```bash
+☐ git status                    # Make sure everything is committed
+☐ git push origin main          # Final backup to GitHub
+☐ npm run dev                   # Final test that everything works
+```
+
+---
+
+### 🎓 LEARNING RESOURCES
+
+**When you want to learn more:**
+- Git basics: https://git-scm.com/book/en/v2/Getting-Started-What-is-Git%3F
+- Visual Git guide: https://marklodato.github.io/visual-git-guide/index-en.html
+- GitHub flow: https://guides.github.com/introduction/flow/
+
+**Don't overwhelm yourself!** Follow the workflows above for now. Learn more as you need it.
+
+---
+
+### 🤖 ASKING CLAUDE FOR HELP
+
+**Always tell me:**
+1. "Show me git status" - I'll run it and explain what I see
+2. "I want to start a new feature called [name]" - I'll guide you through creating a branch
+3. "I'm done with this feature, help me commit and merge" - I'll walk you through it
+4. "Something broke, help me go back" - I'll help you recover
+5. "I don't understand [git concept]" - I'll explain it simply
+
+**I will ALWAYS:**
+- ✅ Create backup branches before making changes
+- ✅ Explain every Git command before running it
+- ✅ Test that everything works after changes
+- ✅ Ask for your confirmation before destructive operations
+- ✅ Provide step-by-step guidance
+
+**I will NEVER:**
+- ❌ Delete your code without your permission
+- ❌ Force-push to overwrite history without warning
+- ❌ Merge without testing first
+- ❌ Commit broken code
+
+---
+
+### 🎯 GIT BEST PRACTICES FOR THIS PROJECT
+
+**Branch naming:**
+- `feature/[name]` - New features
+- `fix/[name]` - Bug fixes
+- `improve/[name]` - Improvements to existing features
+- `backup/[name]-[date]` - Safety backups
+
+**Commit frequency:**
+- ✅ Commit when a feature/fix is complete and working
+- ✅ Commit at end of coding session
+- ❌ Don't commit every 5 minutes
+- ❌ Don't commit broken code
+
+**What to commit:**
+- ✅ Source code files (.ts, .tsx, .css, etc.)
+- ✅ Configuration files (tsconfig.json, package.json, etc.)
+- ✅ Documentation (README.md, HANDOVER.md, etc.)
+- ❌ NEVER commit .env.local (contains API keys!)
+- ❌ NEVER commit node_modules/ (huge, regenerated from package.json)
+- ❌ NEVER commit .next/ (build output, regenerated)
+
+---
+
+### 🔐 PROTECTIVE MEASURES (Already Set Up)
+
+**These protect you automatically:**
+1. `.gitignore` - Prevents committing sensitive files
+2. `.env.local` - Never committed (contains API keys)
+3. `node_modules/` - Never committed (huge dependency folder)
+4. `.next/` - Never committed (build output)
+
+**Check your .gitignore:**
+```bash
+cat .gitignore
+# Should include: .env.local, node_modules, .next, etc.
+```
+
+---
+
+**Last Updated:** January 6, 2026
+**Your Git Safety Net:** I will guide you through EVERY step!
+
+---
+
 ## 🚨 Critical Rules
 
 ### Security
