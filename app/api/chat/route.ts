@@ -52,6 +52,14 @@ const MODEL_MAP = {
 // Default discipline for backwards compatibility
 const DEFAULT_DISCIPLINE: DisciplineId = 'life-sciences';
 
+// Models that support tool/function calling
+const MODELS_WITH_TOOL_SUPPORT = [
+  'openai',
+  'anthropic',
+  'google',
+  // Free models don't reliably support tools
+];
+
 export async function POST(req: Request) {
   try {
     const {
@@ -62,6 +70,7 @@ export async function POST(req: Request) {
     } = await req.json();
 
     const selectedModel = MODEL_MAP[model as keyof typeof MODEL_MAP] || MODEL_MAP.anthropic;
+    const supportsTools = MODELS_WITH_TOOL_SUPPORT.includes(model);
 
     // Get discipline-specific system prompt
     const systemPrompt = getSystemPrompt(discipline as DisciplineId);
@@ -70,7 +79,8 @@ export async function POST(req: Request) {
       model: selectedModel,
       messages,
       system: systemPrompt,
-      tools: {
+      ...(supportsTools && {
+        tools: {
         // Unified search across all databases
         searchResearch: tool({
           description: `Search academic databases for research papers. Automatically searches the most relevant databases for the current discipline (${discipline}). Returns papers with citations, abstracts, and metadata.`,
@@ -272,8 +282,9 @@ export async function POST(req: Request) {
             }
           },
         }),
-      },
-      maxSteps: 5,
+        },
+        maxSteps: 5,
+      }),
     });
 
     return result.toDataStreamResponse();
@@ -292,6 +303,8 @@ export async function POST(req: Request) {
         errorMessage = 'Rate limit exceeded. Please try again in a moment.';
       } else if (error.message.includes('insufficient_quota')) {
         errorMessage = 'API quota exceeded. Please check your billing or try a different model.';
+      } else if (error.message.includes('tool use') || error.message.includes('No endpoints found')) {
+        errorMessage = 'This model does not support research tools. Try a premium model (Claude, GPT-4o, or Gemini) for PubMed search and research features.';
       } else {
         errorMessage = error.message;
       }
