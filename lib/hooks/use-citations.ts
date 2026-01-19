@@ -78,7 +78,7 @@ export function useCitations({ editor, documentId, defaultStyle = 'apa-7' }: Use
 
       // Track citation in document
       const newCitation: DocumentCitation = {
-        id: `cit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `cit_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         referenceId: reference.id,
         position: editor.state.selection.from,
         suppressAuthor: options.suppressAuthor,

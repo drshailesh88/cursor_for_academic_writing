@@ -2,7 +2,7 @@
 'use client';
 
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from './client';
+import { getFirebaseDb } from './client';
 import { COLLECTIONS } from './schema';
 import { UserSettings, DEFAULT_SETTINGS } from '../settings/types';
 
@@ -12,7 +12,7 @@ import { UserSettings, DEFAULT_SETTINGS } from '../settings/types';
  */
 export async function getUserSettings(userId: string): Promise<UserSettings> {
   try {
-    const userRef = doc(db(), COLLECTIONS.USERS, userId);
+    const userRef = doc(getFirebaseDb(), COLLECTIONS.USERS, userId);
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
@@ -60,7 +60,7 @@ export async function updateUserSettings(
   settings: Partial<UserSettings>
 ): Promise<void> {
   try {
-    const userRef = doc(db(), COLLECTIONS.USERS, userId);
+    const userRef = doc(getFirebaseDb(), COLLECTIONS.USERS, userId);
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
@@ -94,7 +94,7 @@ export async function updateUserSettings(
  */
 export async function resetToDefaults(userId: string): Promise<void> {
   try {
-    const userRef = doc(db(), COLLECTIONS.USERS, userId);
+    const userRef = doc(getFirebaseDb(), COLLECTIONS.USERS, userId);
 
     await updateDoc(userRef, {
       settings: DEFAULT_SETTINGS,
@@ -106,32 +106,57 @@ export async function resetToDefaults(userId: string): Promise<void> {
 }
 
 /**
- * Update a specific settings section
+ * Update AI settings section
+ * Merges with existing AI settings
  */
 export async function updateAISettings(
   userId: string,
   aiSettings: Partial<UserSettings['ai']>
 ): Promise<void> {
-  return updateUserSettings(userId, { ai: aiSettings as UserSettings['ai'] });
+  const currentSettings = await getUserSettings(userId);
+  return updateUserSettings(userId, {
+    ai: { ...currentSettings.ai, ...aiSettings },
+  });
 }
 
+/**
+ * Update writing settings section
+ * Merges with existing writing settings
+ */
 export async function updateWritingSettings(
   userId: string,
   writingSettings: Partial<UserSettings['writing']>
 ): Promise<void> {
-  return updateUserSettings(userId, { writing: writingSettings as UserSettings['writing'] });
+  const currentSettings = await getUserSettings(userId);
+  return updateUserSettings(userId, {
+    writing: { ...currentSettings.writing, ...writingSettings },
+  });
 }
 
+/**
+ * Update editor settings section
+ * Merges with existing editor settings
+ */
 export async function updateEditorSettings(
   userId: string,
   editorSettings: Partial<UserSettings['editor']>
 ): Promise<void> {
-  return updateUserSettings(userId, { editor: editorSettings as UserSettings['editor'] });
+  const currentSettings = await getUserSettings(userId);
+  return updateUserSettings(userId, {
+    editor: { ...currentSettings.editor, ...editorSettings },
+  });
 }
 
+/**
+ * Update export settings section
+ * Merges with existing export settings
+ */
 export async function updateExportSettings(
   userId: string,
   exportSettings: Partial<UserSettings['export']>
 ): Promise<void> {
-  return updateUserSettings(userId, { export: exportSettings as UserSettings['export'] });
+  const currentSettings = await getUserSettings(userId);
+  return updateUserSettings(userId, {
+    export: { ...currentSettings.export, ...exportSettings },
+  });
 }

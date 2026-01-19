@@ -229,7 +229,6 @@ function addLineNumber(
   doc.setTextColor(128, 128, 128);
 
   const lineNumText = lineNumber.toString();
-  const textWidth = doc.getTextWidth(lineNumText);
   doc.text(lineNumText, MARGIN - LINE_NUMBER_WIDTH + 10, yPosition);
 
   doc.restoreGraphicsState();

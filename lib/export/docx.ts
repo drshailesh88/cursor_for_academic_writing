@@ -30,13 +30,20 @@ function sanitizeFileName(title?: string) {
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = window.URL.createObjectURL(blob);
+
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
+  anchor.style.display = 'none';
   document.body.appendChild(anchor);
+
   anchor.click();
-  anchor.remove();
-  window.URL.revokeObjectURL(url);
+
+  // Cleanup after a delay to ensure download starts
+  setTimeout(() => {
+    anchor.remove();
+    window.URL.revokeObjectURL(url);
+  }, 100);
 }
 
 type TextFormatting = {

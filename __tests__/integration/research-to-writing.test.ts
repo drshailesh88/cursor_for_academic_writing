@@ -12,16 +12,19 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import { resetFirebaseMocks } from '../mocks/firebase';
 
-// Deep research imports
+// Deep research imports - types from types, functions from index
 import {
   createResearchSession,
-  executeResearch,
-  generateSynthesis,
   type ResearchSession,
   type Synthesis,
   type Perspective,
   type ResearchSource,
 } from '@/lib/research/deep-research/types';
+
+import {
+  executeResearch,
+  generateSynthesis,
+} from '@/lib/research/deep-research';
 
 import {
   calculateConsensusPercentage,

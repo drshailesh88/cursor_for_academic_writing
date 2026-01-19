@@ -5,7 +5,7 @@
  * deduplication, ranking, and discipline-aware prioritization.
  */
 
-import { searchPubMed, articleToCitation } from '@/lib/pubmed/client';
+import { searchPubMed } from '@/lib/pubmed/client';
 import { searchArxiv, arxivClient } from './arxiv';
 import { searchSemanticScholar, semanticScholarClient } from './semantic-scholar';
 import { searchOpenAlex, openalexClient } from './openalex';
@@ -17,7 +17,7 @@ import {
   normalizeTitle,
   toCitation,
 } from './types';
-import { type DisciplineId, getDisciplineDatabases } from '@/lib/prompts/disciplines';
+import { type DisciplineId } from '@/lib/prompts/disciplines';
 
 // Re-export types
 export * from './types';

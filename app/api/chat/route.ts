@@ -1,7 +1,7 @@
 import { streamText, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { anthropic } from '@ai-sdk/anthropic';
-import { google } from '@ai-sdk/google';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 import { getSystemPrompt, type DisciplineId } from '@/lib/prompts/disciplines';
 import {
@@ -12,68 +12,116 @@ import {
   type DatabaseSource,
 } from '@/lib/research';
 
-// Create OpenAI provider
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Valid discipline IDs for runtime validation
+const VALID_DISCIPLINES: DisciplineId[] = [
+  'life-sciences',
+  'bioinformatics',
+  'chemistry',
+  'clinical-medicine',
+  'physics',
+  'astronomy',
+  'computer-science',
+  'engineering',
+  'materials-science',
+  'earth-sciences',
+  'mathematics',
+  'neuroscience',
+  'social-sciences',
+  'economics',
+  'environmental-science',
+];
 
-// Create OpenRouter provider (OpenAI-compatible)
-const openrouter = createOpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
+// Personal API key types
+interface PersonalApiKeys {
+  openai?: string;
+  anthropic?: string;
+  google?: string;
+  zhipu?: string;
+}
 
-const MODEL_MAP = {
-  // Premium models
-  'openai': openai('gpt-4o'),
-  'anthropic': anthropic('claude-3-5-sonnet-20241022'),
-  'google': google('gemini-2.0-flash-exp'),
+// Get API key with fallback to environment variables
+function getApiKey(personalKey: string | undefined, envKey: string): string | undefined {
+  return personalKey || process.env[envKey];
+}
 
-  // Free OpenRouter models - Best Quality
-  'openrouter-hermes-405b': openrouter('nousresearch/hermes-3-llama-3.1-405b:free'),
-  'openrouter-llama-3.3-70b': openrouter('meta-llama/llama-3.3-70b-instruct:free'),
-  'openrouter-qwen': openrouter('qwen/qwen-2.5-72b-instruct:free'),
-  'openrouter-gemini-2-flash': openrouter('google/gemini-2.0-flash-exp:free'),
+// Create model instance based on model type and API key
+function createModelInstance(modelType: string, personalApiKeys: PersonalApiKeys) {
+  switch (modelType) {
+    case 'openai': {
+      const apiKey = getApiKey(personalApiKeys.openai, 'OPENAI_API_KEY');
+      if (!apiKey) throw new Error('OpenAI API key not configured. Add it in Settings or .env.local.');
+      const openai = createOpenAI({ apiKey });
+      return openai('gpt-4o');
+    }
 
-  // Free OpenRouter models - Coding
-  'openrouter-deepseek-chat': openrouter('deepseek/deepseek-chat:free'),
-  'openrouter-qwen-coder': openrouter('qwen/qwen-2.5-coder-32b-instruct:free'),
+    case 'claude': {
+      const apiKey = getApiKey(personalApiKeys.anthropic, 'ANTHROPIC_API_KEY');
+      if (!apiKey) throw new Error('Anthropic API key not configured. Add it in Settings or .env.local.');
+      const anthropic = createAnthropic({ apiKey });
+      return anthropic('claude-sonnet-4-20250514');
+    }
 
-  // Free OpenRouter models - Fast & Light
-  'openrouter-llama-3.2-3b': openrouter('meta-llama/llama-3.2-3b-instruct:free'),
-  'openrouter-mistral-7b': openrouter('mistralai/mistral-7b-instruct:free'),
-  'openrouter-phi-3-mini': openrouter('microsoft/phi-3-mini-128k-instruct:free'),
+    case 'gemini': {
+      const apiKey = getApiKey(personalApiKeys.google, 'GOOGLE_API_KEY');
+      if (!apiKey) throw new Error('Google API key not configured. Add it in Settings or .env.local.');
+      const google = createGoogleGenerativeAI({ apiKey });
+      return google('gemini-2.0-flash');
+    }
 
-  // Free OpenRouter models - Other
-  'openrouter-mythomax-13b': openrouter('gryphe/mythomax-l2-13b:free'),
-  'openrouter-toppy-7b': openrouter('undi95/toppy-m-7b:free'),
-};
+    case 'glm-4-plus': {
+      // Z.AI/Zhipu key - check multiple possible env var names (case variations)
+      const apiKey = personalApiKeys.zhipu
+        || process.env.ZAI_API_KEY
+        || process.env.ZAI_API_Key
+        || process.env.ZHIPU_API_KEY;
+      if (!apiKey) throw new Error('Z.AI API key not configured. Add it in Settings or set ZAI_API_KEY in .env.local.');
+      // Zhipu AI (Z.AI) uses OpenAI-compatible API
+      const zhipu = createOpenAI({
+        baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+        apiKey,
+      });
+      return zhipu('glm-4-plus'); // GLM-4.7
+    }
+
+    default:
+      throw new Error(`Unknown model: ${modelType}. Please select a valid model.`);
+  }
+}
 
 // Default discipline for backwards compatibility
 const DEFAULT_DISCIPLINE: DisciplineId = 'life-sciences';
 
-// Models that support tool/function calling
+// Models that support tool/function calling (research tools)
 const MODELS_WITH_TOOL_SUPPORT = [
   'openai',
-  'anthropic',
-  'google',
-  // Free models don't reliably support tools
+  'claude',
+  'gemini',
+  'glm-4-plus', // GLM-4.7 supports function calling
 ];
 
 export async function POST(req: Request) {
   try {
     const {
       messages,
-      model = 'anthropic',
+      model = 'glm-4-plus',
       documentId,
       discipline = DEFAULT_DISCIPLINE,
+      personalApiKeys = {},
     } = await req.json();
 
-    const selectedModel = MODEL_MAP[model as keyof typeof MODEL_MAP] || MODEL_MAP.anthropic;
-    const supportsTools = MODELS_WITH_TOOL_SUPPORT.includes(model);
+    // Create model instance with personal API key
+    // Normalize model name before creating instance (handle legacy "anthropic" value)
+    const normalizedModelName = model === 'anthropic' ? 'claude' : model;
+    const selectedModel = createModelInstance(normalizedModelName, personalApiKeys);
+    const supportsTools = MODELS_WITH_TOOL_SUPPORT.includes(normalizedModelName);
+
+    // Validate discipline at runtime and use default if invalid
+    const validatedDiscipline = VALID_DISCIPLINES.includes(discipline as DisciplineId)
+      ? (discipline as DisciplineId)
+      : DEFAULT_DISCIPLINE;
 
     // Get discipline-specific system prompt
-    const systemPrompt = getSystemPrompt(discipline as DisciplineId);
+    const systemPrompt = getSystemPrompt(validatedDiscipline);
 
     const result = await streamText({
       model: selectedModel,
@@ -83,7 +131,7 @@ export async function POST(req: Request) {
         tools: {
         // Unified search across all databases
         searchResearch: tool({
-          description: `Search academic databases for research papers. Automatically searches the most relevant databases for the current discipline (${discipline}). Returns papers with citations, abstracts, and metadata.`,
+          description: `Search academic databases for research papers. Automatically searches the most relevant databases for the current discipline (${validatedDiscipline}). Returns papers with citations, abstracts, and metadata.`,
           parameters: z.object({
             query: z.string().describe('Search query (e.g., "machine learning protein folding")'),
             maxResults: z.number().default(15).describe('Maximum number of results'),
@@ -95,7 +143,7 @@ export async function POST(req: Request) {
             try {
               const response = await unifiedSearch({
                 text: query,
-                discipline: discipline as DisciplineId,
+                discipline: validatedDiscipline,
                 limit: maxResults,
                 yearRange: yearStart || yearEnd ? { start: yearStart, end: yearEnd } : undefined,
                 openAccessOnly,

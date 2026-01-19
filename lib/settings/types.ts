@@ -7,6 +7,7 @@ export interface AISettings {
     openai?: string;
     anthropic?: string;
     google?: string;
+    zhipu?: string; // Z.AI GLM-4 for testing
   };
 }
 
@@ -38,7 +39,7 @@ export interface UserSettings {
 // Default settings for new users
 export const DEFAULT_SETTINGS: UserSettings = {
   ai: {
-    defaultModel: 'anthropic',
+    defaultModel: 'glm-4-plus', // Default to GLM-4.7 for testing (requires Z.AI key)
     temperature: 0.7,
     personalApiKeys: {},
   },
@@ -60,11 +61,16 @@ export const DEFAULT_SETTINGS: UserSettings = {
 };
 
 // Available options for dropdowns
+// Simplified to 3 main models (all via OpenRouter in production)
 export const AI_MODELS = [
-  { value: 'anthropic', label: 'Claude (Anthropic)' },
-  { value: 'openai', label: 'GPT-4o (OpenAI)' },
-  { value: 'google', label: 'Gemini (Google)' },
-  { value: 'openrouter', label: 'Qwen (OpenRouter)' },
+  { value: 'claude', label: 'Claude' },
+  { value: 'openai', label: 'ChatGPT' },
+  { value: 'gemini', label: 'Gemini' },
+] as const;
+
+// Testing model (requires personal API key)
+export const TESTING_MODELS = [
+  { value: 'glm-4-plus', label: 'GLM-4.7 (Z.AI) - Testing' },
 ] as const;
 
 export const DISCIPLINES = [

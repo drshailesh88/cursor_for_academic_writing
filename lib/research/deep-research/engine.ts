@@ -22,14 +22,6 @@ import {
 export type ResearchMode = 'comprehensive' | 'focused' | 'rapid';
 
 /**
- * Helper to get config with proper structure
- */
-function getModeConfig(mode: ResearchMode): ResearchConfig {
-  // Use the getDefaultConfig from types
-  return require('./types').getDefaultConfig(mode);
-}
-
-/**
  * Start a deep research session with edge case validation
  */
 export async function startResearch(

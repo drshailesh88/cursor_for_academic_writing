@@ -1,13 +1,15 @@
 'use client';
 
 import { useChat } from 'ai/react';
-import { useState, useCallback } from 'react';
-import { Send, Loader2, Copy, Check, ClipboardPaste, Search, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Send, Loader2, Copy, Check, ClipboardPaste, Search, AlertTriangle, RefreshCw, Settings, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { DisciplineSelector, useDiscipline, DisciplineBadge } from '@/components/discipline/discipline-selector';
 import type { DisciplineId } from '@/lib/prompts/disciplines';
+import { useSettings } from '@/lib/hooks/use-settings';
+import { AI_MODELS, TESTING_MODELS } from '@/lib/settings/types';
 
 interface ChatInterfaceProps {
   documentId?: string;
@@ -22,13 +24,32 @@ export function ChatInterface({
   initialDiscipline,
   onDisciplineChange,
 }: ChatInterfaceProps) {
-  const [selectedModel, setSelectedModel] = useState<string>('anthropic');
+  const { settings } = useSettings();
+  const [selectedModel, setSelectedModel] = useState<string>('glm-4-plus');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showDisciplineSelector, setShowDisciplineSelector] = useState(false);
+  const [showApiKeyWarning, setShowApiKeyWarning] = useState(false);
 
   const { discipline, setDiscipline, config: disciplineConfig } = useDiscipline(
     initialDiscipline || 'life-sciences'
   );
+
+  // Update model when settings load
+  useEffect(() => {
+    if (settings?.ai?.defaultModel) {
+      setSelectedModel(settings.ai.defaultModel);
+    }
+  }, [settings?.ai?.defaultModel]);
+
+  // Check if API key is configured for selected model
+  const hasApiKey = useCallback(() => {
+    if (!settings?.ai?.personalApiKeys) return false;
+    if (selectedModel === 'glm-4-plus') return !!settings.ai.personalApiKeys.zhipu;
+    if (selectedModel === 'claude') return !!settings.ai.personalApiKeys.anthropic;
+    if (selectedModel === 'openai') return !!settings.ai.personalApiKeys.openai;
+    if (selectedModel === 'gemini') return !!settings.ai.personalApiKeys.google;
+    return false;
+  }, [selectedModel, settings?.ai?.personalApiKeys]);
 
   const handleDisciplineChange = useCallback(
     (newDiscipline: DisciplineId) => {
@@ -39,14 +60,33 @@ export function ChatInterface({
     [setDiscipline, onDisciplineChange]
   );
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, reload } = useChat({
+  // Create a unique ID based on model to force hook re-initialization when model changes
+  const chatId = `chat-${selectedModel}`;
+
+  const { messages, input, handleInputChange, handleSubmit: originalHandleSubmit, isLoading, error, reload, setMessages } = useChat({
+    id: chatId,
     api: '/api/chat',
     body: {
       model: selectedModel,
       documentId,
-      discipline, // Pass discipline to API
+      discipline,
+      // Pass personal API keys
+      personalApiKeys: settings?.ai?.personalApiKeys || {},
     },
   });
+
+  // Wrap handleSubmit to ensure current model is always sent
+  const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    originalHandleSubmit(e, {
+      body: {
+        model: selectedModel,
+        documentId,
+        discipline,
+        personalApiKeys: settings?.ai?.personalApiKeys || {},
+      },
+    });
+  }, [originalHandleSubmit, selectedModel, documentId, discipline, settings?.ai?.personalApiKeys]);
 
   const handleCopy = async (content: string, messageId: string) => {
     await navigator.clipboard.writeText(content);
@@ -74,37 +114,38 @@ export function ChatInterface({
           </div>
         </div>
 
-        {/* Model Selector */}
+        {/* Simplified Model Selector */}
         <select
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
           className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+          aria-label="Select AI model"
         >
-          <optgroup label="Premium Models">
-            <option value="anthropic">Claude Sonnet 3.5</option>
-            <option value="openai">GPT-4o</option>
-            <option value="google">Gemini 2.0 Flash</option>
+          <optgroup label="Choose AI Model">
+            {AI_MODELS.map((model) => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
           </optgroup>
-          <optgroup label="Free Models - Best Quality (OpenRouter)">
-            <option value="openrouter-hermes-405b">Nous Hermes 3 405B (Free)</option>
-            <option value="openrouter-llama-3.3-70b">Meta Llama 3.3 70B (Free)</option>
-            <option value="openrouter-qwen">Qwen 2.5 72B (Free)</option>
-            <option value="openrouter-gemini-2-flash">Google Gemini 2.0 Flash Exp (Free)</option>
-          </optgroup>
-          <optgroup label="Free Models - Coding (OpenRouter)">
-            <option value="openrouter-deepseek-chat">DeepSeek V3 (Free)</option>
-            <option value="openrouter-qwen-coder">Qwen 2.5 Coder 32B (Free)</option>
-          </optgroup>
-          <optgroup label="Free Models - Fast & Light (OpenRouter)">
-            <option value="openrouter-llama-3.2-3b">Meta Llama 3.2 3B (Free)</option>
-            <option value="openrouter-mistral-7b">Mistral 7B Instruct (Free)</option>
-            <option value="openrouter-phi-3-mini">Microsoft Phi-3 Mini (Free)</option>
-          </optgroup>
-          <optgroup label="Free Models - Other (OpenRouter)">
-            <option value="openrouter-mythomax-13b">MythoMax 13B (Free)</option>
-            <option value="openrouter-toppy-7b">Toppy M 7B (Free)</option>
+          <optgroup label="🧪 Testing (BYOK)">
+            {TESTING_MODELS.map((model) => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
           </optgroup>
         </select>
+
+        {/* API Key Warning */}
+        {!hasApiKey() && (
+          <div className="flex items-center gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
+            <Key className="w-4 h-4 flex-shrink-0" />
+            <p className="text-xs">
+              Add your API key in Settings to use {selectedModel === 'glm-4-plus' ? 'GLM-4.7' : selectedModel}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Messages */}

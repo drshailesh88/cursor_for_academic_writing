@@ -5,15 +5,14 @@
  * supporting multi-perspective analysis, iterative learning,
  * citation classification, and consensus visualization.
  *
+ * NOTE: Function re-exports have been moved to ./index.ts to avoid
+ * circular dependencies. This file should only contain types.
+ *
  * @see specs/001-deep-research/spec.md
  */
 
 import type { Timestamp } from 'firebase/firestore';
 import type { SearchResult } from '../types';
-
-// Re-export functions for convenience (avoiding circular dependencies)
-export { executeResearch } from './engine';
-export { synthesizeFindings as generateSynthesis } from './synthesis';
 
 // ============================================================================
 // RESEARCH MODES & CONFIGURATION

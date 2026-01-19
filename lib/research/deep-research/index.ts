@@ -74,6 +74,7 @@ export {
 // Synthesis and reporting
 export {
   synthesizeFindings,
+  synthesizeFindings as generateSynthesis, // Alias for backwards compatibility
   generateReport,
   qualityReview,
 } from './synthesis';
