@@ -16,21 +16,37 @@ export function ExportButtons({ title, content }: ExportButtonsProps) {
   const [exportingFormat, setExportingFormat] = useState<'docx' | 'pdf' | null>(null);
 
   const handleExport = async (format: 'docx' | 'pdf') => {
-    if (!content) return;
+    console.log('[Export] handleExport called with format:', format);
+    console.log('[Export] content length:', content?.length || 0);
+    console.log('[Export] title:', title);
+
+    if (!content) {
+      console.log('[Export] No content, returning early');
+      toast.error('No content to export');
+      return;
+    }
+
     setExportingFormat(format);
+    console.log('[Export] Starting export...');
+
     try {
       if (format === 'docx') {
+        console.log('[Export] Calling exportDocumentToDocx...');
         await exportDocumentToDocx({ title, content });
+        console.log('[Export] DOCX export completed successfully');
         toast.success('Exported to DOCX');
       } else {
+        console.log('[Export] Calling exportDocumentToPdf...');
         exportDocumentToPdf({ title, content });
+        console.log('[Export] PDF export completed successfully');
         toast.success('Exported to PDF');
       }
     } catch (error) {
-      console.error('Export failed:', error);
-      toast.error('Export failed. Please try again.');
+      console.error('[Export] Export failed:', error);
+      toast.error(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setExportingFormat(null);
+      console.log('[Export] Export process finished');
     }
   };
 

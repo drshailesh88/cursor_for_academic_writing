@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
-import { AI_MODELS } from '@/lib/settings/types';
+import { AI_MODELS, TESTING_MODELS } from '@/lib/settings/types';
 import { UserSettings } from '@/lib/settings/types';
 
 interface AISettingsTabProps {
@@ -35,6 +35,11 @@ export function AISettingsTab({ settings, onUpdate }: AISettingsTabProps) {
             {AI_MODELS.map((model) => (
               <SelectItem key={model.value} value={model.value}>
                 {model.label}
+              </SelectItem>
+            ))}
+            {TESTING_MODELS.map((model) => (
+              <SelectItem key={model.value} value={model.value}>
+                🧪 {model.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -131,6 +136,28 @@ export function AISettingsTab({ settings, onUpdate }: AISettingsTabProps) {
               })
             }
           />
+        </div>
+
+        {/* Z.AI GLM-4 Key (Testing) */}
+        <div className="space-y-2">
+          <Label htmlFor="zhipu-key">Z.AI API Key (GLM-4 Testing)</Label>
+          <Input
+            id="zhipu-key"
+            type="password"
+            placeholder="Enter your Z.AI API key..."
+            value={settings.personalApiKeys.zhipu || ''}
+            onChange={(e) =>
+              onUpdate({
+                personalApiKeys: {
+                  ...settings.personalApiKeys,
+                  zhipu: e.target.value || undefined,
+                },
+              })
+            }
+          />
+          <p className="text-xs text-muted-foreground">
+            Get your API key from <a href="https://open.bigmodel.cn/" target="_blank" rel="noopener noreferrer" className="text-primary underline">open.bigmodel.cn</a>
+          </p>
         </div>
       </div>
     </div>

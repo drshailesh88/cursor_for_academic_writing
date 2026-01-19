@@ -52,9 +52,9 @@ export const FEATURE_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'Research',
   },
 
-  // Papers shortcuts (Cmd/Ctrl + Shift + P)
+  // Papers shortcuts (Cmd/Ctrl + Shift + L for Library)
   openPapers: {
-    key: 'p',
+    key: 'l',
     modifiers: ['cmd', 'shift'],
     description: 'Open Paper Library',
     category: 'Papers',
@@ -70,7 +70,7 @@ export const FEATURE_SHORTCUTS: Record<string, ShortcutDefinition> = {
   // Note: Discovery requires a selected paper to explore citations
   // This shortcut is handled differently in the UI
 
-  // Presentation shortcuts
+  // Presentation shortcuts (Cmd/Ctrl + Shift + S for Slides)
   generatePresentation: {
     key: 'g',
     modifiers: ['cmd', 'shift'],
@@ -78,7 +78,7 @@ export const FEATURE_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'Presentations',
   },
   openPresentationMode: {
-    key: 'p',
+    key: 's',
     modifiers: ['cmd', 'shift'],
     description: 'Open Presentation Mode',
     category: 'Presentations',

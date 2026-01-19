@@ -68,7 +68,9 @@ export function usePapers(options: UsePapersOptions = {}) {
       const response = await fetch(`/api/papers?userId=${userId}`);
 
       if (!response.ok) {
-        throw new Error('Failed to fetch papers');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.hint || errorData.details || 'Failed to fetch papers';
+        throw new Error(errorMsg);
       }
 
       const { papers: fetchedPapers } = await response.json();

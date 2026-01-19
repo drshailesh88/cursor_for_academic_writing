@@ -35,8 +35,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ papers });
   } catch (error) {
     console.error('Error fetching papers:', error);
+
+    // Extract more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isIndexError = errorMessage.includes('index') || errorMessage.includes('Index');
+
     return NextResponse.json(
-      { error: 'Failed to fetch papers' },
+      {
+        error: 'Failed to fetch papers',
+        details: errorMessage,
+        hint: isIndexError
+          ? 'A Firestore composite index is required. Check the console for a link to create it.'
+          : 'Check Firebase permissions and configuration.'
+      },
       { status: 500 }
     );
   }
