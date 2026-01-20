@@ -129,6 +129,45 @@ export async function getResearchSession(sessionId: string): Promise<ResearchSes
   }
 }
 
+export async function createResearchSession(params: {
+  id?: string;
+  userId: string;
+  topic: string;
+  mode: ResearchMode;
+  status?: SessionStatus;
+  progress?: number;
+}): Promise<string> {
+  try {
+    const supabase = getAdminClient();
+    const payload: ResearchSessionInsert = {
+      id: params.id,
+      user_id: params.userId,
+      topic: params.topic,
+      mode: params.mode,
+      status: params.status ?? 'clarifying',
+      progress: params.progress ?? 0,
+      sources_collected: 0,
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('research_sessions')
+      .insert(payload)
+      .select('id')
+      .single();
+
+    if (error || !data) {
+      console.error('Error creating research session:', error);
+      throw error || new Error('Failed to create research session');
+    }
+
+    return data.id as string;
+  } catch (error) {
+    console.error('Error creating research session:', error);
+    throw error;
+  }
+}
+
 export async function deleteResearchSession(sessionId: string): Promise<void> {
   try {
     const supabase = getAdminClient();

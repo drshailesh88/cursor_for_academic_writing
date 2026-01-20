@@ -99,14 +99,16 @@ export class ResearchEngine extends EventEmitter {
     userId: string,
     topic: string,
     mode: ResearchMode,
-    configOverrides?: Partial<ResearchConfig>
+    configOverrides?: Partial<ResearchConfig>,
+    sessionIdOverride?: string
   ): Promise<string> {
-    const sessionId = this.generateSessionId();
+    const sessionId = sessionIdOverride || this.generateSessionId();
 
     // Get default config for mode
     const { RESEARCH_MODE_CONFIGS } = await import('./types');
     const baseConfig = RESEARCH_MODE_CONFIGS[mode];
     const config: ResearchConfig = { ...baseConfig, ...configOverrides };
+    const model = configOverrides?.model;
 
     // Create orchestrator
     const orchestrator = new OrchestratorAgent(sessionId);
@@ -119,6 +121,7 @@ export class ResearchEngine extends EventEmitter {
         topic,
         mode,
         config,
+        model,
         clarifications: [],
         perspectives: [],
         tree: { root: null as any, totalNodes: 0, maxDepthReached: 0 },

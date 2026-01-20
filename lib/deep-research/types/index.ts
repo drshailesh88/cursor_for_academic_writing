@@ -12,6 +12,7 @@ export interface ResearchSession {
   topic: string;
   mode: ResearchMode;
   config: ResearchConfig;
+  model?: ResearchModel;
 
   // Clarification phase
   clarifications: Clarification[];
@@ -68,7 +69,10 @@ export interface ResearchConfig {
   };
   articleTypes: ArticleType[];
   languages: string[];
+  model?: ResearchModel;
 }
+
+export type ResearchModel = 'deepseek' | 'claude' | 'openai' | 'gemini';
 
 export type DatabaseSource =
   | 'pubmed'

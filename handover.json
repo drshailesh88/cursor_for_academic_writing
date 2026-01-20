@@ -2,9 +2,9 @@
   "session_id": "2026-01-19-validation",
   "project": "Academic Writing Platform",
   "dev_server": "http://localhost:2550",
-  "phase": "VALIDATION 99% COMPLETE - AI CHAT MODEL NORMALIZATION FIXED",
+  "phase": "DEEP RESEARCH SESSION API WIRED",
   "progress": 99,
-  "status": "Fixed AI Chat 'Unknown model: anthropic' error. Legacy model names now normalized. User needs to hard refresh browser and test chat with GLM-4.7.",
+  "status": "Deep Research now creates real engine sessions (JSON) and streams via /api/research/[sessionId]/stream. Legacy SSE fallback retained for non-session callers.",
 
   "RESUME_INSTRUCTIONS": "=== READ THIS FIRST === 1) All critical bugs have been fixed. 2) User needs to: a) Add API key in Settings for AI Chat, b) Create Postgres index for papers collection if not exists. 3) Test the fixes by opening the app at localhost:2550. 4) Use browser automation for further testing if needed.",
 
@@ -40,13 +40,19 @@
       "files_modified": ["app/api/chat/route.ts"],
       "fix": "Added model name normalization at API level - legacy 'anthropic' value from Postgres settings is now converted to 'claude' before model creation. Both model instance creation and tool support check use normalized name.",
       "status": "FIXED"
+    },
+    {
+      "issue": "Deep Research Session API Mismatch",
+      "files_modified": ["app/api/research/route.ts", "lib/deep-research/engine.ts", "lib/deep-research/types/index.ts", "lib/supabase/research-sessions-admin.ts"],
+      "fix": "POST /api/research now returns JSON sessionId for the deep-research engine, persists the session, and streams via /api/research/[sessionId]/stream; model is propagated into session context.",
+      "status": "FIXED"
     }
   ],
 
   "current_task": {
-    "name": "Validation Complete - User Configuration Needed",
-    "description": "All code fixes applied. User needs to: 1) Configure API key in Settings for AI Chat, 2) Create Postgres index for papers collection if fetch error persists.",
-    "next_action": "1) Test fixes in browser, 2) Configure API key, 3) Verify all features work"
+    "name": "Deep Research Validation",
+    "description": "Deep Research session creation and streaming are wired. Verify with a real topic and ensure the selected model has a valid API key.",
+    "next_action": "1) Run Deep Research from the right panel, 2) Confirm SSE progress and results, 3) Check for any model key errors"
   },
 
   "parallel_test_results": {
@@ -172,7 +178,8 @@
     "1. USER CONFIG: Add API key in Settings for AI Chat",
     "2. USER CONFIG: Create Postgres index for papers collection (if error persists)",
     "3. OPTIONAL: Fix TipTap SSR hydration warning",
-    "4. VERIFY: Test all fixes in real browser"
+    "4. VERIFY: Test all fixes in real browser",
+    "5. VERIFY: Run Deep Research end-to-end with a configured model key"
   ],
 
   "project_context": {
@@ -182,5 +189,5 @@
     "user": "Dr. Shailesh Singh"
   },
 
-  "last_updated": "2026-01-19T19:15:00Z"
+  "last_updated": "2026-01-20T00:00:00Z"
 }
