@@ -138,7 +138,7 @@ specs/{feature-id}-{feature-name}/
 Before making changes, review:
 - `README.md` - Project overview and setup
 - `HANDOVER.md` - Complete implementation status and architecture
-- `FIREBASE_SETUP.md` - Supabase configuration guide
+- `SUPABASE_SETUP.md` - Supabase configuration guide
 
 ---
 

@@ -16,7 +16,7 @@ An AI-powered academic writing system with multi-database research, plagiarism d
 
 1. **HANDOVER.md** - Complete implementation status (50 features, 6 phases)
 2. **CLAUDE.md** - Coding standards and architecture
-3. **FIREBASE_SETUP.md** - Supabase configuration
+3. **SUPABASE_SETUP.md** - Supabase configuration
 
 ---
 

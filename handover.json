@@ -36,12 +36,6 @@
       "status": "FIXED"
     },
     {
-      "issue": "Missing Postgres Index Documentation",
-      "files_created": ["firestore.indexes.json"],
-      "fix": "Created firestore.indexes.json documenting all required composite indexes for the project",
-      "status": "DOCUMENTATION ADDED"
-    },
-    {
       "issue": "AI Chat 'Unknown model: anthropic' Error",
       "files_modified": ["app/api/chat/route.ts"],
       "fix": "Added model name normalization at API level - legacy 'anthropic' value from Postgres settings is now converted to 'claude' before model creation. Both model instance creation and tool support check use normalized name.",
@@ -171,8 +165,7 @@
     "9. Found and FIXED Papers library error handling",
     "10. FIXED Cmd+Shift+P keyboard shortcut conflict",
     "11. FIXED Presentation dialog closing on Select interaction",
-    "12. Created firestore.indexes.json for index documentation",
-    "13. Documented all features in validation checklist"
+    "12. Documented all features in validation checklist"
   ],
 
   "remaining_tasks": [

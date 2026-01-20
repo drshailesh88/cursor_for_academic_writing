@@ -1,6 +1,6 @@
-# Database Swap Plan: Supabase → Supabase
+# Database Swap Plan: Firebase → Supabase
 
-**Purpose:** Step-by-step instructions for migrating from Supabase to Supabase
+**Purpose:** Step-by-step instructions for migrating from Firebase to Supabase
 **For:** Any LLM agent to execute
 **Difficulty:** Medium
 **Estimated Time:** 4-6 hours
@@ -690,13 +690,13 @@ export async function resetToDefaults(userId: string): Promise<void> {
 
 ## Phase 4: Update Imports (1-2 hours)
 
-### Step 4.1: Find All Supabase Imports
+### Step 4.1: Find All Firebase Imports
 
 Search for these patterns and update:
 
 ```bash
-# Find all files importing from supabase
-grep -r "from '@/lib/supabase" --include="*.ts" --include="*.tsx" components/ lib/ app/
+# Find all files importing from firebase
+grep -r "from '@/lib/firebase" --include="*.ts" --include="*.tsx" components/ lib/ app/
 ```
 
 ### Step 4.2: Update Each Import
@@ -704,9 +704,9 @@ grep -r "from '@/lib/supabase" --include="*.ts" --include="*.tsx" components/ li
 **Pattern:**
 ```typescript
 // Before
-import { useAuth } from '@/lib/supabase/auth';
-import { createDocument, getDocument } from '@/lib/supabase/documents';
-import { getUserSettings } from '@/lib/supabase/settings';
+import { useAuth } from '@/lib/firebase/auth';
+import { createDocument, getDocument } from '@/lib/firebase/documents';
+import { getUserSettings } from '@/lib/firebase/settings';
 
 // After
 import { useAuth } from '@/lib/supabase/auth';

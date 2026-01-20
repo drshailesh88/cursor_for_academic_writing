@@ -282,7 +282,7 @@ cursor_for_academic_writing/
 ├── .env.local                          ✅ API keys (needs Supabase config)
 ├── .env.example                        ✅ Template
 ├── HANDOVER.md                         ✅ This file
-├── FIREBASE_SETUP.md                   ✅ Supabase setup guide
+├── SUPABASE_SETUP.md                   ✅ Supabase setup guide
 ├── README.md                           ✅ Project readme
 ├── package.json                        ✅ Dependencies
 ├── tsconfig.json                       ✅ ES2022 target
@@ -567,7 +567,7 @@ cursor_for_academic_writing/
 **CRITICAL:** Supabase must be configured before the app will work properly.
 
 ### Setup Steps:
-1. Follow the guide: `FIREBASE_SETUP.md`
+1. Follow the guide: `SUPABASE_SETUP.md`
 2. Create Supabase project at https://supabase.com/dashboard
 3. Enable Google Authentication (optional)
 4. Run `supabase/schema.sql` in SQL Editor

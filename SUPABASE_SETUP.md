@@ -2,7 +2,7 @@
 
 ## Database + Auth Setup for Academic Writing Platform
 
-This project now uses Supabase instead of Supabase. Follow these steps to get
+This project now uses Supabase instead of Firebase. Follow these steps to get
 Supabase running locally.
 
 ---
@@ -91,4 +91,3 @@ Open: http://localhost:2550
 - [ ] App runs on http://localhost:2550
 - [ ] Create document works
 - [ ] Auto-save writes to Supabase
-
