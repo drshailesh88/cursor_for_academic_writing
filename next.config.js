@@ -8,7 +8,7 @@ const nextConfig = {
     },
   },
   images: {
-    domains: ['firebasestorage.googleapis.com'],
+    domains: ['bifdjldvvxuyxixglgoa.supabase.co'],
   },
 }
 

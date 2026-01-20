@@ -5,8 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Force dynamic rendering (no static generation at build time)
 export const dynamic = 'force-dynamic';
-import { uploadPaperFile, createPaper, updatePaperStatus, updatePaperMetadata } from '@/lib/firebase/papers';
-import { savePaperContent } from '@/lib/firebase/papers';
+import { uploadPaperFile, createPaper, updatePaperStatus, updatePaperMetadata } from '@/lib/supabase/papers';
+import { savePaperContent } from '@/lib/supabase/papers';
 import { PDFProcessor } from '@/lib/papers/pdf-processor';
 
 // Max file size: 100MB
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const blob = new Blob([arrayBuffer], { type: file.type });
 
-    // Upload to Firebase Storage
+    // Upload to Supabase Storage
     const { url, path } = await uploadPaperFile(userId, tempId, blob, file.name);
 
-    // Create paper document in Firestore
+    // Create paper document in Supabase
     const paperId = await createPaper(userId, {
       fileName: file.name,
       fileSize: file.size,
@@ -114,7 +114,7 @@ async function processInBackground(
       buffer,
       fileName,
       async (status, progress) => {
-        // Update status in Firestore
+        // Update status in Supabase
         const statusMap: Record<string, string> = {
           'Extracting text...': 'extracting_text',
           'Extracting figures...': 'extracting_figures',

@@ -3,7 +3,7 @@
  *
  * This file runs before all tests and sets up:
  * - Testing Library DOM matchers
- * - Firebase mocks
+ * - Supabase mocks
  * - API mocks (MSW)
  * - Global test utilities
  */
@@ -11,145 +11,57 @@
 import '@testing-library/jest-dom/vitest';
 import { beforeAll, afterEach, afterAll, vi, expect } from 'vitest';
 import { server } from './mocks/server';
-import { mockAuth, mockFirestore, MockTimestamp } from './mocks/firebase';
+import { mockAuth, mockDatabase, MockTimestamp } from './mocks/supabase';
 
-// Mock Firebase SDK before any imports
-vi.mock('firebase/auth', async () => ({
-  getAuth: vi.fn(() => mockAuth),
-  signInWithPopup: vi.fn(async (auth: any, provider: any) => mockAuth.signInWithPopup()),
-  signOut: vi.fn(async (auth: any) => mockAuth.signOut()),
-  onAuthStateChanged: vi.fn((auth: any, callback: Function, errorCallback?: Function) =>
-    mockAuth.onAuthStateChanged(callback as any, errorCallback as any)
-  ),
-  GoogleAuthProvider: class MockGoogleAuthProvider { providerId = 'google.com'; },
-  createUserWithEmailAndPassword: vi.fn(async (auth: any, email: string, password: string) => {
-    // If there's already a current user (set via mockAuth.setUser), use it
-    if (mockAuth.currentUser) {
-      return { user: mockAuth.currentUser };
-    }
-    const result = await mockAuth.signInWithPopup();
-    return { user: { ...result.user, email } };
-  }),
-  signInWithEmailAndPassword: vi.fn(async (auth: any, email: string, password: string) => {
-    // If there's already a current user (set via mockAuth.setUser), use it
-    if (mockAuth.currentUser) {
-      return { user: mockAuth.currentUser };
-    }
-    const result = await mockAuth.signInWithPopup();
-    return { user: { ...result.user, email } };
-  }),
-  sendPasswordResetEmail: vi.fn(async () => Promise.resolve()),
-  updateProfile: vi.fn(async (user: any, updates: any) => {
-    // Update the current user with the profile updates
-    if (mockAuth.currentUser) {
-      Object.assign(mockAuth.currentUser, updates);
-    }
-    return Promise.resolve();
-  }),
+function createMockQuery() {
+  const query: any = {};
+  const noop = vi.fn(() => ({ data: null, error: null }));
+  query.select = vi.fn(() => query);
+  query.insert = vi.fn(() => ({ data: null, error: null }));
+  query.update = vi.fn(() => ({ data: null, error: null }));
+  query.upsert = vi.fn(() => ({ data: null, error: null }));
+  query.delete = vi.fn(() => ({ data: null, error: null }));
+  query.eq = vi.fn(() => query);
+  query.in = vi.fn(() => query);
+  query.order = vi.fn(() => query);
+  query.limit = vi.fn(() => query);
+  query.single = vi.fn(noop);
+  query.maybeSingle = vi.fn(noop);
+  query.contains = vi.fn(() => query);
+  query.ilike = vi.fn(() => query);
+  return query;
+}
+
+const mockSupabaseClient = {
+  auth: {
+    getSession: vi.fn(async () => ({ data: { session: null }, error: null })),
+    getUser: vi.fn(async () => ({ data: { user: mockAuth.currentUser }, error: null })),
+    onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+    signInWithOAuth: vi.fn(async () => ({ data: null, error: null })),
+    signInWithPassword: vi.fn(async () => ({ data: { user: mockAuth.currentUser }, error: null })),
+    signUp: vi.fn(async () => ({ data: { user: mockAuth.currentUser }, error: null })),
+    resetPasswordForEmail: vi.fn(async () => ({ data: null, error: null })),
+    updateUser: vi.fn(async () => ({ data: { user: mockAuth.currentUser }, error: null })),
+    signOut: vi.fn(async () => ({ error: null })),
+  },
+  from: vi.fn(() => createMockQuery()),
+  storage: {
+    from: vi.fn(() => ({
+      upload: vi.fn(async () => ({ data: null, error: null })),
+      getPublicUrl: vi.fn(() => ({ data: { publicUrl: '' } })),
+    })),
+  },
+  rpc: vi.fn(async () => ({ data: null, error: null })),
+  database: mockDatabase,
+  timestamp: MockTimestamp,
+};
+
+vi.mock('@supabase/ssr', async () => ({
+  createBrowserClient: vi.fn(() => mockSupabaseClient),
 }));
 
-vi.mock('firebase/firestore', async () => ({
-  getFirestore: vi.fn(() => mockFirestore),
-  doc: vi.fn((pathOrRef: any, ...pathSegments: string[]) => {
-    if (typeof pathOrRef === 'string') {
-      // doc(db, 'collection', 'id') or doc(db, 'collection/id')
-      const fullPath = [pathOrRef, ...pathSegments].filter(Boolean).join('/');
-      return mockFirestore.doc(fullPath);
-    } else if (pathOrRef && typeof pathOrRef.path === 'string') {
-      // doc(collectionRef) or doc(collectionRef, 'id')
-      if (pathSegments.length > 0) {
-        // doc(collectionRef, 'id')
-        return mockFirestore.collection(pathOrRef.path).doc(pathSegments[0]);
-      } else {
-        // doc(collectionRef) - auto-generate ID
-        return mockFirestore.collection(pathOrRef.path).doc();
-      }
-    } else {
-      // Fallback
-      const fullPath = pathSegments.join('/');
-      return mockFirestore.doc(fullPath);
-    }
-  }),
-  collection: vi.fn((pathOrRef: any, ...pathSegments: string[]) => {
-    if (typeof pathOrRef === 'string') {
-      // collection(db, 'documents') or collection(db, 'documents', 'id', 'subcollection')
-      const fullPath = [pathOrRef, ...pathSegments].filter(Boolean).join('/');
-      return mockFirestore.collection(fullPath);
-    } else if (pathOrRef && typeof pathOrRef.path === 'string') {
-      // collection(docRef, 'subcollection')
-      const fullPath = [pathOrRef.path, ...pathSegments].filter(Boolean).join('/');
-      return mockFirestore.collection(fullPath);
-    } else {
-      // Fallback: pathOrRef is Firestore instance
-      const fullPath = pathSegments.join('/');
-      return mockFirestore.collection(fullPath);
-    }
-  }),
-  getDoc: vi.fn(async (ref: any) => ref.get()),
-  getDocs: vi.fn(async (query: any) => query.get()),
-  setDoc: vi.fn(async (ref: any, data: any, options?: any) => {
-    if (options?.merge) {
-      const existing = await ref.get();
-      if (existing.exists()) {
-        return ref.update(data);
-      }
-    }
-    return ref.set(data);
-  }),
-  updateDoc: vi.fn(async (ref: any, data: any) => ref.update(data)),
-  deleteDoc: vi.fn(async (ref: any) => ref.delete()),
-  query: vi.fn((collection: any, ...queryConstraints: any[]) => {
-    let query = collection;
-    for (const constraint of queryConstraints) {
-      if (constraint._type === 'where') {
-        query = query.where(constraint._field, constraint._op, constraint._value);
-      } else if (constraint._type === 'orderBy') {
-        query = query.orderBy(constraint._field, constraint._direction);
-      } else if (constraint._type === 'limit') {
-        query = query.limit(constraint._limit);
-      }
-    }
-    return query;
-  }),
-  where: vi.fn((field: string, op: string, value: any) => ({
-    _type: 'where',
-    _field: field,
-    _op: op,
-    _value: value,
-  })),
-  orderBy: vi.fn((field: string, direction: 'asc' | 'desc' = 'asc') => ({
-    _type: 'orderBy',
-    _field: field,
-    _direction: direction,
-  })),
-  limit: vi.fn((count: number) => ({
-    _type: 'limit',
-    _limit: count,
-  })),
-  onSnapshot: vi.fn((query: any, callback: Function, errorCallback?: Function) => {
-    // Call immediately with current data
-    query.get().then((snapshot: any) => callback(snapshot));
-    // Return unsubscribe function
-    return vi.fn();
-  }),
-  writeBatch: vi.fn((db: any) => {
-    // db might be a function (getFirebaseDb) or the mockFirestore instance
-    const firestoreInstance = typeof db === 'function' ? mockFirestore : db;
-    return firestoreInstance.writeBatch();
-  }),
-  serverTimestamp: vi.fn(() => MockTimestamp.now()),
-  Timestamp: MockTimestamp,
-  FieldValue: class FieldValue {},
-}));
-
-vi.mock('firebase/app', async () => ({
-  initializeApp: vi.fn(() => ({ name: '[DEFAULT]', options: {} })),
-  getApps: vi.fn(() => []),
-  getApp: vi.fn(() => ({ name: '[DEFAULT]', options: {} })),
-}));
-
-vi.mock('firebase/storage', async () => ({
-  getStorage: vi.fn(() => ({})),
+vi.mock('@supabase/supabase-js', async () => ({
+  createClient: vi.fn(() => mockSupabaseClient),
 }));
 
 // Mock pptxgenjs for presentation export tests
@@ -326,7 +238,7 @@ declare module 'vitest' {
 }
 
 // Global test utilities
-export const waitForFirebase = () => new Promise((resolve) => setTimeout(resolve, 100));
+export const waitForSupabase = () => new Promise((resolve) => setTimeout(resolve, 100));
 
 export const mockUser = {
   uid: 'test-user-123',

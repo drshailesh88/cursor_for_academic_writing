@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect, vi } from 'vitest';
-import { mockFirestore, mockAuth, resetFirebaseMocks } from '../mocks/firebase';
+import { mockDatabase, mockAuth, resetSupabaseMocks } from '../mocks/supabase';
 import { createMockDocument, createMockReference, createMockUser } from '../mocks/test-data';
 
 describe('Test Infrastructure', () => {
@@ -41,13 +41,13 @@ describe('Test Infrastructure', () => {
     });
   });
 
-  describe('Firebase Mock', () => {
+  describe('Supabase Mock', () => {
     beforeEach(() => {
-      resetFirebaseMocks();
+      resetSupabaseMocks();
     });
 
-    test('mockFirestore can store and retrieve data', async () => {
-      const docRef = mockFirestore.doc('documents/test-doc');
+    test('mockDatabase can store and retrieve data', async () => {
+      const docRef = mockDatabase.doc('documents/test-doc');
       await docRef.set({ title: 'Test', content: 'Hello' });
 
       const snapshot = await docRef.get();
@@ -66,12 +66,12 @@ describe('Test Infrastructure', () => {
       expect(mockAuth.currentUser).toBeNull();
     });
 
-    test('mockFirestore queries work', async () => {
-      await mockFirestore.doc('documents/doc1').set({ userId: 'user1', title: 'Doc 1' });
-      await mockFirestore.doc('documents/doc2').set({ userId: 'user1', title: 'Doc 2' });
-      await mockFirestore.doc('documents/doc3').set({ userId: 'user2', title: 'Doc 3' });
+    test('mockDatabase queries work', async () => {
+      await mockDatabase.doc('documents/doc1').set({ userId: 'user1', title: 'Doc 1' });
+      await mockDatabase.doc('documents/doc2').set({ userId: 'user1', title: 'Doc 2' });
+      await mockDatabase.doc('documents/doc3').set({ userId: 'user2', title: 'Doc 3' });
 
-      const query = mockFirestore.collection('documents').where('userId', '==', 'user1');
+      const query = mockDatabase.collection('documents').where('userId', '==', 'user1');
       const snapshot = await query.get();
 
       expect(snapshot.size).toBe(2);

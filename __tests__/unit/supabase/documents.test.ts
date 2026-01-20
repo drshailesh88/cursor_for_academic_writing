@@ -1,5 +1,5 @@
 /**
- * Firebase Document CRUD Tests
+ * Supabase Document CRUD Tests
  *
  * Tests document operations including:
  * - Document Creation
@@ -11,7 +11,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { mockFirestore, resetFirebaseMocks, MockTimestamp } from '../../mocks/firebase';
+import { mockDatabase, resetSupabaseMocks, MockTimestamp } from '../../mocks/supabase';
 import { createMockDocument, createMockUser, edgeCases } from '../../mocks/test-data';
 
 // Import document functions
@@ -25,13 +25,13 @@ import {
   getRecentDocuments,
   renameDocument,
   updateDocumentDiscipline,
-} from '@/lib/firebase/documents';
+} from '@/lib/supabase/documents';
 
-describe('Firebase Document CRUD', () => {
+describe('Supabase Document CRUD', () => {
   let testUserId: string;
 
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
     testUserId = createMockUser().uid;
   });
 
@@ -42,7 +42,7 @@ describe('Firebase Document CRUD', () => {
       expect(docId).toBeDefined();
       expect(docId).toContain('mock-id-');
 
-      // Verify document exists in Firestore
+      // Verify document exists in Supabase
       const doc = await getDocument(docId);
       expect(doc).not.toBeNull();
       expect(doc?.userId).toBe(testUserId);
@@ -88,13 +88,13 @@ describe('Firebase Document CRUD', () => {
       expect(doc?.title.length).toBe(1000);
     });
 
-    test.skip('throws error on Firestore failure', async () => {
-      // SKIPPED: This test requires integration-level mocking of Firebase SDK functions
+    test.skip('throws error on Supabase failure', async () => {
+      // SKIPPED: This test requires integration-level mocking of Supabase SDK functions
       // (setDoc, deleteDoc) which are mocked at module level in setup.ts.
-      // The mockFirestore.doc().set approach doesn't intercept the setDoc() function call.
-      // Mock Firestore error
-      const setSpy = vi.spyOn(mockFirestore.collection('documents').doc(), 'set')
-        .mockRejectedValueOnce(new Error('Firestore error'));
+      // The mockDatabase.doc().set approach doesn't intercept the setDoc() function call.
+      // Mock Supabase error
+      const setSpy = vi.spyOn(mockDatabase.collection('documents').doc(), 'set')
+        .mockRejectedValueOnce(new Error('Supabase error'));
 
       await expect(createDocument(testUserId, 'Test')).rejects.toThrow();
 
@@ -117,9 +117,9 @@ describe('Firebase Document CRUD', () => {
       expect(doc).toBeNull();
     });
 
-    test('handles Firestore errors gracefully', async () => {
-      const getSpy = vi.spyOn(mockFirestore.doc('documents/test'), 'get')
-        .mockRejectedValueOnce(new Error('Firestore error'));
+    test('handles Supabase errors gracefully', async () => {
+      const getSpy = vi.spyOn(mockDatabase.doc('documents/test'), 'get')
+        .mockRejectedValueOnce(new Error('Supabase error'));
 
       const doc = await getDocument('test');
       expect(doc).toBeNull();
@@ -270,11 +270,11 @@ describe('Firebase Document CRUD', () => {
       await expect(deleteDocument('non-existent')).resolves.not.toThrow();
     });
 
-    test.skip('throws error on Firestore failure', async () => {
-      // SKIPPED: This test requires integration-level mocking of Firebase SDK functions
+    test.skip('throws error on Supabase failure', async () => {
+      // SKIPPED: This test requires integration-level mocking of Supabase SDK functions
       // (deleteDoc) which is mocked at module level in setup.ts.
-      // The mockFirestore.doc().delete approach doesn't intercept the deleteDoc() function call.
-      const deleteSpy = vi.spyOn(mockFirestore.doc('documents/test'), 'delete')
+      // The mockDatabase.doc().delete approach doesn't intercept the deleteDoc() function call.
+      const deleteSpy = vi.spyOn(mockDatabase.doc('documents/test'), 'delete')
         .mockRejectedValueOnce(new Error('Delete failed'));
 
       await expect(deleteDocument('test')).rejects.toThrow();
@@ -367,8 +367,8 @@ describe('Firebase Document CRUD', () => {
       expect(docs).toEqual([]);
     });
 
-    test('handles Firestore query errors gracefully', async () => {
-      const getSpy = vi.spyOn(mockFirestore.collection('documents'), 'get')
+    test('handles Supabase query errors gracefully', async () => {
+      const getSpy = vi.spyOn(mockDatabase.collection('documents'), 'get')
         .mockRejectedValueOnce(new Error('Query failed'));
 
       const docs = await getUserDocuments('test-user');

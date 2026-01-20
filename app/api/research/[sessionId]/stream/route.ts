@@ -4,10 +4,9 @@ import { researchEngine, type EngineEvent } from '@/lib/deep-research/engine';
 import {
   updateSessionStatus,
   addSessionClarifications,
-  addSessionPerspectives,
   addSessionSources,
   setSessionSynthesis,
-} from '@/lib/firebase/research-sessions';
+} from '@/lib/supabase/research-sessions-admin';
 
 /**
  * GET /api/research/[sessionId]/stream - SSE stream for real-time progress
@@ -45,7 +44,7 @@ export async function GET(
         // Send event to client
         sendEvent(event);
 
-        // Persist important events to Firebase
+        // Persist important events to Supabase
         try {
           switch (event.type) {
             case 'status':
@@ -61,7 +60,7 @@ export async function GET(
               await addSessionSources(sessionId, [event.source]);
               break;
             case 'synthesis_ready':
-              await setSessionSynthesis(sessionId, event.synthesis);
+              await setSessionSynthesis(sessionId, event.synthesis as unknown as Record<string, unknown>);
               break;
             case 'complete':
               await updateSessionStatus(sessionId, 'complete', 100);

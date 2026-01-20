@@ -6,13 +6,13 @@ import {
   createVersion,
   getVersions,
   getVersion,
-  deleteVersion as deleteVersionFromFirestore,
-  restoreVersion as restoreVersionToFirestore,
+  deleteVersion as deleteVersionFromSupabase,
+  restoreVersion as restoreVersionToSupabase,
   updateVersionLabel,
   getVersionStats,
 } from '@/lib/collaboration/versions';
 import type { DocumentVersion, CreateVersionOptions } from '@/lib/collaboration/types';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { toast } from 'sonner';
 
 interface UseVersionsOptions {
@@ -190,7 +190,7 @@ export function useVersions(options: UseVersionsOptions = {}) {
       }
 
       try {
-        await restoreVersionToFirestore(
+        await restoreVersionToSupabase(
           documentId,
           versionId,
           user.uid,
@@ -227,7 +227,7 @@ export function useVersions(options: UseVersionsOptions = {}) {
       }
 
       try {
-        await deleteVersionFromFirestore(documentId, versionId);
+        await deleteVersionFromSupabase(documentId, versionId);
 
         // Remove from local state
         setVersions((prev) => prev.filter((v) => v.id !== versionId));

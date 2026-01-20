@@ -1,7 +1,7 @@
 // Paper Metadata Enrichment
 // Enriches paper metadata from external sources: CrossRef, PubMed, OpenAlex, ORCID
 
-import type { PaperAuthor } from '@/lib/firebase/schema';
+import type { PaperAuthor } from '@/lib/supabase/schema';
 import { pubmedProvider } from '@/lib/deep-research/sources/pubmed-provider';
 import { crossrefProvider } from '@/lib/deep-research/sources/crossref-provider';
 import type { EnrichmentResult, EnrichmentSource } from './types';

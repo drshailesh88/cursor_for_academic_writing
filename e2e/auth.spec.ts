@@ -45,12 +45,12 @@ test.describe('Authentication', () => {
     // Wait for auth to initialize
     await page.waitForTimeout(2000);
 
-    // Check that Firebase auth has initialized
-    const firebaseInitialized = await page.evaluate(() => {
+    // Check that Supabase auth has initialized
+    const supabaseInitialized = await page.evaluate(() => {
       return typeof window !== 'undefined';
     });
 
-    expect(firebaseInitialized).toBeTruthy();
+    expect(supabaseInitialized).toBeTruthy();
   });
 
   test('should have proper page structure', async ({ page }) => {
@@ -86,10 +86,10 @@ test.describe('Authentication', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Filter out known Firebase auth errors in test environment
+    // Filter out known Supabase auth errors in test environment
     const relevantErrors = errors.filter(
       (error) =>
-        !error.includes('Firebase') &&
+        !error.includes('Supabase') &&
         !error.includes('auth/') &&
         !error.includes('CORS') &&
         !error.includes('ERR_BLOCKED_BY_CLIENT')
@@ -178,7 +178,7 @@ test.describe('Authentication', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    // Some requests might fail in test environment (Firebase, etc.)
+    // Some requests might fail in test environment (Supabase, etc.)
     // but the page should still load
     const pageContent = await page.content();
     expect(pageContent.length).toBeGreaterThan(100);

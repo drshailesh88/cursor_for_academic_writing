@@ -5,7 +5,7 @@
 An AI-powered academic writing system with multi-database research integration, plagiarism detection, collaboration features, and professional document export.
 
 **Status:** All 6 Phases Complete (50 features)
-**Tech Stack:** Next.js 14, TypeScript, TipTap, Firebase, Vercel AI SDK
+**Tech Stack:** Next.js 14, TypeScript, TipTap, Supabase, Vercel AI SDK
 **Port:** localhost:2550
 
 ---
@@ -16,7 +16,7 @@ Before making ANY changes, read:
 
 1. **HANDOVER.md** - Complete implementation status (50 features, 6 phases)
 2. **CLAUDE.md** - Coding standards and architecture
-3. **FIREBASE_SETUP.md** - Firebase configuration guide
+3. **FIREBASE_SETUP.md** - Supabase configuration guide
 
 ---
 
@@ -44,8 +44,8 @@ Before making ANY changes, read:
 - **Layout:** Three resizable panels
 
 ### Backend
-- **Auth:** Firebase Authentication (Google Sign-in)
-- **Database:** Firestore with subcollections
+- **Auth:** Supabase Auth (Google Sign-in)
+- **Database:** Supabase Postgres
 - **AI:** Vercel AI SDK (14 models supported)
 - **Research:** 4 academic databases
 
@@ -84,7 +84,7 @@ components/
     └── ai-detection-panel.tsx    # GPTZero-style detection
 
 lib/
-├── firebase/                     # Auth, Firestore, schema
+├── supabase/                     # Supabase-backed auth/data layer (legacy path)
 ├── hooks/
 │   ├── use-document.ts           # Document management
 │   ├── use-plagiarism.ts         # Plagiarism detection
@@ -119,7 +119,7 @@ type Document = { }
 ### File Naming
 - Components: `kebab-case.tsx` (e.g., `plagiarism-panel.tsx`)
 - Hooks: `use-kebab-case.ts` (e.g., `use-plagiarism.ts`)
-- Types in: `lib/firebase/schema.ts`, `lib/*/types.ts`
+- Types in: `lib/supabase/schema.ts`, `lib/*/types.ts`
 
 ### Import Order
 ```typescript
@@ -130,13 +130,13 @@ import { useState, useEffect } from 'react';
 import { Editor } from '@tiptap/react';
 
 // 3. Internal lib
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 
 // 4. Components
 import { Button } from '@/components/ui/button';
 
 // 5. Types
-import { Document } from '@/lib/firebase/schema';
+import { Document } from '@/lib/supabase/schema';
 ```
 
 ---
@@ -219,7 +219,7 @@ const { isTracking, acceptChange, rejectChange } = useTrackChanges(docId);
 
 ---
 
-## Firebase Schema
+## Supabase Schema
 
 ```
 /users/{userId}
@@ -373,18 +373,18 @@ node_modules/       # Dependencies
 ### Security
 - **NEVER commit `.env.local`**
 - **NEVER hardcode API keys**
-- Validate user input before Firestore
+- Validate user input before database writes
 - Check user ownership for documents
 
 ### Performance
 - Debounce auto-save (30 seconds)
 - Debounce analysis (1 second)
-- Use Firestore indexes
+- Use Postgres indexes
 - Lazy load heavy components
 
 ### Code Quality
 - No `any` types
-- Error handling for all Firebase ops
+- Error handling for all Supabase ops
 - Comments explain WHY not WHAT
 - Match existing patterns
 
@@ -424,7 +424,7 @@ npx tsc --noEmit     # Type check
 **Key Files:**
 - `HANDOVER.md` - All 50 features documented
 - `.env.local` - API keys (never commit)
-- `lib/firebase/schema.ts` - Data types
+- `lib/supabase/schema.ts` - Data types
 
 ---
 

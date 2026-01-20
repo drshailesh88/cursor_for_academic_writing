@@ -56,7 +56,7 @@ npm run test:ui
 ```
 __tests__/
 ├── mocks/                    # Shared mocks
-│   ├── firebase.ts           # Firebase SDK mocks
+│   ├── supabase.ts           # Supabase SDK mocks
 │   ├── handlers.ts           # MSW API handlers
 │   ├── server.ts             # MSW server setup
 │   └── test-data.ts          # Faker-based test data
@@ -65,7 +65,7 @@ __tests__/
     ├── citations/            # Citation system tests
     ├── collaboration/        # Collaboration feature tests
     ├── export/               # Export functionality tests
-    ├── firebase/             # Firebase/auth tests
+    ├── supabase/             # Supabase/auth tests
     ├── plagiarism/           # Plagiarism detection tests
     ├── presentations/        # Presentation generator tests
     ├── research/             # Research API tests
@@ -114,15 +114,15 @@ describe('Feature Name', () => {
 
 ## Mocking Guidelines
 
-### Firebase Mocks
+### Supabase Mocks
 
-The project uses comprehensive Firebase mocks in `__tests__/mocks/firebase.ts`:
+The project uses comprehensive Supabase mocks in `__tests__/mocks/supabase.ts`:
 
 ```typescript
-import { mockAuth, mockFirestore } from '@/__tests__/mocks/firebase';
+import { mockAuth, mockDatabase } from '@/__tests__/mocks/supabase';
 
 // Auth is automatically mocked via setup.ts
-// Firestore operations use mockFirestore
+// Database operations use mockDatabase
 ```
 
 ### API Mocks (MSW)
@@ -161,7 +161,7 @@ Tests run automatically on:
 
 1. **Authentication**: Sign-in, session management
 2. **Document CRUD**: Create, read, update, delete
-3. **Auto-save**: Debounced saves to Firestore
+3. **Auto-save**: Debounced saves to Postgres
 4. **Citation Formatting**: All 10 citation styles
 5. **Export**: DOCX, PDF, PPTX generation
 
@@ -222,9 +222,9 @@ npm run test:run -- --testTimeout=30000
 2. Verify mock path matches actual import
 3. Clear mocks in `beforeEach`
 
-### Firebase Mock Issues
+### Supabase Mock Issues
 
-The Firebase mock in `setup.ts` must match SDK method signatures exactly.
+The Supabase mock in `setup.ts` must match SDK method signatures exactly.
 
 ## Adding Tests for New Features
 

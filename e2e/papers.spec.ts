@@ -397,7 +397,7 @@ test.describe('Papers - Research Matrix', () => {
     expect(typeof hasExport).toBe('boolean');
   });
 
-  test('should save matrix to Firestore', async ({ page }) => {
+  test('should save matrix to Postgres', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 

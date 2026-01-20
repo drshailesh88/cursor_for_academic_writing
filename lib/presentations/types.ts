@@ -3,7 +3,6 @@
  * Phase 7A: Foundation Types
  */
 
-import { Timestamp } from 'firebase/firestore';
 
 // ============================================================================
 // SLIDE TYPES
@@ -342,8 +341,8 @@ export interface Presentation {
   theme: ThemeId;
   slides: Slide[];
   settings: PresentationSettings;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // ============================================================================

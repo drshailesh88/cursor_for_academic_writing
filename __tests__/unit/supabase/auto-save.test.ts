@@ -11,11 +11,12 @@
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { mockAuth, mockFirestore, resetFirebaseMocks } from '../../mocks/firebase';
+import { mockAuth, mockDatabase, resetSupabaseMocks } from '../../mocks/supabase';
 import { createMockUser, createMockDocument } from '../../mocks/test-data';
 import { useDocument } from '@/lib/hooks/use-document';
-import { createDocument, getDocument } from '@/lib/firebase/documents';
-import { updateDoc } from 'firebase/firestore';
+import { createDocument, getDocument } from '@/lib/supabase/documents';
+
+const updateDoc = vi.fn();
 
 // Mock toast notifications - define factory inline to avoid hoisting issues
 vi.mock('sonner', () => ({
@@ -33,7 +34,7 @@ describe('Auto-Save Functionality', () => {
   let testDocId: string;
 
   beforeEach(async () => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
     vi.clearAllTimers();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.clearAllMocks();
@@ -43,7 +44,7 @@ describe('Auto-Save Functionality', () => {
     testUserId = user.uid;
     mockAuth.setUser(user);
 
-    // Create a test document and ensure it exists in mock Firestore
+    // Create a test document and ensure it exists in mock database
     testDocId = await createDocument(testUserId, 'Test Document');
 
     // Verify document was created
@@ -376,7 +377,7 @@ describe('Auto-Save Functionality', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Mock Firestore updateDoc to throw an error
+      // Mock updateDoc to throw an error
       const updateDocMock = vi.mocked(updateDoc);
       updateDocMock.mockRejectedValueOnce(new Error('Save failed'));
 
@@ -610,7 +611,7 @@ describe('Auto-Save Functionality', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Mock Firestore updateDoc to throw an error
+      // Mock updateDoc to throw an error
       const updateDocMock = vi.mocked(updateDoc);
       updateDocMock.mockRejectedValueOnce(new Error('Network error'));
 

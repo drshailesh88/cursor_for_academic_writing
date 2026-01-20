@@ -28,7 +28,6 @@ import {
 
 import { extractContent } from './extractors/content-extractor';
 import { detectVisualizations } from './analyzers/visualization-detector';
-import { Timestamp } from 'firebase/firestore';
 
 // ============================================================================
 // GENERATION METADATA
@@ -75,7 +74,7 @@ export async function generatePresentation(
   } else if (config.source === 'text' && config.sourceText) {
     sourceText = config.sourceText;
   } else if (config.source === 'document' && config.sourceId) {
-    // TODO: Fetch document from Firestore
+    // TODO: Fetch document from Supabase
     throw new Error('Document source not yet implemented');
   } else if (config.source === 'topic') {
     // TODO: Generate content from topic using AI
@@ -768,7 +767,7 @@ export function createPresentationFromGeneration(
   title?: string,
   documentId?: string
 ): Omit<Presentation, 'id'> {
-  const now = Timestamp.now();
+  const now = new Date();
 
   return {
     userId,

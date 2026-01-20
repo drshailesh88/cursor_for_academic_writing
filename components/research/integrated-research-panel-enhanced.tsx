@@ -25,7 +25,7 @@ import { ResearchResults as ResearchResultsComponent } from './research-results'
 import { ResearchHistory } from './research-history';
 import type { ResearchMode, DatabaseSource, ArticleType } from '@/lib/research/deep-research/types';
 import { getDefaultConfig } from '@/lib/research/deep-research/types';
-import { getResearchSession } from '@/lib/firebase/research-sessions';
+import { getResearchSession } from '@/lib/supabase/research-sessions';
 
 /**
  * Props for IntegratedResearchPanel

@@ -11,7 +11,7 @@ import {
   useEffect,
   ReactNode,
 } from 'react';
-import type { Paper, PaperMetadata, PaperContent } from '@/lib/firebase/schema';
+import type { Paper, PaperMetadata, PaperContent } from '@/lib/supabase/schema';
 
 interface PaperLibraryContextValue {
   // State

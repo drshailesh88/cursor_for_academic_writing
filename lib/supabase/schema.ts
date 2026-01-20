@@ -1,4 +1,4 @@
-// Firestore Data Schema and Types
+// Supabase Data Schema and Types
 
 // Discipline types for multi-discipline support
 export type DisciplineId =
@@ -67,8 +67,8 @@ export interface DocumentMetadata {
   discipline?: DisciplineId;
 }
 
-// Firestore collection names
-export const COLLECTIONS = {
+// Supabase table names (legacy labels used across the codebase)
+export const TABLES = {
   USERS: 'users',
   DOCUMENTS: 'documents',
   CITATIONS: 'citations',
@@ -76,12 +76,12 @@ export const COLLECTIONS = {
   PAPERS: 'papers',
   PAPER_CONTENTS: 'paperContents',
   PRESENTATIONS: 'presentations',
-  // Citation library collections (nested under users)
-  REFERENCES: 'references',      // users/{userId}/references
-  LIBRARY_FOLDERS: 'folders',    // users/{userId}/folders
-  LIBRARY_LABELS: 'labels',      // users/{userId}/labels
-  // Version history (nested under documents)
-  VERSIONS: 'versions',          // documents/{documentId}/versions
+  // Citation library tables
+  REFERENCES: 'references',
+  LIBRARY_FOLDERS: 'folders',
+  LIBRARY_LABELS: 'labels',
+  // Version history
+  VERSIONS: 'versions',
 } as const;
 
 // ============================================================================
@@ -115,7 +115,7 @@ export interface PaperAuthor {
 }
 
 /**
- * Paper document stored in Firestore
+ * Paper record stored in Supabase
  */
 export interface Paper {
   id: string;
@@ -349,7 +349,7 @@ export interface PaperMetadata {
   tags?: string[];
 }
 
-// Helper function to convert Firestore timestamp to Date
+// Helper function to convert database timestamps to Date
 export function timestampToDate(timestamp: any): Date {
   if (timestamp?.toDate) {
     return timestamp.toDate();
@@ -365,7 +365,7 @@ export function timestampToDate(timestamp: any): Date {
 // ============================================================================
 
 /**
- * Research session stored in Firestore
+ * Research session stored in Supabase
  * Simplified version of the full ResearchSession from deep-research/types.ts
  */
 export interface ResearchSession {

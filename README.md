@@ -62,7 +62,7 @@ An AI-powered academic writing platform with PubMed research integration, authen
 ### Testing & Quality
 - **1,822 Tests Passing:** 100% pass rate across all features
 - **TypeScript Strict Mode:** No `any` types
-- **Full Firebase Integration:** Auth, Firestore, Storage
+- **Supabase Integration:** Auth, Postgres, Storage
 
 ## 🚀 Quick Start
 
@@ -70,7 +70,7 @@ An AI-powered academic writing platform with PubMed research integration, authen
 
 - Node.js 18+ (for web app)
 - API keys for at least one LLM provider (OpenAI, Anthropic, or Google)
-- Firebase project (for web app persistence)
+- Supabase project (for web app persistence)
 
 ### Setup
 
@@ -103,8 +103,8 @@ An AI-powered academic writing platform with PubMed research integration, authen
 - **Language:** TypeScript
 - **UI:** shadcn/ui + Tailwind CSS
 - **Editor:** Novel (TipTap)
-- **Database:** Firebase Firestore
-- **Auth:** Firebase Auth
+- **Database:** Supabase Postgres
+- **Auth:** Supabase Auth
 - **AI:** Vercel AI SDK
 - **Research:** PubMed MCP Server
 
@@ -119,7 +119,7 @@ An AI-powered academic writing platform with PubMed research integration, authen
 
 - **Never commit** `.env.local` or any files containing API keys
 - All secrets are in `.env.local` only
-- Firebase security rules enforce user data isolation
+- Supabase RLS policies enforce user data isolation
 - See `.gitignore` for protected files
 
 ## 📖 Documentation

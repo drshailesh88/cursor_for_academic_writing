@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import type { Paper, PaperContent, Citation } from '@/lib/firebase/schema';
+import type { Paper, PaperContent, Citation } from '@/lib/supabase/schema';
 
 interface Message {
   id: string;

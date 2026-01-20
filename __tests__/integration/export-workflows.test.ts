@@ -13,7 +13,7 @@
  */
 
 import { describe, test, expect, beforeEach, vi, beforeAll } from 'vitest';
-import { MockTimestamp } from '../mocks/firebase';
+import { MockTimestamp } from '../mocks/supabase';
 
 // ============================================================================
 // MOCKS (must be defined before imports)

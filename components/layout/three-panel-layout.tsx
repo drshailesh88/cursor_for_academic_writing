@@ -35,11 +35,11 @@ import { FeatureTabs } from '@/components/layout/feature-tabs';
 import { TabContent } from '@/components/layout/tab-content';
 import type { FeatureTab } from '@/components/layout/feature-tabs';
 import { useDocument } from '@/lib/hooks/use-document';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { DocumentTemplate } from '@/lib/templates/document-templates';
-import type { DisciplineId } from '@/lib/firebase/schema';
+import type { DisciplineId } from '@/lib/supabase/schema';
 import {
   ResearchProvider,
   ResearchTrigger,

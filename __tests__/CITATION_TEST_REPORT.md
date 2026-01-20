@@ -42,7 +42,7 @@
 ---
 
 ### 3. `__tests__/unit/citations/library.test.ts`
-**55 tests** for Firebase-based reference library operations
+**55 tests** for Supabase-based reference library operations
 
 **Coverage:**
 - ✅ CRUD operations (create, read, update, delete)
@@ -54,7 +54,7 @@
 - ✅ Library statistics
 - ✅ Favorite and read status
 
-**Test Results:** 8/55 passed ❌ **47 FAILURES** (due to incomplete Firebase mocks)
+**Test Results:** 8/55 passed ❌ **47 FAILURES** (due to incomplete Supabase mocks)
 
 ---
 
@@ -195,14 +195,14 @@ FAIL: handles nested braces
 
 ---
 
-### Firebase Mock Issues (Library Tests)
+### Supabase Mock Issues (Library Tests)
 
 #### Issue #6: Missing writeBatch Mock
-**File:** `__tests__/mocks/firebase.ts`
+**File:** `__tests__/mocks/supabase.ts`
 **Severity:** 🟠 TEST INFRASTRUCTURE
 
 **Issue:**
-The Firebase mock does not implement `writeBatch`, causing 47 library tests to fail.
+The Supabase mock does not implement `writeBatch`, causing 47 library tests to fail.
 
 **Functions Affected:**
 - `addReferences()` - batch import
@@ -210,7 +210,7 @@ The Firebase mock does not implement `writeBatch`, causing 47 library tests to f
 - `deleteFolder()` - updates all references
 - `deleteLabel()` - updates all references
 
-**Fix Required:** Implement writeBatch mock in firebase.ts
+**Fix Required:** Implement writeBatch mock in supabase.ts
 
 ---
 
@@ -270,7 +270,7 @@ The Firebase mock does not implement `writeBatch`, causing 47 library tests to f
    - Affects international author names
    - Important for global compatibility
 
-3. **🟠 TEST: Complete Firebase mock** (Issue #6)
+3. **🟠 TEST: Complete Supabase mock** (Issue #6)
    - Required for proper test coverage
    - Currently only 14.5% of library tests pass
 
@@ -306,7 +306,7 @@ Added to `__tests__/mocks/test-data.ts`:
 
 1. ❌ `lib/citations/csl-formatter.ts` - Bugs #1, #2
 2. ❌ `lib/citations/import-export.ts` - Bugs #3, #4, #5
-3. ❌ `__tests__/mocks/firebase.ts` - Issue #6
+3. ❌ `__tests__/mocks/supabase.ts` - Issue #6
 
 ---
 
@@ -338,12 +338,12 @@ npm test -- --coverage __tests__/unit/citations/
 ❌ **CRITICAL BUGS IDENTIFIED**
 - Missing year handling returns "undefined" instead of "n.d."
 - BibTeX LaTeX escape sequences not fully functional
-- Firebase mock incomplete (affects test infrastructure only)
+- Supabase mock incomplete (affects test infrastructure only)
 
 🎯 **NEXT STEPS**
 1. Fix Bug #1 (missing year) - CRITICAL for production
 2. Fix Bugs #3-5 (LaTeX escapes) - Important for international support
-3. Complete Firebase mocks - Required for full test coverage
+3. Complete Supabase mocks - Required for full test coverage
 4. Verify Bug #2 (APA ellipsis) against official style guide
 
 ---

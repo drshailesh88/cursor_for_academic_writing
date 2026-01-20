@@ -14,11 +14,11 @@ Created comprehensive test suites for all collaboration features:
 
 ## Bugs Discovered
 
-### 🔴 CRITICAL BUG #1: Incorrect Firestore API Usage
+### 🔴 CRITICAL BUG #1: Incorrect Postgres API Usage
 
 **Location:** Multiple files in `lib/collaboration/`
 
-**Issue:** The code incorrectly calls `.exists()` as a method when it should be accessed as a property in Firebase Firestore v9+ modular SDK.
+**Issue:** The code incorrectly calls `.exists()` as a method when it should be accessed as a property in Supabase Postgres v9+ modular SDK.
 
 **Affected Files:**
 - `lib/collaboration/comments.ts:134`
@@ -45,18 +45,18 @@ if (!commentSnap.exists) {
 ```
 
 **Why This Matters:**
-In Firestore v9+ modular SDK, `DocumentSnapshot.exists` is a readonly boolean property, not a method. Calling `.exists()` as a method causes a `TypeError: exists is not a function` at runtime.
+In Postgres v9+ modular SDK, `DocumentSnapshot.exists` is a readonly boolean property, not a method. Calling `.exists()` as a method causes a `TypeError: exists is not a function` at runtime.
 
 **Fix Required:**
 Search and replace all instances of `.exists()` with `.exists` across all collaboration files.
 
 ---
 
-### 🔴 CRITICAL BUG #2: Missing Firebase Mock Exports
+### 🔴 CRITICAL BUG #2: Missing Supabase Mock Exports
 
 **Location:** `__tests__/setup.ts`
 
-**Issue:** The firebase/firestore mock was missing `onSnapshot` and `writeBatch` exports, causing subscription tests to fail.
+**Issue:** The supabase/postgres mock was missing `onSnapshot` and `writeBatch` exports, causing subscription tests to fail.
 
 **Status:** ✅ **FIXED** during testing
 
@@ -216,10 +216,10 @@ Error: Document documents/test-document-123/comments/ does not exist
 
 ## Test Infrastructure Improvements
 
-### Enhanced Firebase Mocks
+### Enhanced Supabase Mocks
 - ✅ Added `onSnapshot` for real-time subscriptions
 - ✅ Added `writeBatch` for batch operations
-- ✅ Improved mock fidelity to match Firestore v9+ API
+- ✅ Improved mock fidelity to match Postgres v9+ API
 
 ### Test Data Generators
 - ✅ Uses `@faker-js/faker` for realistic test data
@@ -258,12 +258,12 @@ Error: Document documents/test-document-123/comments/ does not exist
 ### Potential Bottlenecks
 1. **Version Cleanup**: Runs on every auto-version creation, could batch cleanup operations
 2. **Share Token Validation**: Queries all documents to find token - should use indexed query or separate tokens collection
-3. **Batch Operations**: `acceptAllChanges` and `rejectAllChanges` run serially with Promise.all, could use Firestore batch writes
+3. **Batch Operations**: `acceptAllChanges` and `rejectAllChanges` run serially with Promise.all, could use Postgres batch writes
 
 ### Optimization Recommendations
 1. Move share tokens to top-level collection with documentId reference for O(1) lookup
 2. Implement version cleanup as a scheduled job instead of inline
-3. Use Firestore batch writes for batch accept/reject operations
+3. Use Postgres batch writes for batch accept/reject operations
 4. Consider pagination for large comment/change lists
 
 ---
@@ -272,7 +272,7 @@ Error: Document documents/test-document-123/comments/ does not exist
 
 ### Immediate (Critical)
 1. **Fix `.exists()` bug** in all collaboration files - this will cause runtime errors in production
-2. **Verify Firebase SDK version** - ensure using v9+ modular SDK consistently
+2. **Verify Supabase SDK version** - ensure using v9+ modular SDK consistently
 3. **Add `.exists` property checks** to prevent similar bugs
 
 ### Short-term (Important)
@@ -307,7 +307,7 @@ Remaining failures will likely be minor mock implementation details that can be 
 
 ## Conclusion
 
-The collaboration features are **well-architected** with proper separation of concerns, good use of Firestore subcollections, and comprehensive functionality. However, there is one critical bug (`.exists()` method calls) that must be fixed before production use.
+The collaboration features are **well-architected** with proper separation of concerns, good use of Postgres subcollections, and comprehensive functionality. However, there is one critical bug (`.exists()` method calls) that must be fixed before production use.
 
 The test suite provides **excellent coverage** with 131 tests covering:
 - Happy path scenarios

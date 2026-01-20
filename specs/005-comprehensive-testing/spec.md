@@ -55,11 +55,11 @@ msw                     - API mocking (Mock Service Worker)
 __tests__/
 ├── setup.ts                    # Global test setup
 ├── mocks/
-│   ├── firebase.ts             # Firebase mock
+│   ├── supabase.ts             # Supabase mock
 │   ├── api-handlers.ts         # MSW handlers
 │   └── test-data.ts            # Faker-based test data
 ├── unit/
-│   ├── firebase/
+│   ├── supabase/
 │   ├── citations/
 │   ├── research/
 │   ├── writing-analysis/
@@ -82,10 +82,10 @@ __tests__/
 
 ### Phase 0: Core Infrastructure (CRITICAL)
 
-#### 3.0.1 Firebase Authentication
+#### 3.0.1 Supabase Authentication
 ```typescript
-// Test cases for lib/firebase/auth.ts
-describe('Firebase Authentication', () => {
+// Test cases for lib/supabase/auth.ts
+describe('Supabase Authentication', () => {
   // Happy path
   test('signs in with Google successfully')
   test('signs out successfully')
@@ -96,7 +96,7 @@ describe('Firebase Authentication', () => {
   // Edge cases
   test('handles Google sign-in popup blocked')
   test('handles network failure during sign-in')
-  test('handles Firebase quota exceeded')
+  test('handles Supabase quota exceeded')
   test('handles invalid/expired tokens')
   test('handles concurrent sign-in attempts')
   test('cleans up listeners on unmount')
@@ -109,7 +109,7 @@ describe('Firebase Authentication', () => {
 
 #### 3.0.2 Document CRUD Operations
 ```typescript
-// Test cases for lib/firebase/documents.ts
+// Test cases for lib/supabase/documents.ts
 describe('Document Operations', () => {
   // Create
   test('creates document with required fields')

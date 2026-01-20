@@ -1,6 +1,6 @@
-# Database Swap Plan: Firebase → Supabase
+# Database Swap Plan: Supabase → Supabase
 
-**Purpose:** Step-by-step instructions for migrating from Firebase to Supabase
+**Purpose:** Step-by-step instructions for migrating from Supabase to Supabase
 **For:** Any LLM agent to execute
 **Difficulty:** Medium
 **Estimated Time:** 4-6 hours
@@ -690,13 +690,13 @@ export async function resetToDefaults(userId: string): Promise<void> {
 
 ## Phase 4: Update Imports (1-2 hours)
 
-### Step 4.1: Find All Firebase Imports
+### Step 4.1: Find All Supabase Imports
 
 Search for these patterns and update:
 
 ```bash
-# Find all files importing from firebase
-grep -r "from '@/lib/firebase" --include="*.ts" --include="*.tsx" components/ lib/ app/
+# Find all files importing from supabase
+grep -r "from '@/lib/supabase" --include="*.ts" --include="*.tsx" components/ lib/ app/
 ```
 
 ### Step 4.2: Update Each Import
@@ -704,9 +704,9 @@ grep -r "from '@/lib/firebase" --include="*.ts" --include="*.tsx" components/ li
 **Pattern:**
 ```typescript
 // Before
-import { useAuth } from '@/lib/firebase/auth';
-import { createDocument, getDocument } from '@/lib/firebase/documents';
-import { getUserSettings } from '@/lib/firebase/settings';
+import { useAuth } from '@/lib/supabase/auth';
+import { createDocument, getDocument } from '@/lib/supabase/documents';
+import { getUserSettings } from '@/lib/supabase/settings';
 
 // After
 import { useAuth } from '@/lib/supabase/auth';
@@ -770,7 +770,7 @@ npm run dev
 ```
 
 - [ ] App loads without errors
-- [ ] DEV MODE still works (localStorage)
+- [ ] DEV MODE writes to Supabase
 - [ ] Can sign in with Google (when not in dev mode)
 - [ ] Documents list loads
 - [ ] Can create new document
@@ -783,30 +783,21 @@ npm run dev
 
 ---
 
-## Phase 7: Cleanup (15 minutes)
+## Phase 7: Cleanup (Optional)
 
-### Step 7.1: Remove Firebase Dependencies (Optional)
+### Step 7.1: Validate Supabase Policies
 
-Only do this after everything works:
+- Review RLS policies (if enabled)
+- Confirm storage bucket permissions for `papers`
 
+### Step 7.2: Verify Environment Variables
+
+Ensure `.env.local` includes:
 ```bash
-npm uninstall firebase firebase-admin --legacy-peer-deps
-```
-
-### Step 7.2: Remove Firebase Files (Optional)
-
-```bash
-rm -rf lib/firebase/
-```
-
-### Step 7.3: Update .env.local
-
-Remove Firebase variables (optional):
-```bash
-# Can remove these if not using Firebase anymore
-# NEXT_PUBLIC_FIREBASE_API_KEY=
-# NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-# etc.
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_DEV_AUTH_BYPASS=true
 ```
 
 ---

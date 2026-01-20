@@ -270,29 +270,102 @@ export class ClarifierAgent extends BaseAgent {
    */
   async execute(context: AgentContext): Promise<AgentResult<ClarifierResult>> {
     this.updateStatus('working', 'Analyzing research topic', 0);
+    let totalTokensUsed = 0;
 
     try {
       const topic = context.session.topic;
+      const modelType = (context.session as { model?: string }).model || 'deepseek';
 
       // Add system and user messages
       this.addMessage('system', this.config.systemPrompt);
       this.addMessage('user', `Please analyze this research topic: "${topic}"`);
 
-      // Analyze the topic
-      this.updateStatus('working', 'Identifying ambiguities', 25);
-      const analysis = this.analyzeTopic(topic);
+      // Use LLM for intelligent topic analysis
+      this.updateStatus('working', 'Analyzing topic with LLM', 25);
+
+      const analysisPrompt = `Analyze this research topic for a comprehensive literature review: "${topic}"
+
+Provide:
+1. Identified ambiguities that need clarification
+2. Suggested focus areas for the research
+3. Estimated topic breadth (narrow/moderate/broad/very_broad)
+4. 3-5 clarifying questions with suggested answer options
+
+Return as JSON:
+{
+  "ambiguities": ["ambiguity 1", "ambiguity 2"],
+  "focusAreas": ["focus area 1", "focus area 2"],
+  "breadth": "moderate",
+  "questions": [
+    {
+      "question": "What specific aspect...?",
+      "category": "scope",
+      "importance": "critical",
+      "suggestedOptions": ["Option A", "Option B", "Option C"]
+    }
+  ]
+}
+
+Categories: scope, methodology, population, timeframe, outcome, context
+Importance: critical, important, optional`;
+
+      const { text: analysisResponse, tokensUsed: analysisTokens } = await this.callLLM(analysisPrompt, modelType);
+      totalTokensUsed += analysisTokens;
+
+      // Parse LLM response
+      let llmAnalysis: {
+        ambiguities: string[];
+        focusAreas: string[];
+        breadth: 'narrow' | 'moderate' | 'broad' | 'very_broad';
+        questions: Array<{
+          question: string;
+          category: ClarifyingQuestion['category'];
+          importance: ClarifyingQuestion['importance'];
+          suggestedOptions?: string[];
+        }>;
+      } | null = null;
+
+      try {
+        const jsonMatch = analysisResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          llmAnalysis = JSON.parse(jsonMatch[0]);
+        }
+      } catch {
+        console.warn('Failed to parse LLM analysis response, using fallback');
+      }
+
+      this.addMessage('assistant', analysisResponse);
+
+      // Build analysis from LLM or fallback
+      const analysis: TopicAnalysis = llmAnalysis ? {
+        originalTopic: topic,
+        identifiedAmbiguities: llmAnalysis.ambiguities,
+        suggestedFocusAreas: llmAnalysis.focusAreas,
+        estimatedBreadth: llmAnalysis.breadth,
+      } : this.analyzeTopic(topic);
 
       this.addMessage('assistant',
         `Topic analysis complete. Identified ${analysis.identifiedAmbiguities.length} ambiguities. ` +
         `Topic breadth: ${analysis.estimatedBreadth}.`
       );
 
-      // Generate clarifying questions
-      this.updateStatus('working', 'Generating clarifying questions', 50);
-      this.questions = this.generateQuestions(analysis);
+      // Generate clarifying questions from LLM or fallback
+      this.updateStatus('working', 'Processing clarifying questions', 50);
+
+      if (llmAnalysis?.questions && llmAnalysis.questions.length > 0) {
+        this.questions = llmAnalysis.questions.map((q, idx) => ({
+          id: `clarify-${idx + 1}`,
+          question: q.question,
+          category: q.category,
+          importance: q.importance,
+          suggestedOptions: q.suggestedOptions,
+        }));
+      } else {
+        this.questions = this.generateQuestions(analysis);
+      }
 
       this.addMessage('assistant',
-        `Generated ${this.questions.length} clarifying questions to refine the research scope.`
+        `Generated ${this.questions.length} clarifying questions to refine the research scope using ${modelType} model.`
       );
 
       // Check if we have clarifications from context
@@ -317,7 +390,7 @@ export class ClarifierAgent extends BaseAgent {
         success: true,
         data: result,
         messages: this.messages,
-        tokensUsed: 0,
+        tokensUsed: totalTokensUsed,
       };
     } catch (error) {
       this.updateStatus('error', `Clarification failed: ${error}`);
@@ -325,7 +398,7 @@ export class ClarifierAgent extends BaseAgent {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         messages: this.messages,
-        tokensUsed: 0,
+        tokensUsed: totalTokensUsed,
       };
     }
   }

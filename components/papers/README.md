@@ -30,7 +30,7 @@ Complete UI component that combines:
 ```tsx
 import { PapersProvider } from '@/lib/contexts/papers-context';
 import { IntegratedPapersPanel } from '@/components/papers/integrated-papers-panel';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 
 function MyApp() {
   const { user } = useAuth();
@@ -101,7 +101,7 @@ function MyComponent() {
 
 ```tsx
 import { usePapers } from '@/lib/hooks/use-papers';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 
 function MyComponent() {
   const { user } = useAuth();

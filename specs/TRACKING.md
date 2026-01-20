@@ -127,7 +127,7 @@
 
 | Category | Tests | Status |
 |----------|-------|--------|
-| Firebase Auth | 16 | ✅ |
+| Supabase Auth | 16 | ✅ |
 | Document CRUD | 20 | ✅ |
 | Auto-save | 20 | ✅ |
 | Research clients | 72 | ✅ |
@@ -152,7 +152,7 @@
 ```
 __tests__/
 ├── unit/
-│   ├── firebase/           45 tests ✅
+│   ├── supabase/           45 tests ✅
 │   ├── research/          157 tests ✅
 │   ├── citations/         124 tests ✅
 │   ├── writing-analysis/   45 tests ✅
@@ -202,7 +202,7 @@ __tests__/
 Academic Writing Platform
 ├── Core Features (Existing)
 │   ├── TipTap Editor ✅
-│   ├── Firebase Auth ✅
+│   ├── Supabase Auth ✅
 │   ├── Document CRUD ✅
 │   ├── Auto-save ✅
 │   └── AI Chat ✅

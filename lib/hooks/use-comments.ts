@@ -2,14 +2,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import {
-  addComment as addCommentToFirestore,
-  getComments as getCommentsFromFirestore,
-  updateComment as updateCommentInFirestore,
-  deleteComment as deleteCommentFromFirestore,
-  resolveComment as resolveCommentInFirestore,
-  addReply as addReplyToFirestore,
+  addComment as addCommentToSupabase,
+  getComments as getCommentsFromSupabase,
+  updateComment as updateCommentInSupabase,
+  deleteComment as deleteCommentFromSupabase,
+  resolveComment as resolveCommentInSupabase,
+  addReply as addReplyToSupabase,
   subscribeToComments,
 } from '@/lib/collaboration/comments';
 import type {
@@ -82,7 +82,7 @@ export function useComments(options: UseCommentsOptions = {}) {
           userAvatar: user.photoURL || undefined,
         };
 
-        const commentId = await addCommentToFirestore(commentData);
+        const commentId = await addCommentToSupabase(commentData);
         toast.success(data.type === 'suggestion' ? 'Suggestion added' : 'Comment added');
         return commentId;
       } catch (err) {
@@ -102,7 +102,7 @@ export function useComments(options: UseCommentsOptions = {}) {
       }
 
       try {
-        await updateCommentInFirestore(documentId, commentId, updates);
+        await updateCommentInSupabase(commentId, updates);
         toast.success('Comment updated');
       } catch (err) {
         setError(err as Error);
@@ -121,7 +121,7 @@ export function useComments(options: UseCommentsOptions = {}) {
       }
 
       try {
-        await deleteCommentFromFirestore(documentId, commentId);
+        await deleteCommentFromSupabase(commentId);
         toast.success('Comment deleted');
       } catch (err) {
         setError(err as Error);
@@ -140,7 +140,7 @@ export function useComments(options: UseCommentsOptions = {}) {
       }
 
       try {
-        await resolveCommentInFirestore(documentId, commentId);
+        await resolveCommentInSupabase(commentId, true);
         toast.success('Comment resolved');
       } catch (err) {
         setError(err as Error);
@@ -159,7 +159,7 @@ export function useComments(options: UseCommentsOptions = {}) {
       }
 
       try {
-        await updateCommentInFirestore(documentId, commentId, { resolved: false });
+        await updateCommentInSupabase(commentId, { resolved: false });
         toast.success('Comment reopened');
       } catch (err) {
         setError(err as Error);
@@ -185,7 +185,7 @@ export function useComments(options: UseCommentsOptions = {}) {
           content,
         };
 
-        await addReplyToFirestore(documentId, commentId, reply);
+        await addReplyToSupabase(documentId, commentId, reply);
         toast.success('Reply added');
       } catch (err) {
         setError(err as Error);

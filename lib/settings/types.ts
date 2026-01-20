@@ -8,6 +8,7 @@ export interface AISettings {
     anthropic?: string;
     google?: string;
     zhipu?: string; // Z.AI GLM-4 for testing
+    deepseek?: string; // DeepSeek (cheapest option)
   };
 }
 
@@ -66,6 +67,7 @@ export const AI_MODELS = [
   { value: 'claude', label: 'Claude' },
   { value: 'openai', label: 'ChatGPT' },
   { value: 'gemini', label: 'Gemini' },
+  { value: 'deepseek', label: 'DeepSeek (Cheapest)' },
 ] as const;
 
 // Testing model (requires personal API key)

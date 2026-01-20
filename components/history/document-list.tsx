@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/lib/firebase/auth';
-import { getUserDocuments, deleteDocument } from '@/lib/firebase/documents';
-import { DocumentMetadata } from '@/lib/firebase/schema';
+import { useAuth } from '@/lib/supabase/auth';
+import { getUserDocuments, deleteDocument } from '@/lib/supabase/documents';
+import { DocumentMetadata } from '@/lib/supabase/schema';
 import { FileText, Plus, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TemplateSelector } from '@/components/templates/template-selector';

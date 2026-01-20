@@ -16,10 +16,10 @@ import {
   Edit3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { useSharing } from '@/lib/hooks/use-sharing';
 import { SharePermission } from '@/lib/collaboration/types';
-import { getDocument } from '@/lib/firebase/documents';
+import { getDocument } from '@/lib/supabase/documents';
 
 interface ShareDialogProps {
   isOpen: boolean;

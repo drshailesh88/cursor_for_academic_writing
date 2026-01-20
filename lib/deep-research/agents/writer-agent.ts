@@ -441,9 +441,11 @@ export class WriterAgent extends BaseAgent {
    */
   async execute(context: AgentContext): Promise<AgentResult<WriterResult>> {
     this.updateStatus('working', 'Generating research report', 0);
+    let totalTokensUsed = 0;
 
     try {
       const { topic } = context.session;
+      const modelType = (context.session as { model?: string }).model || 'deepseek';
 
       // Get data from previous agents
       const researcherOutput = context.previousAgentOutputs.get('researcher') as
@@ -468,45 +470,159 @@ export class WriterAgent extends BaseAgent {
       this.addMessage('system', this.config.systemPrompt);
       this.addMessage('user', `Generate research report on: "${topic}"`);
 
-      // Generate report components
-      this.updateStatus('working', 'Generating executive summary', 10);
-      const executiveSummary = this.generateExecutiveSummary(topic, sections, sources, keyFindings);
+      // Use LLM to generate polished academic content
+      this.updateStatus('working', 'Generating report content with LLM', 20);
 
-      this.updateStatus('working', 'Generating introduction', 20);
-      const introSection = sections.find(s => s.title === 'Introduction');
-      const introduction = this.generateIntroduction(topic, sources, introSection?.content);
+      const sourceSummaries = sources.slice(0, 15).map(s => ({
+        title: s.title,
+        authors: s.authors.slice(0, 2).map(a => a.name).join(', '),
+        year: s.year,
+        journal: s.journal,
+      }));
 
-      this.updateStatus('working', 'Generating methodology', 30);
+      const reportPrompt = `Write a comprehensive academic research report on "${topic}".
+
+Key findings from synthesis:
+${keyFindings.join('\n- ')}
+
+Research gaps identified:
+${gaps.join('\n- ')}
+
+Sources to cite (use author-year citations):
+${JSON.stringify(sourceSummaries, null, 2)}
+
+Generate the report with these sections:
+1. Executive Summary (150-200 words)
+2. Introduction (200-300 words)
+3. Key Findings (300-500 words, organized by theme)
+4. Discussion (200-300 words)
+5. Limitations (100-150 words)
+6. Conclusions (100-150 words)
+
+Return as JSON:
+{
+  "executiveSummary": "...",
+  "introduction": "...",
+  "findings": "...",
+  "discussion": "...",
+  "limitations": "...",
+  "conclusions": "...",
+  "keywords": ["keyword1", "keyword2", ...]
+}
+
+Write in scholarly prose with proper citations. Use author-year format for in-text citations.`;
+
+      const { text: reportResponse, tokensUsed: reportTokens } = await this.callLLM(reportPrompt, modelType);
+      totalTokensUsed += reportTokens;
+
+      // Parse LLM response
+      let llmReport: {
+        executiveSummary: string;
+        introduction: string;
+        findings: string;
+        discussion: string;
+        limitations: string;
+        conclusions: string;
+        keywords: string[];
+      } | null = null;
+
+      try {
+        const jsonMatch = reportResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          llmReport = JSON.parse(jsonMatch[0]);
+        }
+      } catch {
+        console.warn('Failed to parse LLM report response, using fallback');
+      }
+
+      this.addMessage('assistant', reportResponse);
+
+      // Generate report components (use LLM response or fallback)
+      this.updateStatus('working', 'Assembling report sections', 60);
+
+      const executiveSummary = llmReport?.executiveSummary || this.generateExecutiveSummary(topic, sections, sources, keyFindings);
+      const introduction = llmReport?.introduction || this.generateIntroduction(topic, sources);
       const methodology = this.generateMethodology(sources);
+      const findings = llmReport?.findings;
+      const discussion = llmReport?.discussion;
+      const conclusions = llmReport?.conclusions ||
+        `This synthesis highlights the current state of research on ${topic}. Further investigation is warranted to address identified gaps.`;
+      const limitations = llmReport?.limitations || this.generateLimitations(gaps);
 
       // Format content sections
-      this.updateStatus('working', 'Formatting sections', 50);
       const contentSections = sections
         .filter(s => !['Introduction', 'Conclusions'].includes(s.title))
         .map(s => this.formatSection(s, sources));
 
-      // Generate conclusions
-      this.updateStatus('working', 'Generating conclusions', 65);
-      const conclusionSection = sections.find(s => s.title === 'Conclusions');
-      const conclusions = conclusionSection?.content ||
-        `This synthesis highlights the current state of research on ${topic}. ` +
-        `Further investigation is warranted to address identified gaps.`;
-
-      // Generate limitations
-      this.updateStatus('working', 'Generating limitations', 75);
-      const limitations = this.generateLimitations(gaps);
-
       // Generate references
-      this.updateStatus('working', 'Formatting references', 85);
+      this.updateStatus('working', 'Formatting references', 80);
       const references = this.generateReferences(sources);
 
       // Generate keywords
-      const keywords = this.options.includeKeywords
+      const keywords = llmReport?.keywords || (this.options.includeKeywords
         ? this.generateKeywords(topic, sections)
-        : undefined;
+        : undefined);
 
       // Assemble report
-      this.updateStatus('working', 'Assembling report', 95);
+      this.updateStatus('working', 'Finalizing report', 90);
+
+      const reportSections: ReportSection[] = [
+        {
+          id: 'section-summary',
+          title: 'Executive Summary',
+          content: executiveSummary,
+          order: 0,
+        },
+        {
+          id: 'section-introduction',
+          title: 'Introduction',
+          content: introduction,
+          order: 1,
+        },
+        {
+          id: 'section-methodology',
+          title: 'Methodology',
+          content: methodology,
+          order: 2,
+        },
+      ];
+
+      if (findings) {
+        reportSections.push({
+          id: 'section-findings',
+          title: 'Key Findings',
+          content: findings,
+          order: 3,
+        });
+      }
+
+      // Add synthesized sections
+      contentSections.forEach((s, i) => {
+        reportSections.push({ ...s, order: reportSections.length });
+      });
+
+      if (discussion) {
+        reportSections.push({
+          id: 'section-discussion',
+          title: 'Discussion',
+          content: discussion,
+          order: reportSections.length,
+        });
+      }
+
+      reportSections.push({
+        id: 'section-limitations',
+        title: 'Limitations',
+        content: limitations,
+        order: reportSections.length,
+      });
+
+      reportSections.push({
+        id: 'section-conclusions',
+        title: 'Conclusions',
+        content: conclusions,
+        order: reportSections.length,
+      });
 
       this.report = {
         id: `report-${context.session.id}`,
@@ -514,39 +630,7 @@ export class WriterAgent extends BaseAgent {
         title: `Research Synthesis: ${topic}`,
         abstract: this.options.includeAbstract ? executiveSummary : undefined,
         keywords,
-        sections: [
-          {
-            id: 'section-summary',
-            title: 'Executive Summary',
-            content: executiveSummary,
-            order: 0,
-          },
-          {
-            id: 'section-introduction',
-            title: 'Introduction',
-            content: introduction,
-            order: 1,
-          },
-          {
-            id: 'section-methodology',
-            title: 'Methodology',
-            content: methodology,
-            order: 2,
-          },
-          ...contentSections.map((s, i) => ({ ...s, order: i + 3 })),
-          {
-            id: 'section-conclusions',
-            title: 'Conclusions',
-            content: conclusions,
-            order: contentSections.length + 3,
-          },
-          {
-            id: 'section-limitations',
-            title: 'Limitations',
-            content: limitations,
-            order: contentSections.length + 4,
-          },
-        ],
+        sections: reportSections,
         references,
         generatedAt: new Date() as any,
         citationStyle: this.options.citationStyle,
@@ -561,7 +645,7 @@ export class WriterAgent extends BaseAgent {
 
       this.addMessage('assistant',
         `Generated research report with ${this.report.sections.length} sections, ` +
-        `${references.length} references, ${wordCount} words (${readingTime} min read)`
+        `${references.length} references, ${wordCount} words (${readingTime} min read) using ${modelType} model`
       );
 
       const result: WriterResult = {
@@ -575,7 +659,7 @@ export class WriterAgent extends BaseAgent {
         success: true,
         data: result,
         messages: this.messages,
-        tokensUsed: 0,
+        tokensUsed: totalTokensUsed,
       };
     } catch (error) {
       this.updateStatus('error', `Report generation failed: ${error}`);
@@ -583,7 +667,7 @@ export class WriterAgent extends BaseAgent {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         messages: this.messages,
-        tokensUsed: 0,
+        tokensUsed: totalTokensUsed,
       };
     }
   }

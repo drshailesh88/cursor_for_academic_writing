@@ -121,7 +121,7 @@ function calculateSimilarity(doc1: Fingerprint[], doc2: Fingerprint[]): number {
 ```
 
 #### 4A.3 Self-Plagiarism Detection
-- Compare current document against user's other documents in Firestore
+- Compare current document against user's other documents in Postgres
 - Useful for academics reusing their own content
 - Highlight matches with links to original documents
 
@@ -160,7 +160,7 @@ interface PlagiarismAPIProvider {
 ```
 
 #### 4B.3 Caching Strategy
-- Cache API results in Firestore (per document version)
+- Cache API results in Postgres (per document version)
 - Only re-check when content changes significantly
 - Show cached results instantly, offer "Recheck" option
 

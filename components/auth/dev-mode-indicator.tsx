@@ -1,6 +1,6 @@
 'use client';
 
-import { isDevAuthBypass } from '@/lib/firebase/auth';
+import { isDevAuthBypass } from '@/lib/supabase/auth';
 
 /**
  * DEV MODE indicator - shows when development auth bypass is active

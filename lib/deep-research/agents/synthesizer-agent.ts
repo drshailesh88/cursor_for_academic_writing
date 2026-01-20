@@ -482,9 +482,11 @@ export class SynthesizerAgent extends BaseAgent {
    */
   async execute(context: AgentContext): Promise<AgentResult<SynthesizerResult>> {
     this.updateStatus('working', 'Beginning synthesis', 0);
+    let totalTokensUsed = 0;
 
     try {
       const { topic } = context.session;
+      const modelType = (context.session as { model?: string }).model || 'deepseek';
 
       // Get sources from researcher
       const researcherOutput = context.previousAgentOutputs.get('researcher') as
@@ -514,43 +516,189 @@ export class SynthesizerAgent extends BaseAgent {
       this.addMessage('system', this.config.systemPrompt);
       this.addMessage('user', `Synthesize findings from ${sources.length} sources on: "${topic}"`);
 
-      // Extract themes
-      this.updateStatus('working', 'Extracting themes', 20);
-      this.themes = this.extractThemes(sources);
+      // Extract themes using LLM
+      this.updateStatus('working', 'Extracting themes with LLM', 20);
 
-      this.addMessage('assistant',
-        `Identified ${this.themes.length} themes across sources`
-      );
-
-      // Create synthesis sections
-      this.updateStatus('working', 'Creating synthesis sections', 40);
-      this.sections = this.createSections(this.themes, sources, perspectives);
-
-      // Synthesize evidence
-      this.updateStatus('working', 'Synthesizing evidence', 60);
-      const evidence: SynthesizedEvidence[] = this.themes.map(theme => ({
-        claim: `Research supports ${theme.name.toLowerCase()} as a key area`,
-        supportingSources: theme.sourceIds,
-        opposingSources: [],
-        strength: theme.strength === 'strong' ? 0.9 : theme.strength === 'moderate' ? 0.6 : 0.3,
-        confidence: theme.strength === 'strong' ? 'high' : theme.strength === 'moderate' ? 'moderate' : 'low',
-        notes: theme.description,
+      // Prepare source summaries for LLM
+      const sourceSummaries = sources.slice(0, 20).map(s => ({
+        id: s.id,
+        title: s.title,
+        year: s.year,
+        abstract: s.abstract?.slice(0, 300) || '',
+        citationCount: s.citationCount || 0,
       }));
 
+      const themePrompt = `Analyze these ${sources.length} research sources on "${topic}" and identify key themes.
+
+Sources:
+${JSON.stringify(sourceSummaries, null, 2)}
+
+Identify 3-7 major themes that emerge from this research. For each theme, provide:
+1. A descriptive name
+2. A brief description
+3. Which source IDs relate to this theme
+4. Theme strength (strong/moderate/weak based on evidence quantity)
+5. Consensus level (high/mixed/low)
+
+Return as JSON:
+{
+  "themes": [
+    {
+      "name": "Theme Name",
+      "description": "Brief description",
+      "sourceIds": ["id1", "id2"],
+      "strength": "strong",
+      "consensus": "high"
+    }
+  ],
+  "keyFindings": ["Finding 1", "Finding 2"],
+  "gaps": ["Gap 1", "Gap 2"]
+}`;
+
+      const { text: themeResponse, tokensUsed: themeTokens } = await this.callLLM(themePrompt, modelType);
+      totalTokensUsed += themeTokens;
+
+      // Parse LLM response for themes
+      let llmThemes: Array<{
+        name: string;
+        description: string;
+        sourceIds: string[];
+        strength: 'strong' | 'moderate' | 'weak';
+        consensus: 'high' | 'mixed' | 'low';
+      }> = [];
+      let llmKeyFindings: string[] = [];
+      let llmGaps: string[] = [];
+
+      try {
+        const jsonMatch = themeResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          llmThemes = parsed.themes || [];
+          llmKeyFindings = parsed.keyFindings || [];
+          llmGaps = parsed.gaps || [];
+        }
+      } catch {
+        console.warn('Failed to parse LLM theme response, using fallback');
+      }
+
+      // Use LLM themes or fallback to pattern extraction
+      if (llmThemes.length > 0) {
+        this.themes = llmThemes.map((t, idx) => ({
+          id: `theme-${idx}`,
+          name: t.name,
+          description: t.description,
+          sourceIds: t.sourceIds,
+          strength: t.strength,
+          consensus: t.consensus,
+        }));
+      } else {
+        this.themes = this.extractThemes(sources);
+      }
+
+      this.addMessage('assistant', themeResponse);
+      this.addMessage('assistant', `Identified ${this.themes.length} themes across sources`);
+
+      // Create synthesis sections with LLM
+      this.updateStatus('working', 'Generating synthesis content with LLM', 50);
+
+      const synthesisPrompt = `Create a comprehensive research synthesis on "${topic}" based on these themes and sources.
+
+Themes identified:
+${JSON.stringify(this.themes, null, 2)}
+
+Perspectives to consider:
+${perspectives.map(p => `- ${p.name}: ${p.description}`).join('\n')}
+
+Generate synthesis sections in JSON format:
+{
+  "sections": [
+    {
+      "title": "Introduction",
+      "content": "Synthesized narrative text with proper academic style..."
+    },
+    {
+      "title": "Theme Name 1",
+      "content": "Detailed analysis of this theme..."
+    }
+  ],
+  "evidence": [
+    {
+      "claim": "Key claim from synthesis",
+      "confidence": "high",
+      "notes": "Supporting rationale"
+    }
+  ]
+}
+
+Write in academic prose, cite findings by author/year where possible, and maintain scholarly objectivity.`;
+
+      const { text: synthesisResponse, tokensUsed: synthesisTokens } = await this.callLLM(synthesisPrompt, modelType);
+      totalTokensUsed += synthesisTokens;
+
+      // Parse synthesis response
+      let llmSections: Array<{ title: string; content: string }> = [];
+      let llmEvidence: Array<{ claim: string; confidence: string; notes: string }> = [];
+
+      try {
+        const jsonMatch = synthesisResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          llmSections = parsed.sections || [];
+          llmEvidence = parsed.evidence || [];
+        }
+      } catch {
+        console.warn('Failed to parse LLM synthesis response, using fallback');
+      }
+
+      // Convert to proper section format
+      if (llmSections.length > 0) {
+        this.sections = llmSections.map((s, idx) => ({
+          id: `section-${idx}`,
+          title: s.title,
+          content: s.content,
+          evidence: [],
+          sourceIds: sources.slice(0, 5).map(src => src.id),
+          order: idx,
+        }));
+      } else {
+        this.sections = this.createSections(this.themes, sources, perspectives);
+      }
+
+      this.addMessage('assistant', synthesisResponse);
+
+      // Synthesize evidence
+      this.updateStatus('working', 'Synthesizing evidence', 70);
+      const evidence: SynthesizedEvidence[] = llmEvidence.length > 0
+        ? llmEvidence.map((e, idx) => ({
+            claim: e.claim,
+            supportingSources: sources.slice(0, 3).map(s => s.id),
+            opposingSources: [],
+            strength: e.confidence === 'high' ? 0.9 : e.confidence === 'moderate' ? 0.6 : 0.3,
+            confidence: (e.confidence as 'high' | 'moderate' | 'low') || 'moderate',
+            notes: e.notes,
+          }))
+        : this.themes.map(theme => ({
+            claim: `Research supports ${theme.name.toLowerCase()} as a key area`,
+            supportingSources: theme.sourceIds,
+            opposingSources: [],
+            strength: theme.strength === 'strong' ? 0.9 : theme.strength === 'moderate' ? 0.6 : 0.3,
+            confidence: theme.strength === 'strong' ? 'high' : theme.strength === 'moderate' ? 'moderate' : 'low',
+            notes: theme.description,
+          }));
+
       // Identify conflicts
-      this.updateStatus('working', 'Identifying conflicts', 75);
+      this.updateStatus('working', 'Identifying conflicts', 85);
       const conflicts = this.identifyConflicts(sources, classificationMap);
 
-      // Generate key findings and gaps
-      this.updateStatus('working', 'Finalizing synthesis', 90);
-      const keyFindings = this.identifyKeyFindings(sources, this.themes);
-      const gaps = this.identifyGaps(sources, this.themes);
+      // Use LLM-generated findings/gaps or fallback
+      const keyFindings = llmKeyFindings.length > 0 ? llmKeyFindings : this.identifyKeyFindings(sources, this.themes);
+      const gaps = llmGaps.length > 0 ? llmGaps : this.identifyGaps(sources, this.themes);
 
       this.updateStatus('complete', 'Synthesis complete', 100);
 
       this.addMessage('assistant',
         `Synthesis complete with ${this.sections.length} sections, ` +
-        `${keyFindings.length} key findings, and ${gaps.length} identified gaps`
+        `${keyFindings.length} key findings, and ${gaps.length} identified gaps using ${modelType} model.`
       );
 
       const result: SynthesizerResult = {
@@ -566,7 +714,7 @@ export class SynthesizerAgent extends BaseAgent {
         success: true,
         data: result,
         messages: this.messages,
-        tokensUsed: 0,
+        tokensUsed: totalTokensUsed,
       };
     } catch (error) {
       this.updateStatus('error', `Synthesis failed: ${error}`);
@@ -574,7 +722,7 @@ export class SynthesizerAgent extends BaseAgent {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         messages: this.messages,
-        tokensUsed: 0,
+        tokensUsed: totalTokensUsed,
       };
     }
   }

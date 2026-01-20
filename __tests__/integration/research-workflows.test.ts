@@ -14,7 +14,7 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
-import { resetFirebaseMocks } from '../mocks/firebase';
+import { resetSupabaseMocks } from '../mocks/supabase';
 
 // Research imports
 import {
@@ -54,7 +54,7 @@ const TEST_USER_ID = 'test-user-integration';
 
 describe('Multi-Database Search Workflow', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('searches across all databases with deduplication', async () => {
@@ -238,7 +238,7 @@ describe('Multi-Database Search Workflow', () => {
 
 describe('Citation Library Workflow', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('adds reference from search result', async () => {
@@ -481,7 +481,7 @@ describe('Citation Library Workflow', () => {
 
 describe('Cite-While-You-Write Workflow', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('searches and selects reference for citation', async () => {
@@ -646,7 +646,7 @@ describe('Cite-While-You-Write Workflow', () => {
 
 describe('Bibliography Generation Workflow', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('collects all citations from document', async () => {
@@ -771,7 +771,7 @@ describe('Bibliography Generation Workflow', () => {
 
 describe('Discipline-Aware Research', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('prioritizes PubMed for life sciences', async () => {
@@ -861,7 +861,7 @@ describe('Discipline-Aware Research', () => {
 
 describe('Complex Research Workflows', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('complete research workflow: search → add to library → organize → cite', async () => {

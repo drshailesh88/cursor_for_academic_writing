@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generatePresentation, createPresentationFromGeneration } from '@/lib/presentations/generator';
-import { getDocument } from '@/lib/firebase/documents';
+import { getDocument } from '@/lib/supabase/documents-admin';
 import {
   GenerationConfig,
   PresentationFormat,
@@ -122,17 +122,22 @@ export async function POST(request: NextRequest) {
     let documentId: string | undefined;
 
     if (body.source === 'document') {
-      // Fetch document from Firestore
+      // Fetch document from Supabase
       const document = await getDocument(body.sourceId!);
 
       if (!document) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Document not found',
-          } as GenerateResponse,
-          { status: 404 }
-        );
+        if (body.sourceText) {
+          sourceContent = body.sourceText;
+          documentId = body.sourceId;
+        } else {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Document not found',
+            } as GenerateResponse,
+            { status: 404 }
+          );
+        }
       }
 
       // TODO: Verify user owns this document
@@ -143,8 +148,10 @@ export async function POST(request: NextRequest) {
       //   );
       // }
 
-      sourceContent = document.content;
-      documentId = document.id;
+      if (document) {
+        sourceContent = document.content;
+        documentId = document.id;
+      }
     } else {
       // Use provided text or topic
       sourceContent = body.sourceText;
@@ -172,7 +179,7 @@ export async function POST(request: NextRequest) {
     const result = await generatePresentation(config, sourceContent);
 
     // Return generated slides and metadata
-    // Note: We're not saving to Firestore here - that will be done
+    // Note: We're not saving to Supabase here - that will be done
     // by a separate endpoint when user saves the presentation
     return NextResponse.json({
       success: true,

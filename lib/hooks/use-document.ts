@@ -8,9 +8,9 @@ import {
   saveDocumentContent,
   updateDocument,
   updateDocumentDiscipline,
-} from '@/lib/firebase/documents';
-import { Document, DisciplineId } from '@/lib/firebase/schema';
-import { useAuth } from '@/lib/firebase/auth';
+} from '@/lib/supabase/documents';
+import { Document, DisciplineId } from '@/lib/supabase/schema';
+import { useAuth } from '@/lib/supabase/auth';
 import { toast } from 'sonner';
 
 interface UseDocumentOptions {

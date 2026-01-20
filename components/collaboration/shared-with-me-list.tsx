@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { useSharing } from '@/lib/hooks/use-sharing';
 import { FileText, Users, Eye, MessageSquare, Edit3 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';

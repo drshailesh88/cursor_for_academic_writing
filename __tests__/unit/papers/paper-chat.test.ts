@@ -10,8 +10,8 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import type { PaperChatSession, PaperChatMessage, PaperChatCitation } from '@/lib/firebase/schema';
-import type { Paper, PaperContent } from '@/lib/firebase/schema';
+import type { PaperChatSession, PaperChatMessage, PaperChatCitation } from '@/lib/supabase/schema';
+import type { Paper, PaperContent } from '@/lib/supabase/schema';
 import {
   chatWithPaper,
   chatWithPapers,

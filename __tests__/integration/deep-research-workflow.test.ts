@@ -12,7 +12,7 @@
  */
 
 import { describe, test, expect, beforeEach } from 'vitest';
-import { resetFirebaseMocks } from '../mocks/firebase';
+import { resetSupabaseMocks } from '../mocks/supabase';
 import {
   createResearchSession,
   getDefaultConfig,
@@ -40,7 +40,7 @@ const TEST_USER_ID = 'test-user-research';
 
 describe('Deep Research Workflow - Complete Session', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('executes full quick research workflow', () => {
@@ -349,7 +349,7 @@ describe('Deep Research Workflow - Complete Session', () => {
 
 describe('Multi-Perspective Research', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('generates perspectives for medical topic', () => {
@@ -472,7 +472,7 @@ describe('Multi-Perspective Research', () => {
 
 describe('Iterative Refinement and Learning', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('accumulates learnings across iterations', () => {
@@ -588,7 +588,7 @@ describe('Iterative Refinement and Learning', () => {
 
 describe('Citation Graph Construction', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('builds citation graph from sources', () => {
@@ -717,7 +717,7 @@ describe('Citation Graph Construction', () => {
 
 describe('Consensus Analysis Workflow', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('analyzes consensus for yes/no question', () => {
@@ -803,7 +803,7 @@ describe('Consensus Analysis Workflow', () => {
 
 describe('Quality Review Cycles', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('identifies gaps in coverage', () => {
@@ -914,7 +914,7 @@ describe('Quality Review Cycles', () => {
 
 describe('Synthesis Generation', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('generates synthesis from multiple perspectives', () => {
@@ -997,7 +997,7 @@ describe('Synthesis Generation', () => {
 
 describe('Cross-Database Deduplication', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('deduplicates sources by DOI', () => {

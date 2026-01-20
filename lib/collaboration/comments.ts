@@ -1,175 +1,208 @@
-// Firestore operations for comments and suggestions
+// Supabase operations for comments
 'use client';
 
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-  onSnapshot,
-  Unsubscribe,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
-import { COLLECTIONS } from '@/lib/firebase/schema';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { Comment, CommentReply, CreateCommentData, UpdateCommentData } from './types';
 
-// Add a comment to a document
-export async function addComment(
-  data: CreateCommentData
-): Promise<string> {
+type CommentRow = {
+  id: string;
+  document_id: string;
+  user_id: string;
+  user_name: string;
+  user_avatar: string | null;
+  selection_start: number;
+  selection_end: number;
+  selected_text: string;
+  content: string;
+  type: 'comment' | 'suggestion';
+  suggested_text: string | null;
+  resolved: boolean;
+  replies: CommentReply[];
+  created_at: string;
+  updated_at: string;
+};
+
+function mapComment(row: CommentRow): Comment {
+  return {
+    id: row.id,
+    documentId: row.document_id,
+    userId: row.user_id,
+    userName: row.user_name,
+    userAvatar: row.user_avatar || undefined,
+    selectionStart: row.selection_start,
+    selectionEnd: row.selection_end,
+    selectedText: row.selected_text,
+    content: row.content,
+    type: row.type,
+    suggestedText: row.suggested_text || undefined,
+    resolved: row.resolved,
+    replies: row.replies || [],
+    createdAt: new Date(row.created_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime(),
+  };
+}
+
+export async function addComment(data: CreateCommentData): Promise<string> {
   try {
-    const commentRef = doc(
-      collection(db(), COLLECTIONS.DOCUMENTS, data.documentId, 'comments')
-    );
+    const supabase = getSupabaseBrowserClient();
+    const { data: created, error } = await supabase
+      .from('document_comments')
+      .insert({
+        document_id: data.documentId,
+        user_id: data.userId,
+        user_name: data.userName,
+        user_avatar: data.userAvatar || null,
+        selection_start: data.selectionStart,
+        selection_end: data.selectionEnd,
+        selected_text: data.selectedText,
+        content: data.content,
+        type: data.type,
+        suggested_text: data.suggestedText || null,
+        resolved: false,
+        replies: [],
+      })
+      .select('id')
+      .single();
 
-    const now = Date.now();
-    const comment: Omit<Comment, 'id'> = {
-      documentId: data.documentId,
-      userId: data.userId,
-      userName: data.userName,
-      userAvatar: data.userAvatar,
-      selectionStart: data.selectionStart,
-      selectionEnd: data.selectionEnd,
-      selectedText: data.selectedText,
-      content: data.content,
-      type: data.type,
-      suggestedText: data.suggestedText,
-      resolved: false,
-      createdAt: now,
-      updatedAt: now,
-      replies: [],
-    };
+    if (error || !created) {
+      console.error('Error adding comment:', error);
+      throw error;
+    }
 
-    await setDoc(commentRef, comment);
-    return commentRef.id;
+    return created.id as string;
   } catch (error) {
     console.error('Error adding comment:', error);
     throw error;
   }
 }
 
-// Get all comments for a document
 export async function getComments(documentId: string): Promise<Comment[]> {
   try {
-    const commentsRef = collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments');
-    const q = query(commentsRef, orderBy('createdAt', 'asc'));
-    const querySnapshot = await getDocs(q);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('document_comments')
+      .select('*')
+      .eq('document_id', documentId)
+      .order('created_at', { ascending: true });
 
-    const comments: Comment[] = [];
-    querySnapshot.forEach((doc) => {
-      comments.push({
-        id: doc.id,
-        ...doc.data(),
-      } as Comment);
-    });
+    if (error || !data) {
+      return [];
+    }
 
-    return comments;
+    return (data as CommentRow[]).map(mapComment);
   } catch (error) {
     console.error('Error getting comments:', error);
     return [];
   }
 }
 
-// Update a comment
 export async function updateComment(
-  documentId: string,
   commentId: string,
   updates: UpdateCommentData
 ): Promise<void> {
   try {
-    const commentRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
-    await updateDoc(commentRef, {
-      ...updates,
-      updatedAt: Date.now(),
-    });
+    const supabase = getSupabaseBrowserClient();
+    const payload: Record<string, unknown> = {};
+
+    if (updates.content !== undefined) payload.content = updates.content;
+    if (updates.resolved !== undefined) payload.resolved = updates.resolved;
+    if (updates.suggestedText !== undefined) payload.suggested_text = updates.suggestedText;
+
+    const { error } = await supabase
+      .from('document_comments')
+      .update(payload)
+      .eq('id', commentId);
+
+    if (error) {
+      console.error('Error updating comment:', error);
+      throw error;
+    }
   } catch (error) {
     console.error('Error updating comment:', error);
     throw error;
   }
 }
 
-// Delete a comment
-export async function deleteComment(
-  documentId: string,
-  commentId: string
-): Promise<void> {
+export async function deleteComment(commentId: string): Promise<void> {
   try {
-    const commentRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
-    await deleteDoc(commentRef);
+    const supabase = getSupabaseBrowserClient();
+    const { error } = await supabase.from('document_comments').delete().eq('id', commentId);
+
+    if (error) {
+      console.error('Error deleting comment:', error);
+      throw error;
+    }
   } catch (error) {
     console.error('Error deleting comment:', error);
     throw error;
   }
 }
 
-// Resolve a comment
-export async function resolveComment(
-  documentId: string,
-  commentId: string
-): Promise<void> {
-  try {
-    await updateComment(documentId, commentId, { resolved: true });
-  } catch (error) {
-    console.error('Error resolving comment:', error);
-    throw error;
-  }
+export async function resolveComment(commentId: string, resolved: boolean): Promise<void> {
+  return updateComment(commentId, { resolved });
 }
 
-// Add a reply to a comment
 export async function addReply(
   documentId: string,
   commentId: string,
   reply: Omit<CommentReply, 'id' | 'createdAt'>
 ): Promise<void> {
   try {
-    const commentRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments', commentId);
-    const commentSnap = await getDoc(commentRef);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('document_comments')
+      .select('*')
+      .eq('id', commentId)
+      .eq('document_id', documentId)
+      .single();
 
-    if (!commentSnap.exists()) {
+    if (error || !data) {
       throw new Error('Comment not found');
     }
 
-    const comment = commentSnap.data() as Comment;
+    const existing = mapComment(data as CommentRow);
     const newReply: CommentReply = {
       id: `reply_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...reply,
       createdAt: Date.now(),
     };
 
-    await updateDoc(commentRef, {
-      replies: [...(comment.replies || []), newReply],
-      updatedAt: Date.now(),
-    });
+    const { error: updateError } = await supabase
+      .from('document_comments')
+      .update({
+        replies: [...(existing.replies || []), newReply],
+      })
+      .eq('id', commentId);
+
+    if (updateError) {
+      console.error('Error adding reply:', updateError);
+      throw updateError;
+    }
   } catch (error) {
     console.error('Error adding reply:', error);
     throw error;
   }
 }
 
-// Subscribe to real-time comment updates
 export function subscribeToComments(
   documentId: string,
   callback: (comments: Comment[]) => void
-): Unsubscribe {
-  const commentsRef = collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'comments');
-  const q = query(commentsRef, orderBy('createdAt', 'asc'));
+): () => void {
+  const supabase = getSupabaseBrowserClient();
+  const channel = supabase
+    .channel(`comments-${documentId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'document_comments', filter: `document_id=eq.${documentId}` },
+      async () => {
+        const comments = await getComments(documentId);
+        callback(comments);
+      }
+    )
+    .subscribe();
 
-  return onSnapshot(q, (snapshot) => {
-    const comments: Comment[] = [];
-    snapshot.forEach((doc) => {
-      comments.push({
-        id: doc.id,
-        ...doc.data(),
-      } as Comment);
-    });
-    callback(comments);
-  }, (error) => {
-    console.error('Error subscribing to comments:', error);
-  });
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
+

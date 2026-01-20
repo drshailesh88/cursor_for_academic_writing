@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { PaperSection } from '@/lib/firebase/schema';
+import type { PaperSection } from '@/lib/supabase/schema';
 
 interface PaperSectionsProps {
   sections: PaperSection[];

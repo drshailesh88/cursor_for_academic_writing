@@ -2,7 +2,7 @@
 // Tests for all 9 agents in the multi-agent system
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Timestamp } from 'firebase/firestore';
+import { MockTimestamp } from '@/__tests__/mocks/supabase';
 
 // Import all agents
 import { BaseAgent, agentRegistry } from '../../lib/deep-research/agents/base-agent';
@@ -72,12 +72,12 @@ const createMockSession = (topic: string = 'Effects of caffeine on cognitive per
     qualityScore: 0,
     reviewFeedback: [],
     revisionCount: 0,
-    generatedAt: Timestamp.now(),
+    generatedAt: MockTimestamp.now(),
   },
   status: 'clarifying',
   progress: 0,
-  createdAt: Timestamp.now(),
-  updatedAt: Timestamp.now(),
+  createdAt: MockTimestamp.now(),
+  updatedAt: MockTimestamp.now(),
   collaborators: [],
   comments: [],
 });
@@ -108,7 +108,7 @@ const createMockSource = (id: string, title: string, year: number): ResearchSour
   citationContext: '',
   citationCount: 50,
   influenceScore: 0.8,
-  processedAt: Timestamp.now(),
+  processedAt: MockTimestamp.now(),
 });
 
 const createMockContext = (session: ResearchSession): AgentContext => ({

@@ -10,7 +10,7 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { mockFirestore, resetFirebaseMocks } from '../mocks/firebase';
+import { mockDatabase, resetSupabaseMocks } from '../mocks/supabase';
 import { createMockUser, createMockDocument } from '../mocks/test-data';
 import type {
   Comment,
@@ -32,21 +32,21 @@ vi.stubGlobal('crypto', {
   randomUUID: mockRandomUUID,
 });
 
-// Mock Firebase client
-vi.mock('@/lib/firebase/client', () => ({
-  db: () => mockFirestore,
+// Mock Supabase client
+vi.mock('@/lib/supabase/client', () => ({
+  db: () => mockDatabase,
 }));
 
-vi.mock('@/lib/firebase/schema', () => ({
+vi.mock('@/lib/supabase/schema', () => ({
   COLLECTIONS: {
     DOCUMENTS: 'documents',
     USERS: 'users',
   },
 }));
 
-vi.mock('@/lib/firebase/documents', () => ({
+vi.mock('@/lib/supabase/documents', () => ({
   getDocument: vi.fn(async (documentId: string) => {
-    const docRef = mockFirestore.doc(`documents/${documentId}`);
+    const docRef = mockDatabase.doc(`documents/${documentId}`);
     const snapshot = await docRef.get();
     if (snapshot.exists()) {
       return snapshot.data();
@@ -54,7 +54,7 @@ vi.mock('@/lib/firebase/documents', () => ({
     return null;
   }),
   updateDocument: vi.fn(async (documentId: string, data: any) => {
-    const docRef = mockFirestore.doc(`documents/${documentId}`);
+    const docRef = mockDatabase.doc(`documents/${documentId}`);
     await docRef.update(data);
   }),
 }));
@@ -111,11 +111,11 @@ describe('Collaboration Workflows Integration Tests', () => {
   const testDocument = createMockDocument({ id: testDocId, userId: owner.uid, title: 'Integration Test Document' });
 
   beforeEach(async () => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
     mockRandomUUID.mockClear();
 
     // Seed test document
-    await mockFirestore.doc(`documents/${testDocId}`).set({
+    await mockDatabase.doc(`documents/${testDocId}`).set({
       id: testDocId,
       userId: owner.uid,
       title: testDocument.title,
@@ -126,25 +126,25 @@ describe('Collaboration Workflows Integration Tests', () => {
     });
 
     // Seed users
-    await mockFirestore.doc(`users/${owner.uid}`).set({
+    await mockDatabase.doc(`users/${owner.uid}`).set({
       uid: owner.uid,
       email: owner.email,
       displayName: owner.displayName,
     });
 
-    await mockFirestore.doc(`users/${collaborator1.uid}`).set({
+    await mockDatabase.doc(`users/${collaborator1.uid}`).set({
       uid: collaborator1.uid,
       email: collaborator1.email,
       displayName: collaborator1.displayName,
     });
 
-    await mockFirestore.doc(`users/${collaborator2.uid}`).set({
+    await mockDatabase.doc(`users/${collaborator2.uid}`).set({
       uid: collaborator2.uid,
       email: collaborator2.email,
       displayName: collaborator2.displayName,
     });
 
-    await mockFirestore.doc(`users/${reviewer.uid}`).set({
+    await mockDatabase.doc(`users/${reviewer.uid}`).set({
       uid: reviewer.uid,
       email: reviewer.email,
       displayName: reviewer.displayName,
@@ -476,7 +476,7 @@ describe('Collaboration Workflows Integration Tests', () => {
       await restoreVersion(testDocId, v2Id, owner.uid, owner.displayName);
 
       // Check that document was updated
-      const docSnapshot = await mockFirestore.doc(`documents/${testDocId}`).get();
+      const docSnapshot = await mockDatabase.doc(`documents/${testDocId}`).get();
       const docData = docSnapshot.data();
       expect(docData?.content).toBe('<p>Version 2</p>');
 

@@ -11,7 +11,7 @@ import { faker } from '@faker-js/faker';
 faker.seed(12345);
 
 // ============================================================
-// Type Definitions (mirrors lib/firebase/schema.ts)
+// Type Definitions (mirrors lib/supabase/schema.ts)
 // ============================================================
 
 export interface MockUser {

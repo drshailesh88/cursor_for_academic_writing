@@ -179,7 +179,7 @@ export interface Reference {
 
   // Files and links
   pdfUrl?: string;
-  pdfStoragePath?: string; // Firebase Storage path
+  pdfStoragePath?: string; // Supabase Storage path
   supplementaryUrls?: string[];
 
   // Metrics
@@ -236,6 +236,7 @@ export interface DocumentCitation {
 export interface LibraryFolder {
   id: string;
   name: string;
+  description?: string;    // Folder description
   parentId?: string;       // For nested folders
   color?: string;          // Hex color
   icon?: string;           // Icon name

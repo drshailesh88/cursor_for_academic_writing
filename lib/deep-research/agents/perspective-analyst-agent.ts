@@ -264,10 +264,12 @@ export class PerspectiveAnalystAgent extends BaseAgent {
    */
   async execute(context: AgentContext): Promise<AgentResult<PerspectiveAnalysisResult>> {
     this.updateStatus('working', 'Analyzing topic for perspectives', 0);
+    let totalTokensUsed = 0;
 
     try {
       const topic = context.session.topic;
       const mode = context.session.mode;
+      const modelType = (context.session as { model?: string }).model || 'deepseek';
 
       // Determine number of perspectives based on research mode
       let numPerspectives: number;
@@ -290,17 +292,89 @@ export class PerspectiveAnalystAgent extends BaseAgent {
       }
 
       this.addMessage('system', this.config.systemPrompt);
+
+      // Build LLM prompt for perspective generation
+      const llmPrompt = `You are analyzing the research topic: "${topic}"
+
+Generate ${numPerspectives} distinct expert perspectives for comprehensive research.
+
+For each perspective, provide:
+1. A unique expert role type (e.g., domain_expert, methodologist, clinician, critic, historian, futurist, patient_advocate)
+2. A descriptive name for the expert
+3. A brief description of their focus
+4. 3-4 key focus areas
+5. 3-4 probing questions specific to this topic from their viewpoint
+
+Format your response as JSON:
+{
+  "perspectives": [
+    {
+      "role": "domain_expert",
+      "name": "Cardiology Specialist",
+      "description": "Expert in cardiovascular disease mechanisms and treatments",
+      "focusAreas": ["Pathophysiology", "Treatment efficacy", "Risk factors"],
+      "questions": [
+        "What are the key mechanisms underlying...?",
+        "What is the current evidence for...?"
+      ]
+    }
+  ]
+}
+
+Ensure perspectives are diverse, covering technical, methodological, practical, and critical viewpoints.`;
+
       this.addMessage('user', `Generate ${numPerspectives} expert perspectives for: "${topic}"`);
+      this.updateStatus('working', 'Calling LLM for perspective generation', 25);
 
-      // Select expert roles
-      this.updateStatus('working', 'Selecting expert roles', 25);
-      const selectedRoles = this.selectExpertRoles(topic, numPerspectives);
+      // Call LLM to generate perspectives
+      const { text: llmResponse, tokensUsed } = await this.callLLM(llmPrompt, modelType);
+      totalTokensUsed += tokensUsed;
 
-      // Create perspectives
-      this.updateStatus('working', 'Creating perspectives', 50);
-      this.perspectives = selectedRoles.map((role, index) =>
-        this.createPerspective(role, topic, index)
-      );
+      // Parse LLM response
+      this.updateStatus('working', 'Parsing LLM response', 50);
+      let parsedPerspectives: Array<{
+        role: string;
+        name: string;
+        description: string;
+        focusAreas: string[];
+        questions: string[];
+      }>;
+
+      try {
+        // Extract JSON from response (handle markdown code blocks)
+        const jsonMatch = llmResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          parsedPerspectives = parsed.perspectives || [];
+        } else {
+          throw new Error('No JSON found in LLM response');
+        }
+      } catch {
+        // Fallback to template-based generation if LLM parsing fails
+        console.warn('Failed to parse LLM response, falling back to templates');
+        const selectedRoles = this.selectExpertRoles(topic, numPerspectives);
+        this.perspectives = selectedRoles.map((role, index) =>
+          this.createPerspective(role, topic, index)
+        );
+        parsedPerspectives = [];
+      }
+
+      // Convert parsed perspectives to Perspective objects
+      if (parsedPerspectives.length > 0) {
+        this.perspectives = parsedPerspectives.map((p, index) => ({
+          id: `perspective-${index + 1}`,
+          name: p.name,
+          role: p.role,
+          description: p.description,
+          focusAreas: p.focusAreas,
+          questions: p.questions.map((q, qIdx) => ({
+            id: `q-${p.role}-${qIdx + 1}`,
+            question: q,
+            sources: [],
+            confidence: 0,
+          })),
+        }));
+      }
 
       // Calculate total questions
       const totalQuestions = this.perspectives.reduce(
@@ -308,8 +382,9 @@ export class PerspectiveAnalystAgent extends BaseAgent {
         0
       );
 
+      this.addMessage('assistant', llmResponse);
       this.addMessage('assistant',
-        `Created ${this.perspectives.length} expert perspectives with ${totalQuestions} research questions.`
+        `Created ${this.perspectives.length} expert perspectives with ${totalQuestions} research questions using ${modelType} model.`
       );
 
       // Analyze coverage
@@ -328,7 +403,7 @@ export class PerspectiveAnalystAgent extends BaseAgent {
         success: true,
         data: result,
         messages: this.messages,
-        tokensUsed: 0,
+        tokensUsed: totalTokensUsed,
       };
     } catch (error) {
       this.updateStatus('error', `Perspective analysis failed: ${error}`);
@@ -336,7 +411,7 @@ export class PerspectiveAnalystAgent extends BaseAgent {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         messages: this.messages,
-        tokensUsed: 0,
+        tokensUsed: totalTokensUsed,
       };
     }
   }

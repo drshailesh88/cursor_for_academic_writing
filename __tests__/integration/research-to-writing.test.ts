@@ -10,7 +10,7 @@
  */
 
 import { describe, test, expect, beforeEach } from 'vitest';
-import { resetFirebaseMocks } from '../mocks/firebase';
+import { resetSupabaseMocks } from '../mocks/supabase';
 
 // Deep research imports - types from types, functions from index
 import {
@@ -46,7 +46,7 @@ import { formatBibliography, formatCitation, type CitationStyleId } from '@/lib/
 import type { Reference } from '@/lib/citations/types';
 
 // Document imports
-import { updateDocument } from '@/lib/firebase/documents';
+import { updateDocument } from '@/lib/supabase/documents';
 
 const TEST_USER_ID = 'test-user-research-writing';
 
@@ -56,7 +56,7 @@ const TEST_USER_ID = 'test-user-research-writing';
 
 describe('Deep Research → Synthesis → Insert Findings', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('creates deep research session and executes', () => {
@@ -225,7 +225,7 @@ performance across diverse populations requires careful validation.
     };
 
     // Create a document first and get its ID
-    const { createDocument } = await import('@/lib/firebase/documents');
+    const { createDocument } = await import('@/lib/supabase/documents');
 
     const documentId = await createDocument(TEST_USER_ID, 'Research Synthesis Document');
 
@@ -284,7 +284,7 @@ performance across diverse populations requires careful validation.
 
 describe('Multi-Perspective → Consensus → Conclusion', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('analyzes consensus across studies', () => {
@@ -466,7 +466,7 @@ with ${consensus.confidenceReason}.</p>
 
 describe('Citation Analysis → Bibliography → Export', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('analyzes citation network structure', () => {
@@ -741,7 +741,7 @@ ${bibliography}
 
 describe('Research Quality → Refinement → Final Writing', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('evaluates synthesis quality score', () => {

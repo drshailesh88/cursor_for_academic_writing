@@ -17,7 +17,7 @@ import {
   signUpWithEmail,
   signInWithGoogle,
   getAuthErrorMessage,
-} from '@/lib/firebase/auth';
+} from '@/lib/supabase/auth';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface AuthDialogProps {

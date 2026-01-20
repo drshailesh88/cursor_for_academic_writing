@@ -10,18 +10,18 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { mockFirestore, resetFirebaseMocks } from '../../mocks/firebase';
+import { mockDatabase, resetSupabaseMocks } from '../../mocks/supabase';
 import { createMockUser, createMockDocument } from '../../mocks/test-data';
 import type { DocumentVersion, CreateVersionOptions } from '@/lib/collaboration/types';
 
-// Mock the Firebase client module
-vi.mock('@/lib/firebase/client', () => ({
-  db: () => mockFirestore,
+// Mock the Supabase client module
+vi.mock('@/lib/supabase/client', () => ({
+  db: () => mockDatabase,
 }));
 
-vi.mock('@/lib/firebase/documents', () => ({
+vi.mock('@/lib/supabase/documents', () => ({
   getDocument: vi.fn(async (documentId: string) => {
-    const docRef = mockFirestore.doc(`documents/${documentId}`);
+    const docRef = mockDatabase.doc(`documents/${documentId}`);
     const snapshot = await docRef.get();
     if (snapshot.exists) {
       return snapshot.data();
@@ -48,10 +48,10 @@ describe('Version History', () => {
   const testDocument = createMockDocument({ id: testDocId, userId: testUser.uid });
 
   beforeEach(async () => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
 
     // Seed the document in the mock database
-    await mockFirestore.doc(`documents/${testDocId}`).set({
+    await mockDatabase.doc(`documents/${testDocId}`).set({
       id: testDocId,
       userId: testUser.uid,
       title: testDocument.title,
@@ -257,7 +257,7 @@ describe('Version History', () => {
       );
 
       // Update document to different content
-      await mockFirestore.doc(`documents/${testDocId}`).update({
+      await mockDatabase.doc(`documents/${testDocId}`).update({
         content: '<p>Changed content</p>',
         wordCount: 20,
       });
@@ -266,7 +266,7 @@ describe('Version History', () => {
     test('restores to previous version', async () => {
       await restoreVersion(testDocId, versionId, testUser.uid, testUser.displayName);
 
-      const docRef = mockFirestore.doc(`documents/${testDocId}`);
+      const docRef = mockDatabase.doc(`documents/${testDocId}`);
       const snapshot = await docRef.get();
       const docData = snapshot.data();
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { AuthButton } from './auth-button';
 
 interface AuthGuardProps {

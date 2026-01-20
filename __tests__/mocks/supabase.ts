@@ -1,8 +1,8 @@
 /**
- * Firebase Mock
+ * Supabase Mock
  *
- * Complete mock implementation of Firebase Auth and Firestore
- * for testing without connecting to real Firebase services.
+ * Complete mock implementation of Supabase Auth and Database
+ * for testing without connecting to real Supabase services.
  */
 
 import { createMockUser, createMockDocument, type MockUser, type MockDocument } from './test-data';
@@ -95,7 +95,7 @@ export class MockDocumentReference {
   constructor(
     public id: string,
     public path: string,
-    private store: MockFirestore
+    private store: MockDatabase
   ) {}
 
   async get(): Promise<MockDocumentSnapshot> {
@@ -147,7 +147,7 @@ export class MockDocumentReference {
 export class MockCollectionReference {
   constructor(
     public path: string,
-    private store: MockFirestore
+    private store: MockDatabase
   ) {}
 
   doc(id?: string): MockDocumentReference {
@@ -220,7 +220,7 @@ export class MockCollectionReference {
 export class MockQuery {
   constructor(
     private path: string,
-    private store: MockFirestore,
+    private store: MockDatabase,
     private filters: Array<{ field: string; operator: string; value: unknown }> = [],
     private orderBys: Array<{ field: string; direction: 'asc' | 'desc' }> = [],
     private limitCount?: number
@@ -320,7 +320,7 @@ export class MockQuery {
 export class MockWriteBatch {
   private operations: Array<() => void> = [];
 
-  constructor(private store: MockFirestore) {}
+  constructor(private store: MockDatabase) {}
 
   set(ref: MockDocumentReference, data: Record<string, unknown>): this {
     this.operations.push(() => {
@@ -357,10 +357,10 @@ export class MockWriteBatch {
 }
 
 // ============================================================
-// Mock Firestore
+// Mock Database
 // ============================================================
 
-export class MockFirestore {
+export class MockDatabase {
   private data: Map<string, Record<string, unknown>> = new Map();
   private listeners: Map<string, Set<(data: Record<string, unknown> | null) => void>> =
     new Map();
@@ -528,23 +528,23 @@ export class MockAuth {
 // Singleton Instances
 // ============================================================
 
-export const mockFirestore = new MockFirestore();
+export const mockDatabase = new MockDatabase();
 export const mockAuth = new MockAuth();
 
 // ============================================================
 // Jest Mock Factory
 // ============================================================
 
-export function createFirebaseMock() {
+export function createSupabaseMock() {
   return {
     auth: mockAuth,
-    db: mockFirestore,
+    db: mockDatabase,
     Timestamp: MockTimestamp,
   };
 }
 
 // Reset function for use in beforeEach
-export function resetFirebaseMocks(): void {
-  mockFirestore.clear();
+export function resetSupabaseMocks(): void {
+  mockDatabase.clear();
   mockAuth.clear();
 }

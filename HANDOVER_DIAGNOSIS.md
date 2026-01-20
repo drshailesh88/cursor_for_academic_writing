@@ -12,20 +12,20 @@
 
 | Issue | Root Cause | Impact | Fix Difficulty |
 |-------|-----------|--------|----------------|
-| **Firebase Auth/Permissions** | Complex rules, dev mode conflicts | Documents don't save reliably | Medium |
+| **Supabase Auth/Permissions** | Complex rules, dev mode conflicts | Documents don't save reliably | Medium |
 | **Deep Research** | Mock implementations, no LLM calls | Feature non-functional | High |
 | **Connected Papers** | Missing Semantic Scholar API key | Rate limiting (100 req/5 min) | Easy |
-| **PDF Chat** | Firebase dependency, optional APIs | Works partially | Medium |
+| **PDF Chat** | Supabase dependency, optional APIs | Works partially | Medium |
 | **PPTX Export** | Node.js/browser incompatibility | Disabled intentionally | Medium |
 
 ### Key Insight from Old Project
 
-Your previous project (`sky-space-clone`) used **Supabase from the start**, not Firebase. It was simpler because:
+Your previous project (`sky-space-clone`) used **Supabase from the start**, not Supabase. It was simpler because:
 - Supabase has simpler auth
 - PostgreSQL is straightforward
-- No complex Firestore security rules
+- No complex Postgres security rules
 
-**Recommendation:** Migrate from Firebase to Supabase for database operations.
+**Recommendation:** Migrate from Supabase to Supabase for database operations.
 
 ---
 
@@ -46,28 +46,28 @@ Your previous project (`sky-space-clone`) used **Supabase from the start**, not 
 ### Partially Working
 - [ ] Document persistence (localStorage only, no cloud sync)
 - [ ] Settings persistence (localStorage only)
-- [ ] PDF Chat (needs Firebase + OpenAI for embeddings)
+- [ ] PDF Chat (needs Supabase + OpenAI for embeddings)
 - [ ] Connected Papers (rate-limited without API key)
 
 ### Not Working
 - [ ] Deep Research (mock implementations)
 - [ ] PPTX Export (disabled)
-- [ ] Multi-user authentication (Firebase auth complex)
+- [ ] Multi-user authentication (Supabase auth complex)
 - [ ] Cloud document sync
 
 ---
 
 ## Part 2: Detailed Issue Diagnosis
 
-### Issue 1: Firebase Complexity
+### Issue 1: Supabase Complexity
 
 **Symptoms:**
 - "Missing or insufficient permissions" errors
 - Auth state not persisting
-- Firestore queries failing
+- Postgres queries failing
 
 **Root Cause:**
-Firebase requires:
+Supabase requires:
 1. Correct security rules
 2. Proper auth state before queries
 3. Client/server SDK separation
@@ -75,12 +75,12 @@ Firebase requires:
 
 **Current Workaround:**
 Dev mode uses localStorage (implemented in this session):
-- `lib/firebase/documents.ts` - localStorage fallback
-- `lib/firebase/settings.ts` - localStorage fallback
-- `lib/firebase/auth.ts` - mock user in dev mode
+- `lib/supabase/documents.ts` - localStorage fallback
+- `lib/supabase/settings.ts` - localStorage fallback
+- `lib/supabase/auth.ts` - mock user in dev mode
 
 **Permanent Fix:**
-Replace Firebase with Supabase (see Part 4).
+Replace Supabase with Supabase (see Part 4).
 
 ---
 
@@ -170,12 +170,12 @@ SEMANTIC_SCHOLAR_API_KEY=your_key_here
 1. **Dense retrieval** needs `OPENAI_API_KEY` for embeddings
 2. **Reranking** needs `COHERE_API_KEY` (optional, improves quality)
 3. **OCR** not implemented (scanned PDFs flagged but not processed)
-4. **Firebase** required for paper storage (cloud sync)
+4. **Supabase** required for paper storage (cloud sync)
 
 **Current State:**
 Works with BM25-only retrieval if you have:
 - At least one LLM API key
-- Firebase configured (or using localStorage workaround)
+- Supabase configured (or using localStorage workaround)
 
 ---
 
@@ -218,7 +218,7 @@ GOOGLE_API_KEY=***              # Gemini has model name issue
 GOOGLE_GENERATIVE_AI_API_KEY=***
 NEXT_PUBLIC_DEV_AUTH_BYPASS=true # Working
 
-# Firebase
+# Supabase
 NEXT_PUBLIC_FIREBASE_API_KEY=***
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=***
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=***
@@ -243,11 +243,11 @@ PUBMED_API_KEY=                 # Optional, increases rate limit
 
 ---
 
-## Part 4: Database Migration Plan (Firebase → Supabase)
+## Part 4: Database Migration Plan (Supabase → Supabase)
 
 ### Why Supabase?
 
-| Factor | Firebase | Supabase |
+| Factor | Supabase | Supabase |
 |--------|----------|----------|
 | Learning curve | Steeper | Gentler |
 | Data portability | Locked | PostgreSQL (exportable) |
@@ -344,18 +344,18 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
-#### Step 5: Replace Firebase Functions
+#### Step 5: Replace Supabase Functions
 
 **Files to modify:**
-1. `lib/firebase/documents.ts` → `lib/supabase/documents.ts`
-2. `lib/firebase/settings.ts` → `lib/supabase/settings.ts`
-3. `lib/firebase/auth.ts` → `lib/supabase/auth.ts`
-4. `lib/firebase/papers.ts` → `lib/supabase/papers.ts`
+1. `lib/supabase/documents.ts` → `lib/supabase/documents.ts`
+2. `lib/supabase/settings.ts` → `lib/supabase/settings.ts`
+3. `lib/supabase/auth.ts` → `lib/supabase/auth.ts`
+4. `lib/supabase/papers.ts` → `lib/supabase/papers.ts`
 
 **Pattern for each function:**
 ```typescript
-// Before (Firebase)
-import { collection, doc, getDoc } from 'firebase/firestore';
+// Before (Supabase)
+import { collection, doc, getDoc } from 'supabase/postgres';
 const docRef = doc(db, 'documents', id);
 const snap = await getDoc(docRef);
 
@@ -369,7 +369,7 @@ const { data, error } = await supabase
 ```
 
 #### Step 6: Update Auth Hook
-Replace Firebase Auth with Supabase Auth in `lib/hooks/use-auth.ts`:
+Replace Supabase Auth with Supabase Auth in `lib/hooks/use-auth.ts`:
 ```typescript
 import { supabase } from '@/lib/supabase/client';
 import { useEffect, useState } from 'react';
@@ -417,7 +417,7 @@ export function useAuth() {
 4. Test all export features manually
 
 ### Medium-term (Next Week)
-5. Migrate from Firebase to Supabase
+5. Migrate from Supabase to Supabase
 6. Implement Deep Research LLM integration
 
 ### Long-term
@@ -431,9 +431,9 @@ export function useAuth() {
 
 ### Critical Files for Database Swap
 ```
-lib/firebase/
+lib/supabase/
 ├── auth.ts          # Auth functions → replace with Supabase
-├── client.ts        # Firebase init → replace with Supabase
+├── client.ts        # Supabase init → replace with Supabase
 ├── documents.ts     # Document CRUD → replace with Supabase
 ├── settings.ts      # Settings CRUD → replace with Supabase
 ├── papers.ts        # Papers CRUD → replace with Supabase
@@ -522,7 +522,7 @@ curl -X POST http://localhost:2550/api/research \
 
 The app has **solid architecture and extensive features**, but several are incomplete:
 
-1. **Firebase is overcomplicating things** → Migrate to Supabase
+1. **Supabase is overcomplicating things** → Migrate to Supabase
 2. **Deep Research is stubbed out** → Needs LLM integration
 3. **Connected Papers works** → Just needs API key
 4. **PPTX export exists** → Just needs server-side API

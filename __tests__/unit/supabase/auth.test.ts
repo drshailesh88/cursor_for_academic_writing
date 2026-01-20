@@ -1,5 +1,5 @@
 /**
- * Firebase Authentication Tests
+ * Supabase Authentication Tests
  *
  * Tests authentication functionality including:
  * - Google Sign-In
@@ -11,7 +11,7 @@
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { mockAuth, mockFirestore, resetFirebaseMocks, MockTimestamp } from '../../mocks/firebase';
+import { mockAuth, mockDatabase, resetSupabaseMocks, MockTimestamp } from '../../mocks/supabase';
 import { createMockUser } from '../../mocks/test-data';
 
 // Import auth functions
@@ -25,11 +25,11 @@ import {
   sendPasswordReset,
   updateUserProfile,
   getAuthErrorMessage,
-} from '@/lib/firebase/auth';
+} from '@/lib/supabase/auth';
 
-describe('Firebase Authentication', () => {
+describe('Supabase Authentication', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   describe('signInWithGoogle', () => {
@@ -41,8 +41,8 @@ describe('Firebase Authentication', () => {
       expect(user.email).toBeDefined();
       expect(mockAuth.currentUser).toEqual(user);
 
-      // Verify user profile was created in Firestore
-      const userDoc = await mockFirestore.doc(`users/${user.uid}`).get();
+      // Verify user profile was created in Supabase
+      const userDoc = await mockDatabase.doc(`users/${user.uid}`).get();
       expect(userDoc.exists()).toBe(true);
 
       const userData = userDoc.data();
@@ -59,11 +59,11 @@ describe('Firebase Authentication', () => {
     test.skip('updates lastLoginAt for existing users', async () => {
       // Skip: This test requires complex mock behavior to simulate same user across sessions
       // The mock creates a new user on each signIn, which is sufficient for most test scenarios
-      // In production, Firebase maintains user identity across sign-in sessions
+      // In production, Supabase maintains user identity across sign-in sessions
 
       // First sign in - creates user
       const user1 = await signInWithGoogle();
-      const firstDoc = await mockFirestore.doc(`users/${user1.uid}`).get();
+      const firstDoc = await mockDatabase.doc(`users/${user1.uid}`).get();
       const firstLoginTime = (firstDoc.data()?.lastLoginAt as MockTimestamp)?.toDate().getTime();
 
       // Sign out
@@ -76,7 +76,7 @@ describe('Firebase Authentication', () => {
       mockAuth.currentUser = user1;
       const user2 = await signInWithGoogle();
 
-      const secondDoc = await mockFirestore.doc(`users/${user2.uid}`).get();
+      const secondDoc = await mockDatabase.doc(`users/${user2.uid}`).get();
       const secondLoginTime = (secondDoc.data()?.lastLoginAt as MockTimestamp)?.toDate().getTime();
 
       expect(user2.uid).toBe(user1.uid);
@@ -201,7 +201,7 @@ describe('Firebase Authentication', () => {
       unmount();
 
       // Note: In a real implementation, this would verify cleanup
-      // Our mock doesn't automatically clean up, but the real Firebase SDK does
+      // Our mock doesn't automatically clean up, but the real Supabase SDK does
     });
   });
 
@@ -222,10 +222,10 @@ describe('Firebase Authentication', () => {
       expect(profile).toBeNull();
     });
 
-    test('handles Firestore errors gracefully', async () => {
-      // Mock Firestore error
-      const getSpy = vi.spyOn(mockFirestore.doc('users/test'), 'get').mockRejectedValueOnce(
-        new Error('Firestore error')
+    test('handles Supabase errors gracefully', async () => {
+      // Mock Supabase error
+      const getSpy = vi.spyOn(mockDatabase.doc('users/test'), 'get').mockRejectedValueOnce(
+        new Error('Supabase error')
       );
 
       const profile = await getUserProfile('test');
@@ -332,7 +332,7 @@ describe('Firebase Authentication', () => {
       const error = new Error('Invalid email');
       (error as any).code = 'auth/invalid-email';
 
-      // We'd need to mock the Firebase sendPasswordResetEmail function
+      // We'd need to mock the Supabase sendPasswordResetEmail function
       // For now, testing the error message handler
       const message = getAuthErrorMessage(error);
       expect(message).toBe('Invalid email address');
@@ -345,7 +345,7 @@ describe('Firebase Authentication', () => {
 
       await updateUserProfile('Updated Name', 'https://example.com/photo.jpg');
 
-      // Verify Firestore update
+      // Verify Supabase update
       const profile = await getUserProfile(user.uid);
       expect(profile?.displayName).toBe('Updated Name');
       expect(profile?.photoURL).toBe('https://example.com/photo.jpg');
@@ -406,7 +406,7 @@ describe('Firebase Authentication', () => {
       expect(getAuthErrorMessage(error)).toBe('An error occurred. Please try again.');
     });
 
-    test('returns generic message for non-Firebase errors', () => {
+    test('returns generic message for non-Supabase errors', () => {
       const error = new Error('Generic error');
       expect(getAuthErrorMessage(error)).toBe('An unexpected error occurred');
     });

@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import type { FeatureTab } from './feature-tabs';
 import { ChatInterface } from '@/components/chat/chat-interface';
 import { CommentsSidebar } from '@/components/collaboration/comments-sidebar';
-import type { DisciplineId } from '@/lib/firebase/schema';
+import type { DisciplineId } from '@/lib/supabase/schema';
 
 // Lazy load the new feature panels for better performance
 const ResearchPanelCompact = lazy(() =>

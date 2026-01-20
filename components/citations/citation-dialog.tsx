@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, X, ChevronDown, Book, FileText, GraduationCap, Globe, Beaker } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { searchReferences, getAllReferences } from '@/lib/citations/library';
 import {
   Reference,

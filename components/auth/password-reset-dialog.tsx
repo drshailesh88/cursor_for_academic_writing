@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { sendPasswordReset, getAuthErrorMessage } from '@/lib/firebase/auth';
+import { sendPasswordReset, getAuthErrorMessage } from '@/lib/supabase/auth';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface PasswordResetDialogProps {

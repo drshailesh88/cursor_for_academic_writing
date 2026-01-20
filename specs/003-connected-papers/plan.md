@@ -11,7 +11,7 @@ Build a Research Rabbit-inspired feature that discovers related papers based on 
 
 **Language/Version**: TypeScript 5.x with Next.js 14 (App Router)
 **Primary Dependencies**: Existing PubMed client, Vercel AI SDK for concept extraction
-**Storage**: Firebase Firestore (recommendations cache)
+**Storage**: Supabase Postgres (recommendations cache)
 **Testing**: Manual testing with academic documents
 **Target Platform**: Web application (Next.js)
 **Project Type**: Web application - extend existing three-panel layout
@@ -26,7 +26,7 @@ Build a Research Rabbit-inspired feature that discovers related papers based on 
 | Academic Excellence First | PASS | Recommendations enhance research quality |
 | Citation Integrity | PASS | All recommendations include proper citation data |
 | Multi-LLM Flexibility | PASS | Use existing model for concept extraction |
-| Firebase-First Architecture | PASS | Cache recommendations in Firestore |
+| Supabase-First Architecture | PASS | Cache recommendations in Postgres |
 | Simplicity Over Complexity | PASS | Build on existing PubMed integration |
 
 ## Project Structure
@@ -64,7 +64,7 @@ app/api/
 │   └── route.ts                    # Recommendations API endpoint
 
 # Files to modify
-lib/firebase/
+lib/supabase/
 ├── schema.ts                    # Add RecommendationCache type
 
 lib/pubmed/
@@ -105,7 +105,7 @@ components/layout/
 4. **Recommendations API** (`app/api/recommendations/route.ts`)
    - POST endpoint accepting documentContent, existingCitations
    - Extract concepts → Search → Score → Return
-   - Cache results in Firestore for 24 hours
+   - Cache results in Postgres for 24 hours
 
 5. **Recommendations Panel UI** (`components/recommendations/recommendations-panel.tsx`)
    - "Find Related Papers" button
@@ -171,7 +171,7 @@ components/layout/
 
 ## Data Model
 
-### RecommendationCache (Firestore)
+### RecommendationCache (Postgres)
 
 ```typescript
 interface RecommendationCache {
@@ -221,7 +221,7 @@ interface PaperRecommendation {
 }
 ```
 
-### Firestore Collection Structure
+### Postgres Collection Structure
 
 ```
 users/{userId}/recommendationCaches/{documentId}
@@ -320,7 +320,7 @@ Add "Related Papers" as a tab or section within the right panel. Can be:
 ### Existing (no changes needed)
 - `lib/pubmed/client.ts` - PubMed search functionality
 - `@ai-sdk/*` packages - AI for concept extraction
-- `firebase` - Firestore for caching
+- `supabase` - Postgres for caching
 
 ### PubMed Client Enhancements
 

@@ -9,7 +9,7 @@ import {
   DiscoveredPaper,
   LearningEvent,
 } from '@/lib/discovery/types';
-import { Timestamp } from 'firebase/firestore';
+import { MockTimestamp } from '@/__tests__/mocks/supabase';
 import {
   generateRecommendations,
   getTrending,
@@ -175,7 +175,7 @@ class DraftAnalyzer {
       citationGaps: gaps,
       coverageScore,
       suggestions,
-      analyzedAt: Timestamp.now(),
+      analyzedAt: MockTimestamp.now(),
     };
   }
 
@@ -523,7 +523,7 @@ describe('RecommendationEngine', () => {
         type: 'accepted_recommendation',
         paperId: 'paper1',
         topic: 'deep learning',
-        timestamp: Timestamp.now(),
+        timestamp: MockTimestamp.now(),
       };
 
       await expect(
@@ -536,7 +536,7 @@ describe('RecommendationEngine', () => {
       const event: LearningEvent = {
         type: 'rejected_recommendation',
         paperId: 'paper1',
-        timestamp: Timestamp.now(),
+        timestamp: MockTimestamp.now(),
       };
 
       await expect(
@@ -549,7 +549,7 @@ describe('RecommendationEngine', () => {
       const event: LearningEvent = {
         type: 'added_paper',
         paperId: 'paper1',
-        timestamp: Timestamp.now(),
+        timestamp: MockTimestamp.now(),
       };
 
       await expect(
@@ -562,7 +562,7 @@ describe('RecommendationEngine', () => {
       const event: LearningEvent = {
         type: 'read_paper',
         paperId: 'paper1',
-        timestamp: Timestamp.now(),
+        timestamp: MockTimestamp.now(),
       };
 
       await expect(

@@ -109,7 +109,7 @@ test.describe('Document Management', () => {
     // Should not have critical errors that prevent page load
     const criticalErrors = errors.filter(
       (error) =>
-        !error.message.includes('Firebase') &&
+        !error.message.includes('Supabase') &&
         !error.message.includes('auth/') &&
         !error.message.includes('ResizeObserver')
     );

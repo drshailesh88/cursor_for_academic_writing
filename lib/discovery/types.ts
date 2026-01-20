@@ -1,5 +1,3 @@
-import { Timestamp } from 'firebase/firestore';
-
 /**
  * Author information
  */
@@ -139,8 +137,8 @@ export interface CitationNetwork {
   config: NetworkConfig;
   layout: NetworkLayout;
 
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /**
@@ -209,8 +207,8 @@ export interface KnowledgeMap {
 
   config: MapConfig;
 
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /**
@@ -285,7 +283,7 @@ export interface ResearchTimeline {
 
   config: TimelineConfig;
 
-  createdAt: Timestamp;
+  createdAt: Date;
 }
 
 /**
@@ -323,7 +321,7 @@ export interface LiteratureConnection {
   paths: ConnectionPath[];
   shortestPath: ConnectionPath;
 
-  createdAt: Timestamp;
+  createdAt: Date;
 }
 
 /**
@@ -342,7 +340,7 @@ export interface Recommendation {
  */
 export interface Recommendations {
   userId: string;
-  updatedAt: Timestamp;
+  updatedAt: Date;
 
   hotNow: Recommendation[];
   missingFromReview: Recommendation[];
@@ -397,7 +395,7 @@ export interface DraftAnalysis {
 
   suggestions: DraftSuggestion[];
 
-  analyzedAt: Timestamp;
+  analyzedAt: Date;
 }
 
 /**
@@ -420,7 +418,7 @@ export interface ResearchFrontier {
   gaps: ResearchOpportunity[];
   opportunities: ResearchOpportunity[];
   metrics: FrontierMetrics;
-  generatedAt: Timestamp;
+  generatedAt: Date;
 }
 
 /**
@@ -430,7 +428,7 @@ export interface LearningEvent {
   type: 'accepted_recommendation' | 'rejected_recommendation' | 'added_paper' | 'read_paper';
   paperId: string;
   topic?: string;
-  timestamp: Timestamp;
+  timestamp: Date;
 }
 
 /**
@@ -473,7 +471,7 @@ export interface RefManagerSync {
   provider: 'zotero' | 'mendeley' | 'endnote' | 'papers';
 
   connected: boolean;
-  lastSync: Timestamp;
+  lastSync: Date;
   syncedPaperCount: number;
 
   settings: {

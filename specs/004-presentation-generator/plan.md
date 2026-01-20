@@ -62,7 +62,7 @@
 │                                                                                 │
 │  ┌──────────────────────────────────────────────────────────────────────────┐   │
 │  │                         PERSISTENCE LAYER                                │   │
-│  │                    Firebase Firestore                                    │   │
+│  │                    Supabase Postgres                                    │   │
 │  │  /presentations/{presentationId}                                         │   │
 │  │    ├── /slides/{slideId}                                                │   │
 │  │    └── metadata, settings, theme                                        │   │
@@ -897,12 +897,12 @@ export async function exportToPdf(
 
 ### 5. Persistence Layer
 
-#### 5.1 Firebase Schema
+#### 5.1 Supabase Schema
 
 ```typescript
-// lib/presentations/firebase-schema.ts
+// lib/presentations/supabase-schema.ts
 
-// Firestore collection structure:
+// Postgres collection structure:
 // /users/{userId}/presentations/{presentationId}
 // /users/{userId}/presentations/{presentationId}/slides/{slideId}
 
@@ -930,12 +930,12 @@ interface SlideDoc {
   updatedAt: Timestamp;
 }
 
-// Firebase operations
+// Supabase operations
 export async function createPresentation(
   userId: string,
   presentation: Omit<Presentation, 'id'>
 ): Promise<string> {
-  const db = getFirestore();
+  const db = getPostgres();
 
   // Create presentation document
   const presRef = doc(collection(db, `users/${userId}/presentations`));
@@ -1121,7 +1121,7 @@ describe('PPTX Export', () => {
 
 1. **Content Sanitization:** Sanitize all user content before rendering
 2. **Export Validation:** Validate exported files before download
-3. **Firebase Rules:** Presentations inherit document permissions
+3. **Supabase Rules:** Presentations inherit document permissions
 4. **API Rate Limiting:** Limit AI generation requests per user
 
 ---

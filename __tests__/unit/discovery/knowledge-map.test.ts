@@ -7,7 +7,7 @@ import {
   ClusterConnection,
   DiscoveredPaper,
 } from '@/lib/discovery/types';
-import { Timestamp } from 'firebase/firestore';
+import { MockTimestamp } from '@/__tests__/mocks/supabase';
 import {
   generateMap,
   clusterPapers,
@@ -108,8 +108,8 @@ class KnowledgeMapBuilder {
       papers: mapPapers,
       connections,
       config,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      createdAt: MockTimestamp.now(),
+      updatedAt: MockTimestamp.now(),
     };
   }
 
@@ -478,8 +478,8 @@ describe('KnowledgeMapBuilder', () => {
         papers: [],
         connections: [],
         config: mockConfig,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const gaps = await builder.detectGaps(mockMap);
@@ -512,8 +512,8 @@ describe('KnowledgeMapBuilder', () => {
         papers: [],
         connections: [],
         config: mockConfig,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const gaps = await builder.detectGaps(mockMap);
@@ -558,8 +558,8 @@ describe('KnowledgeMapBuilder', () => {
         papers: [],
         connections: [],
         config: mockConfig,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const gaps = await builder.detectGaps(mockMap);

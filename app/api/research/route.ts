@@ -25,6 +25,8 @@ interface ResearchRequest {
   mode?: 'quick' | 'standard' | 'deep' | 'exhaustive' | 'systematic';
   config?: Partial<ResearchConfig>;
   clarifications?: Array<{ question: string; answer: string }>;
+  /** LLM model to use for research agents (uses same model as chat) */
+  model?: 'deepseek' | 'claude' | 'openai' | 'gemini';
 }
 
 /**
@@ -39,7 +41,10 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body: ResearchRequest = await request.json();
-    const { topic, mode = 'standard', config, clarifications } = body;
+    const { topic, mode = 'standard', config, clarifications, model = 'deepseek' } = body;
+
+    // Merge model into config so it's available to research functions
+    const researchConfig = { ...config, model };
 
     // Validate required fields
     if (!topic || !topic.trim()) {
@@ -69,7 +74,7 @@ export async function POST(request: NextRequest) {
             progress: 0,
           });
 
-          const session = await startResearch(topic.trim(), mode, config);
+          const session = await startResearch(topic.trim(), mode, researchConfig);
 
           sendEvent('session_created', {
             sessionId: session.id,

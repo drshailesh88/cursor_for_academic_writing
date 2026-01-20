@@ -14,7 +14,7 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import type { Timestamp } from 'firebase/firestore';
+import type { MockTimestamp } from '@/__tests__/mocks/supabase';
 import {
   createResearchSession,
   getDefaultConfig,

@@ -17,7 +17,7 @@ import type {
   QualityAssessment,
   EnrichmentResult,
 } from '@/lib/papers/types';
-import type { PaperSection, PaperFigure, PaperTable, PaperReference } from '@/lib/firebase/schema';
+import type { PaperSection, PaperFigure, PaperTable, PaperReference } from '@/lib/supabase/schema';
 import {
   extractText,
   identifySections,

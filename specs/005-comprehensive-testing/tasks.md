@@ -25,7 +25,7 @@
 | ✅ 2 | Create vitest.config.ts with TypeScript support | P0 | Done |
 | ✅ 3 | Create tsconfig.test.json for test environment | P0 | Done |
 | ✅ 4 | Create __tests__/setup.ts with global mocks | P0 | Done |
-| ✅ 5 | Create __tests__/mocks/firebase.ts mock | P0 | Done |
+| ✅ 5 | Create __tests__/mocks/supabase.ts mock | P0 | Done |
 | ✅ 6 | Create __tests__/mocks/api-handlers.ts (MSW) | P0 | Done |
 | ✅ 7 | Create __tests__/mocks/test-data.ts (Faker) | P0 | Done |
 | ✅ 8 | Add test scripts to package.json | P0 | Done |
@@ -35,11 +35,11 @@
 
 ## Phase T1: Core Infrastructure Tests ✅ COMPLETE
 
-### T1.1 Firebase Authentication (16 tests)
+### T1.1 Supabase Authentication (16 tests)
 
 | # | Task | Status |
 |---|------|--------|
-| ✅ 10-16 | All Firebase auth tests | Done |
+| ✅ 10-16 | All Supabase auth tests | Done |
 
 ### T1.2 Document CRUD (20 tests)
 
@@ -231,11 +231,11 @@
 __tests__/
 ├── setup.ts
 ├── mocks/
-│   ├── firebase.ts
+│   ├── supabase.ts
 │   ├── api-handlers.ts
 │   └── test-data.ts
 ├── unit/
-│   ├── firebase/
+│   ├── supabase/
 │   │   ├── auth.test.ts
 │   │   ├── documents.test.ts
 │   │   └── auto-save.test.ts

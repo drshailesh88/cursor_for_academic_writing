@@ -11,16 +11,16 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { mockFirestore, resetFirebaseMocks } from '../../mocks/firebase';
+import { mockDatabase, resetSupabaseMocks } from '../../mocks/supabase';
 import { createMockUser } from '../../mocks/test-data';
 import type { Comment, CommentReply, CreateCommentData } from '@/lib/collaboration/types';
 
-// Mock the Firebase client module
-vi.mock('@/lib/firebase/client', () => ({
-  db: () => mockFirestore,
+// Mock the Supabase client module
+vi.mock('@/lib/supabase/client', () => ({
+  db: () => mockDatabase,
 }));
 
-vi.mock('@/lib/firebase/schema', () => ({
+vi.mock('@/lib/supabase/schema', () => ({
   COLLECTIONS: {
     DOCUMENTS: 'documents',
     USERS: 'users',
@@ -44,7 +44,7 @@ describe('Comments System', () => {
   const testUser2 = createMockUser({ uid: 'user-2', displayName: 'Second User' });
 
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   describe('Creating Comments', () => {
@@ -407,7 +407,7 @@ describe('Comments System', () => {
   });
 
   // Note: Real-time subscription tests require complex onSnapshot mock setup
-  // These are better suited as integration tests with actual Firebase
+  // These are better suited as integration tests with actual Supabase
   describe.skip('Real-time Subscriptions', () => {
     test('subscribes to comment updates', async () => {
       const callback = vi.fn();

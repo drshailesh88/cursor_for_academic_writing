@@ -6,14 +6,14 @@ import type { Editor } from '@tiptap/react';
 import {
   createTrackedChange,
   getTrackedChanges,
-  acceptChange as acceptChangeInFirestore,
-  rejectChange as rejectChangeInFirestore,
+  acceptChange as acceptChangeInSupabase,
+  rejectChange as rejectChangeInSupabase,
   acceptAllChanges,
   rejectAllChanges,
   subscribeToTrackedChanges,
 } from '@/lib/collaboration/track-changes';
 import type { TrackedChange, ChangeType } from '@/lib/collaboration/types';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { toast } from 'sonner';
 
 interface UseTrackChangesOptions {
@@ -169,8 +169,8 @@ export function useTrackChanges(options: UseTrackChangesOptions) {
           return;
         }
 
-        // Accept the change in Firestore
-        await acceptChangeInFirestore(documentId, changeId, user.uid);
+      // Accept the change in Supabase
+      await acceptChangeInSupabase(documentId, changeId, user.uid);
 
         // Apply the change to the editor
         if (change.type === 'insertion' && change.newContent) {
@@ -215,8 +215,8 @@ export function useTrackChanges(options: UseTrackChangesOptions) {
           return;
         }
 
-        // Reject the change in Firestore
-        await rejectChangeInFirestore(documentId, changeId, user.uid);
+      // Reject the change in Supabase
+      await rejectChangeInSupabase(documentId, changeId, user.uid);
 
         // Revert the change in the editor
         if (change.type === 'insertion') {

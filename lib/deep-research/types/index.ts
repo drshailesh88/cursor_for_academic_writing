@@ -1,7 +1,6 @@
 // Deep Research Engine - Core Types
 // Based on spec: specs/001-deep-research/spec.md
 
-import { Timestamp } from 'firebase/firestore';
 
 // ============================================================================
 // Research Session
@@ -34,9 +33,9 @@ export interface ResearchSession {
   progress: number; // 0-100
 
   // Timestamps
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  completedAt?: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt?: Date;
 
   // Collaboration
   collaborators: Collaborator[];
@@ -97,7 +96,7 @@ export interface Clarification {
   question: string;
   answer: string;
   suggestedOptions?: string[];
-  answeredAt: Timestamp;
+  answeredAt: Date;
 }
 
 // ============================================================================
@@ -151,7 +150,7 @@ export interface ExplorationNode {
 
   // Status
   status: 'pending' | 'searching' | 'analyzing' | 'complete' | 'pruned';
-  exploredAt?: Timestamp;
+  exploredAt?: Date;
 }
 
 export interface SearchResult {
@@ -208,7 +207,7 @@ export interface ResearchSource {
   influenceScore?: number;
 
   // Processing
-  processedAt: Timestamp;
+  processedAt: Date;
 }
 
 export interface Author {
@@ -316,7 +315,7 @@ export interface SynthesisResult {
   reviewFeedback: ReviewFeedback[];
   revisionCount: number;
 
-  generatedAt: Timestamp;
+  generatedAt: Date;
 }
 
 export interface SynthesisSection {
@@ -369,7 +368,7 @@ export interface Collaborator {
   email: string;
   displayName: string;
   role: 'viewer' | 'commenter' | 'editor' | 'owner';
-  addedAt: Timestamp;
+  addedAt: Date;
 }
 
 export interface Comment {
@@ -379,8 +378,8 @@ export interface Comment {
   content: string;
   sectionId?: string;
   parentId?: string; // For threaded comments
-  createdAt: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt: Date;
+  updatedAt?: Date;
   resolved: boolean;
 }
 
@@ -405,7 +404,7 @@ export interface AgentMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
   metadata?: Record<string, unknown>;
-  timestamp: Timestamp;
+  timestamp: Date;
 }
 
 export interface AgentState {
@@ -415,7 +414,7 @@ export interface AgentState {
   currentTask?: string;
   progress: number;
   messages: AgentMessage[];
-  lastUpdated: Timestamp;
+  lastUpdated: Date;
 }
 
 // ============================================================================
@@ -519,7 +518,7 @@ export interface ResearchReport {
   keywords?: string[];
   sections: ReportSection[];
   references: Reference[];
-  generatedAt: Timestamp;
+  generatedAt: Date;
   citationStyle: 'apa' | 'vancouver' | 'harvard' | 'chicago';
 }
 

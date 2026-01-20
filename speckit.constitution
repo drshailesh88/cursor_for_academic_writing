@@ -45,7 +45,7 @@
 ### Architecture Constraints
 - **Frontend:** Next.js 14+ with App Router
 - **Editor:** TipTap with academic extensions
-- **State:** React hooks + Firestore real-time sync
+- **State:** React hooks + Postgres real-time sync
 - **AI:** Vercel AI SDK with multi-provider support
 - **Export:** Client-side DOCX/PDF/LaTeX generation
 
@@ -57,7 +57,7 @@
 - Dark mode support mandatory
 
 ### Security Requirements
-- Firebase Authentication required for write operations
+- Supabase Authentication required for write operations
 - API keys never exposed to client
 - Rate limiting on all external API calls
 - Input sanitization before database writes

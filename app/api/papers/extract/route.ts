@@ -8,10 +8,10 @@
 // - citation: Formatted citation text
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getPaper, getPaperContent } from '@/lib/firebase/papers';
+import { getPaper, getPaperContent } from '@/lib/supabase/papers';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import type { Paper, PaperContent } from '@/lib/firebase/schema';
+import type { Paper, PaperContent } from '@/lib/supabase/schema';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';

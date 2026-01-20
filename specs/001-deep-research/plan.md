@@ -18,7 +18,7 @@ Build a best-in-class deep research agent with:
 
 **Language/Version**: TypeScript 5.x with Next.js 14 (App Router)
 **Primary Dependencies**: Vercel AI SDK, existing PubMed client, new arXiv/S2 clients
-**Storage**: Firebase Firestore (research sessions, branches, iterations)
+**Storage**: Supabase Postgres (research sessions, branches, iterations)
 **Testing**: Manual testing with academic research queries
 **Target Platform**: Web application (Next.js)
 **Project Type**: Web application - extend existing three-panel layout
@@ -33,7 +33,7 @@ Build a best-in-class deep research agent with:
 | Academic Excellence First | PASS | Multi-perspective ensures comprehensive, balanced coverage |
 | Citation Integrity | PASS | All sources properly cited with author-year format |
 | Multi-LLM Flexibility | PASS | Model selector for all agents |
-| Firebase-First Architecture | PASS | Full session persistence with branches/iterations |
+| Supabase-First Architecture | PASS | Full session persistence with branches/iterations |
 | Simplicity Over Complexity | ADJUSTED | Complexity justified by best-in-class goal |
 
 ## Complexity Justification

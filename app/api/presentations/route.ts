@@ -5,26 +5,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  collection,
-  doc,
-  getDocs,
-  setDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  serverTimestamp,
-  Timestamp,
-} from 'firebase/firestore';
-import { getFirebaseDb } from '@/lib/firebase/client';
+import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { Presentation } from '@/lib/presentations/types';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
-
-// Collection name
-const PRESENTATIONS_COLLECTION = 'presentations';
 
 // ============================================================================
 // TYPES
@@ -38,6 +23,27 @@ interface PresentationMetadata {
   documentId?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Supabase row types (for untyped client)
+interface PresentationRow {
+  id: string;
+  title: string;
+  theme: string;
+  slides: unknown[];
+  document_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PresentationInsertRow {
+  user_id: string;
+  document_id: string | null;
+  title: string;
+  description: string | null;
+  theme: string;
+  slides: unknown;
+  settings: unknown;
 }
 
 interface ListPresentationsResponse {
@@ -83,29 +89,28 @@ export async function GET(request: NextRequest) {
     // }
 
     // Query presentations for user
-    const q = query(
-      collection(getFirebaseDb(), PRESENTATIONS_COLLECTION),
-      where('userId', '==', userId),
-      orderBy('updatedAt', 'desc'),
-      limit(limitCount)
-    );
+    const supabase = getSupabaseAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('presentations')
+      .select('id, title, theme, slides, document_id, created_at, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(limitCount);
 
-    const querySnapshot = await getDocs(q);
-    const presentations: PresentationMetadata[] = [];
+    if (error || !data) {
+      throw error;
+    }
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-
-      presentations.push({
-        id: doc.id,
-        title: data.title,
-        theme: data.theme,
-        slideCount: data.slides?.length || 0,
-        documentId: data.documentId,
-        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-        updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
-      });
-    });
+    const presentations: PresentationMetadata[] = (data as PresentationRow[]).map((row: PresentationRow) => ({
+      id: row.id,
+      title: row.title,
+      theme: row.theme,
+      slideCount: (row.slides || []).length,
+      documentId: row.document_id || undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    }));
 
     return NextResponse.json({
       success: true,
@@ -182,9 +187,6 @@ export async function POST(request: NextRequest) {
     //   );
     // }
 
-    // Create new presentation document
-    const presentationRef = doc(collection(getFirebaseDb(), PRESENTATIONS_COLLECTION));
-
     const presentationData: Omit<Presentation, 'id'> = {
       userId: body.userId,
       documentId: body.documentId,
@@ -201,16 +203,36 @@ export async function POST(request: NextRequest) {
         transition: 'fade',
         transitionDuration: 300,
       },
-      createdAt: serverTimestamp() as Timestamp,
-      updatedAt: serverTimestamp() as Timestamp,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
-    // Save to Firestore
-    await setDoc(presentationRef, presentationData);
+    const supabase = getSupabaseAdminClient();
+    const insertData: PresentationInsertRow = {
+      user_id: presentationData.userId,
+      document_id: presentationData.documentId || null,
+      title: presentationData.title,
+      description: presentationData.description || null,
+      theme: presentationData.theme,
+      slides: presentationData.slides,
+      settings: presentationData.settings,
+    };
+
+    // Use explicit any cast for untyped Supabase client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('presentations')
+      .insert(insertData)
+      .select('id')
+      .single();
+
+    if (error || !data) {
+      throw error;
+    }
 
     return NextResponse.json({
       success: true,
-      presentationId: presentationRef.id,
+      presentationId: data.id as string,
     } as CreatePresentationResponse);
 
   } catch (error) {

@@ -27,9 +27,9 @@
 | # | Task | Priority | Dependencies | Est. Hours |
 |---|------|----------|--------------|------------|
 | ✅ 1 | Create `lib/presentations/types.ts` with all TypeScript interfaces (Presentation, Slide, SlideType, Theme, etc.) | P0 | None | 2 |
-| ✅ 2 | Create `lib/firebase/presentations.ts` for Firebase operations (CRUD, real-time listeners) | P0 | Task 1 | 3 |
-| ✅ 3 | Update `lib/firebase/schema.ts` to include presentation types | P0 | Task 1 | 0.5 |
-| ✅ 4 | Create Firebase security rules for presentations collection | P0 | Task 2 | 1 |
+| ✅ 2 | Create `lib/supabase/presentations.ts` for Supabase operations (CRUD, real-time listeners) | P0 | Task 1 | 3 |
+| ✅ 3 | Update `lib/supabase/schema.ts` to include presentation types | P0 | Task 1 | 0.5 |
+| ✅ 4 | Create Supabase security rules for presentations collection | P0 | Task 2 | 1 |
 
 ### 7A.2 Theme System
 
@@ -191,7 +191,7 @@
 ```
 Phase 7A (Foundation)
 ├── Task 1 (Types) ─────────────────────────────────────────┐
-│   ├── Task 2 (Firebase) ──────────────────────────────────┤
+│   ├── Task 2 (Supabase) ──────────────────────────────────┤
 │   ├── Task 3 (Schema) ────────────────────────────────────┤
 │   └── Task 5 (Themes) ────────────────────────────────────┤
 │       ├── Task 6 (Academic Theme) ────────────────────────┤
@@ -254,7 +254,7 @@ Phase 7D (Export & Polish)
 
 ### Week 1: Foundation
 ```
-Day 1: Tasks 1, 2, 3, 4 (Types, Firebase, Schema, Rules)
+Day 1: Tasks 1, 2, 3, 4 (Types, Supabase, Schema, Rules)
 Day 2: Tasks 5, 6, 7 (Theme System)
 Day 3: Tasks 10, 11 (Content Extraction, Structure Analysis)
 Day 4: Tasks 12, 13 (Citations, Visualization Detection)

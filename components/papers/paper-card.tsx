@@ -20,7 +20,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from 'lucide-react';
-import type { Paper, PaperMetadata, PaperProcessingStatus } from '@/lib/firebase/schema';
+import type { Paper, PaperMetadata, PaperProcessingStatus } from '@/lib/supabase/schema';
 import { DeletePaperDialog } from './delete-paper-dialog';
 
 interface PaperCardProps {

@@ -75,7 +75,7 @@ export default {
       statements: 80,
     },
     // Critical paths require higher coverage
-    './lib/firebase/': {
+    './lib/supabase/': {
       branches: 95,
       functions: 95,
       lines: 95,
@@ -137,15 +137,15 @@ export const handlers = [
 ];
 ```
 
-### 2.3 Firebase Mock
+### 2.3 Supabase Mock
 
 ```typescript
-// __tests__/mocks/firebase.ts
+// __tests__/mocks/supabase.ts
 
 import { jest } from '@jest/globals';
 
-// In-memory Firestore simulation
-class MockFirestore {
+// In-memory Postgres simulation
+class MockPostgres {
   private data: Map<string, Map<string, any>> = new Map();
 
   collection(path: string) {
@@ -185,9 +185,9 @@ class MockAuth {
   }
 }
 
-export const mockFirebase = {
+export const mockSupabase = {
   auth: new MockAuth(),
-  firestore: new MockFirestore(),
+  postgres: new MockPostgres(),
 };
 ```
 
@@ -197,7 +197,7 @@ export const mockFirebase = {
 // __tests__/mocks/test-data.ts
 
 import { faker } from '@faker-js/faker';
-import type { Document, Reference, Presentation } from '@/lib/firebase/schema';
+import type { Document, Reference, Presentation } from '@/lib/supabase/schema';
 
 export function createMockDocument(overrides?: Partial<Document>): Document {
   return {
@@ -388,21 +388,21 @@ describe('CSL Citation Formatter', () => {
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThreePanelLayout } from '@/components/layout/three-panel-layout';
-import { mockFirebase } from '../mocks/firebase';
+import { mockSupabase } from '../mocks/supabase';
 
 // Mock modules
-jest.mock('@/lib/firebase/client', () => mockFirebase);
+jest.mock('@/lib/supabase/client', () => mockSupabase);
 
 describe('Document Workflow', () => {
   beforeEach(() => {
     // Reset mock state
-    mockFirebase.firestore.clear();
-    mockFirebase.auth.signOut();
+    mockSupabase.postgres.clear();
+    mockSupabase.auth.signOut();
   });
 
   test('create → edit → auto-save → reload → verify', async () => {
     // 1. Sign in
-    await mockFirebase.auth.signInWithPopup();
+    await mockSupabase.auth.signInWithPopup();
 
     // 2. Render app
     render(<ThreePanelLayout />);
@@ -441,11 +441,11 @@ describe('Document Workflow', () => {
   });
 
   test('handles offline mode gracefully', async () => {
-    await mockFirebase.auth.signInWithPopup();
+    await mockSupabase.auth.signInWithPopup();
     render(<ThreePanelLayout />);
 
     // Simulate going offline
-    mockFirebase.setOffline(true);
+    mockSupabase.setOffline(true);
 
     // Try to create document
     const newDocButton = await screen.findByText('New Document');
@@ -461,7 +461,7 @@ describe('Document Workflow', () => {
     await userEvent.type(editor, 'Offline content');
 
     // Simulate going back online
-    mockFirebase.setOffline(false);
+    mockSupabase.setOffline(false);
 
     // Should sync automatically
     await waitFor(() => {
@@ -720,7 +720,7 @@ Change `${firstAuthor} et al` to `${firstAuthor} et al.`
 - Create test utilities
 
 ### Phase 2: Core Tests (Days 2-3)
-- Firebase auth tests
+- Supabase auth tests
 - Document CRUD tests
 - Auto-save tests
 - Basic hooks tests

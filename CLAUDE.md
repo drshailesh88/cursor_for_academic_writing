@@ -127,8 +127,8 @@ specs/{feature-id}-{feature-name}/
 
 **Academic Writing Platform** - AI-powered academic writing system with PubMed research integration, multi-LLM support, and professional document export capabilities.
 
-**Current Status:** Firebase integration complete, export features pending
-**Tech Stack:** Next.js 14, TypeScript, TipTap Editor, Firebase, Vercel AI SDK
+**Current Status:** Supabase integration complete, export features pending
+**Tech Stack:** Next.js 14, TypeScript, TipTap Editor, Supabase, Vercel AI SDK
 **Port:** 2550
 
 ---
@@ -138,7 +138,7 @@ specs/{feature-id}-{feature-name}/
 Before making changes, review:
 - `README.md` - Project overview and setup
 - `HANDOVER.md` - Complete implementation status and architecture
-- `FIREBASE_SETUP.md` - Firebase configuration guide
+- `FIREBASE_SETUP.md` - Supabase configuration guide
 
 ---
 
@@ -148,13 +148,13 @@ Before making changes, review:
 1. **Academic Excellence** - Authentic scholarly prose, not corporate marketing speak
 2. **Citation Integrity** - Proper author-year citations, PubMed integration
 3. **Multi-LLM Flexibility** - Support OpenAI, Anthropic, Google, OpenRouter, xAI
-4. **Firebase-First** - Real-time sync, auto-save, user authentication
+4. **Supabase-First** - Real-time sync, auto-save, user authentication
 5. **Professional Export** - DOCX and PDF with proper formatting
 
 ### Key Patterns
-- **Auto-save:** 30-second debounced saves to Firestore
+- **Auto-save:** 30-second debounced saves to Supabase
 - **Three-panel layout:** Document list | Editor | AI Chat
-- **Client-side Firebase:** Real-time updates and auth
+- **Client-side Supabase:** Real-time updates and auth
 - **Server-side Admin SDK:** For future server operations
 
 ---
@@ -165,7 +165,7 @@ Before making changes, review:
 - Strict mode enabled
 - No `any` types - use proper type definitions
 - Interfaces for props, types for data structures
-- Import types from `@/lib/firebase/schema`
+- Import types from `@/lib/supabase/schema`
 
 ### File Naming
 - Components: `kebab-case.tsx`
@@ -177,11 +177,11 @@ Before making changes, review:
 ```typescript
 'use client'; // Only if uses hooks/state
 
-// Imports: external → firebase → components → types
+// Imports: external → data layer → components → types
 import { useState } from 'react';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { Button } from '@/components/ui/button';
-import { Document } from '@/lib/firebase/schema';
+import { Document } from '@/lib/supabase/schema';
 
 interface ComponentProps {
   // Props with JSDoc if complex
@@ -204,14 +204,14 @@ import { useState, useEffect } from 'react';
 // 2. External libraries
 import { Editor } from '@tiptap/react';
 
-// 3. Firebase/lib
-import { useAuth } from '@/lib/firebase/auth';
+// 3. Data layer
+import { useAuth } from '@/lib/supabase/auth';
 
 // 4. Components
 import { Button } from '@/components/ui/button';
 
 // 5. Types
-import { Document } from '@/lib/firebase/schema';
+import { Document } from '@/lib/supabase/schema';
 ```
 
 ---
@@ -250,17 +250,18 @@ import { Document } from '@/lib/firebase/schema';
 ### Adding a New Feature
 1. Check `HANDOVER.md` for existing architecture
 2. Create feature branch if using git
-3. Update types in `lib/firebase/schema.ts` if needed
+3. Update types in `lib/supabase/schema.ts` if needed
 4. Implement component in appropriate directory
-5. Test with Firebase (sign in, save, load)
+5. Test with Supabase (sign in, save, load)
 6. Update `HANDOVER.md` with changes
 
-### Working with Firebase
-- Client SDK: `lib/firebase/client.ts`
-- Admin SDK: `lib/firebase/admin.ts`
-- Auth: `lib/firebase/auth.ts`
-- Documents: `lib/firebase/documents.ts`
-- Schema: `lib/firebase/schema.ts`
+### Working with Supabase
+- Client SDK: `lib/supabase/client.ts`
+- Server SDK: `lib/supabase/server.ts`
+- Admin SDK: `lib/supabase/admin.ts`
+- Auth: `lib/supabase/auth.ts` (Supabase-backed)
+- Documents: `lib/supabase/documents.ts` (Supabase-backed)
+- Schema: `lib/supabase/schema.ts`
 
 ### Testing Changes
 ```bash
@@ -689,19 +690,19 @@ cat .gitignore
 ### Security
 - **NEVER commit `.env.local`** - Contains API keys
 - **NEVER hardcode secrets** - Always use environment variables
-- Validate user input before Firestore writes
-- Use Firebase security rules (already configured)
+- Validate user input before database writes
+- Use Supabase RLS policies (configure when ready)
 
 ### Performance
 - Debounce auto-save (current: 30 seconds)
 - Use React.memo for expensive components
 - Lazy load components where appropriate
-- Optimize Firestore queries (use indexes)
+- Optimize Postgres queries (use indexes)
 
-### Firebase Best Practices
+### Supabase Best Practices
 - **Client-side:** Auth, real-time listeners, user operations
-- **Server-side:** Batch operations, admin tasks, sensitive data
-- Always include error handling for Firebase operations
+- **Server-side:** Admin tasks, sensitive data
+- Always include error handling for Supabase operations
 - Use transactions for critical updates
 
 ---
@@ -710,7 +711,7 @@ cat .gitignore
 
 ### Completed ✅
 - TipTap editor with table support
-- Firebase auth (Google Sign-in)
+- Supabase auth (Google Sign-in)
 - Document CRUD operations
 - Auto-save (30-second interval)
 - AI chat with 4 models
@@ -733,15 +734,15 @@ cat .gitignore
 ## 🔍 Debugging
 
 ### Common Issues
-1. **Firebase errors on load**
-   - Check `.env.local` has all Firebase variables
-   - Verify Firebase project is active
+1. **Supabase errors on load**
+   - Check `.env.local` has all Supabase variables
+   - Verify Supabase project is active
    - Check console for specific error
 
 2. **Auto-save not working**
    - Check `useDocument` hook is properly initialized
    - Verify user is authenticated
-   - Check Firestore permissions
+   - Check Supabase RLS policies
 
 3. **AI chat not responding**
    - Verify API key in `.env.local`
@@ -750,8 +751,8 @@ cat .gitignore
 
 ### Useful Commands
 ```bash
-# Check Firebase connection
-npm run dev | grep -i firebase
+# Check Supabase connection
+npm run dev | grep -i supabase
 
 # Type check without building
 npx tsc --noEmit

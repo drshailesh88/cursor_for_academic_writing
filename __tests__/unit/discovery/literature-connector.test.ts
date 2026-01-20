@@ -6,7 +6,7 @@ import {
   DiscoveredPaper,
   CitationNetwork,
 } from '@/lib/discovery/types';
-import { Timestamp } from 'firebase/firestore';
+import { MockTimestamp } from '@/__tests__/mocks/supabase';
 import {
   findPaths,
   findShortestPath,

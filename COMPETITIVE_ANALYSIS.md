@@ -686,9 +686,9 @@ Based on search results, researchers typically use:
 **Why:** Hybrid approach (external search + upload) requires sophisticated RAG
 
 ### D. Real-Time Collaboration
-**What:** Firebase real-time sync + CRDTs for annotations
+**What:** Supabase real-time sync + CRDTs for annotations
 **Opportunity:** Google Docs-style collaborative annotations
-**Why:** You already have Firebase; no competitor does real-time collaboration well
+**Why:** You already have Supabase; no competitor does real-time collaboration well
 
 ### E. Structured Data Extraction
 **What:** Fine-tuned LLM for extracting methods, sample sizes, statistics
@@ -749,7 +749,7 @@ Based on search results, researchers typically use:
 | API costs too high | High | High | Implement caching, rate limiting, tiered access |
 | PubMed rate limits | Medium | Medium | Self-host PubMed mirror (E-utilities allows) |
 | Vector DB scaling costs | High | Medium | Start with Pinecone free tier, optimize embeddings |
-| Real-time sync overhead | Medium | Low | Firebase handles this; monitor quotas |
+| Real-time sync overhead | Medium | Low | Supabase handles this; monitor quotas |
 | Audio generation costs | High | High | Limit Audio Overview to paid plans only |
 
 ---

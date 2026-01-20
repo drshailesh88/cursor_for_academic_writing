@@ -78,7 +78,7 @@ This document provides a head-to-head comparison of our Academic Writing Platfor
 | **Open Architecture** | Self-hostable, customizable | Enterprise/institutional deployment |
 | **Academic Templates** | 6 discipline-specific templates | Faster document starts |
 | **Dark Mode + Mobile** | Full responsive design | Better UX than most competitors |
-| **Real-time Firebase Sync** | Cloud-native with auto-save | Reliable document persistence |
+| **Real-time Supabase Sync** | Cloud-native with auto-save | Reliable document persistence |
 | **PubMed Integration** | Native research search with citations | Medical/life sciences focus |
 | **Cost Efficiency** | Free tier with real capabilities | Accessible to students/researchers |
 
@@ -310,7 +310,7 @@ async function chatWithPDF(pdfId: string, question: string): Promise<{
 **Implementation Steps:**
 1. Add PDF.js for client-side parsing
 2. Implement section detection using ML
-3. Store parsed content in Firestore
+3. Store parsed content in Postgres
 4. Add RAG (Retrieval-Augmented Generation) for Q&A
 5. Create PDF viewer with chat interface
 

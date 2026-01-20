@@ -1,7 +1,7 @@
 // Research Matrix
 // Structured data extraction and comparison across papers
 
-import type { Paper, PaperContent, PaperSection } from '@/lib/firebase/schema';
+import type { Paper, PaperContent, PaperSection } from '@/lib/supabase/schema';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';

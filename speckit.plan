@@ -28,12 +28,12 @@
 │  Libraries                                                                   │
 │  ├── /lib/prompts/disciplines ← NEW (15 discipline prompts)                │
 │  ├── /lib/research ← NEW (multi-database clients)                          │
-│  ├── /lib/firebase (auth, documents)                                       │
+│  ├── /lib/supabase (auth, documents)                                       │
 │  ├── /lib/export (docx, pdf, latex*)                                       │
 │  └── /lib/pubmed (existing)                                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  External Services                                                          │
-│  ├── Firebase (Auth + Firestore)                                           │
+│  ├── Supabase (Auth + Postgres)                                           │
 │  ├── OpenRouter (11 free models)                                           │
 │  ├── OpenAI, Anthropic, Google (premium models)                            │
 │  └── Research APIs: PubMed, arXiv*, Semantic Scholar*, OpenAlex*           │
@@ -146,7 +146,7 @@ components/
 │  2. Parse: PDF.js text extraction                               │
 │  3. Extract: Section detection, reference parsing              │
 │  4. Embed: OpenAI embeddings for semantic search               │
-│  5. Store: Firestore with user ownership                       │
+│  5. Store: Postgres with user ownership                       │
 │  6. Query: RAG-based Q&A with citations                        │
 └─────────────────────────────────────────────────────────────────┘
 ```

@@ -12,7 +12,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import type {
   ResearchSession,
   ResearchMode,
@@ -23,6 +23,9 @@ import type {
   Clarification,
 } from '@/lib/deep-research/types';
 import type { EngineEvent, ClarifyingQuestion, ClarificationAnswer } from '@/lib/deep-research/engine';
+
+/** LLM model options for research */
+type ResearchModelType = 'deepseek' | 'claude' | 'openai' | 'gemini';
 
 interface ResearchContextValue {
   // Mode
@@ -37,6 +40,9 @@ interface ResearchContextValue {
   setTopic: (topic: string) => void;
   mode: ResearchMode;
   setMode: (mode: ResearchMode) => void;
+  /** LLM model to use for research (same as chat dropdown) */
+  selectedModel: ResearchModelType;
+  setSelectedModel: (model: ResearchModelType) => void;
 
   // Status
   status: ResearchStatus | 'idle';
@@ -71,6 +77,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
   // Research input
   const [topic, setTopic] = useState('');
   const [mode, setMode] = useState<ResearchMode>('standard');
+  const [selectedModel, setSelectedModel] = useState<ResearchModelType>('deepseek');
 
   // Session state
   const [session, setSession] = useState<Partial<ResearchSession> | null>(null);
@@ -224,6 +231,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
           topic: topic.trim(),
           mode,
           userId: user.uid,
+          model: selectedModel,
         }),
       });
 
@@ -260,7 +268,7 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
       setError(errorMessage);
       setStatus('error');
     }
-  }, [topic, mode, user, handleEvent]);
+  }, [topic, mode, user, handleEvent, selectedModel]);
 
   /**
    * Submit clarification answers
@@ -347,6 +355,8 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     setTopic,
     mode,
     setMode,
+    selectedModel,
+    setSelectedModel,
     status,
     progress,
     currentAgent,

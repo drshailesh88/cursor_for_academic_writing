@@ -10,8 +10,8 @@ Build a feature that allows users to upload PDF research papers, extract their c
 ## Technical Context
 
 **Language/Version**: TypeScript 5.x with Next.js 14 (App Router)
-**Primary Dependencies**: pdf-parse (PDF extraction), Vercel AI SDK, Firebase Storage
-**Storage**: Firebase Storage (PDFs), Firestore (metadata, extracted text)
+**Primary Dependencies**: pdf-parse (PDF extraction), Vercel AI SDK, Supabase Storage
+**Storage**: Supabase Storage (PDFs), Postgres (metadata, extracted text)
 **Testing**: Manual testing with sample academic PDFs
 **Target Platform**: Web application (Next.js)
 **Project Type**: Web application - extend existing three-panel layout
@@ -26,7 +26,7 @@ Build a feature that allows users to upload PDF research papers, extract their c
 | Academic Excellence First | PASS | Extractions maintain academic context and accuracy |
 | Citation Integrity | PASS | Paper metadata extracted for proper citations |
 | Multi-LLM Flexibility | PASS | Reuse existing model selector for paper chat |
-| Firebase-First Architecture | PASS | PDFs in Storage, metadata in Firestore |
+| Supabase-First Architecture | PASS | PDFs in Storage, metadata in Postgres |
 | Simplicity Over Complexity | PASS | Use established PDF parsing library |
 
 ## Project Structure
@@ -69,9 +69,9 @@ app/api/
 │   └── chat/route.ts            # Paper-specific chat endpoint
 
 # Files to modify
-lib/firebase/
+lib/supabase/
 ├── schema.ts                    # Add UploadedPaper, PaperSection types
-├── storage.ts                   # NEW: Firebase Storage operations
+├── storage.ts                   # NEW: Supabase Storage operations
 
 components/layout/
 ├── three-panel-layout.tsx       # Add papers panel toggle/tab
@@ -105,11 +105,11 @@ components/layout/
 4. **Upload API** (`app/api/papers/upload/route.ts`)
    - Accept multipart/form-data with PDF file
    - Validate file type and size (< 50MB)
-   - Save to Firebase Storage
+   - Save to Supabase Storage
    - Trigger extraction process
    - Return upload status and paper ID
 
-5. **Firebase Storage** (`lib/firebase/storage.ts`)
+5. **Supabase Storage** (`lib/supabase/storage.ts`)
    - uploadPaper() - Upload PDF to Storage
    - getPaperUrl() - Get signed download URL
    - deletePaper() - Remove PDF from Storage
@@ -137,7 +137,7 @@ components/layout/
 
 2. **Paper Chat API** (`app/api/papers/chat/route.ts`)
    - POST endpoint accepting paperId, question, model
-   - Load paper content from Firestore
+   - Load paper content from Postgres
    - Stream response using Vercel AI SDK
    - Include section references in response
 
@@ -187,7 +187,7 @@ components/layout/
 
 ## Data Model
 
-### UploadedPaper (Firestore)
+### UploadedPaper (Postgres)
 
 ```typescript
 interface UploadedPaper {
@@ -243,14 +243,14 @@ interface PaperChatMessage {
 }
 ```
 
-### Firestore Collection Structure
+### Postgres Collection Structure
 
 ```
 users/{userId}/papers/{paperId}
 users/{userId}/papers/{paperId}/chats/{chatId}
 ```
 
-### Firebase Storage Structure
+### Supabase Storage Structure
 
 ```
 users/{userId}/papers/{paperId}.pdf
@@ -359,7 +359,7 @@ npm install --legacy-peer-deps pdf-parse @types/pdf-parse
 
 ### Existing (no changes needed)
 - `@ai-sdk/*` packages - AI model integration
-- `firebase` - Storage and Firestore
+- `supabase` - Storage and Postgres
 - `lib/prompts/writing-styles.ts` - Academic prose style
 
 ## Risk Mitigation

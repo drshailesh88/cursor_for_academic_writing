@@ -543,7 +543,7 @@ interface UploadedPaper {
   // File info
   fileName: string;
   fileSize: number;
-  fileUrl: string;  // Firebase Storage URL
+  fileUrl: string;  // Supabase Storage URL
   uploadedAt: Timestamp;
 
   // Extracted metadata
@@ -1077,7 +1077,7 @@ A researcher inserts paper content into their manuscript with proper citations.
 ## Assumptions
 
 - Users upload papers they have legal access to
-- Firebase Storage is configured for file uploads
+- Supabase Storage is configured for file uploads
 - TTS API is available for audio generation
 - Users are authenticated
 - Multi-model API access is configured
@@ -1093,8 +1093,8 @@ A researcher inserts paper content into their manuscript with proper citations.
 - **ElevenLabs or Google TTS**: Audio generation
 - **CrossRef API**: DOI lookup and metadata enrichment
 - **PubMed API**: PMID lookup and abstract retrieval
-- **Firebase Storage**: PDF file storage
-- **Firebase Firestore**: Paper metadata and chat storage
+- **Supabase Storage**: PDF file storage
+- **Supabase Postgres**: Paper metadata and chat storage
 
 ---
 

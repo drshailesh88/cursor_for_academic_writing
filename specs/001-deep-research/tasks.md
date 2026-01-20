@@ -320,10 +320,10 @@
 
 **Purpose**: Session management with continue/branch
 
-### 10.1 Firebase Schema ✅
-- [x] T051 [US8] Add ResearchSession to Firebase schema
-- [x] T052 [US8] Add ResearchBranch to Firebase schema
-- [x] T053 [US8] Add ResearchIteration to Firebase schema
+### 10.1 Supabase Schema ✅
+- [x] T051 [US8] Add ResearchSession to Supabase schema
+- [x] T052 [US8] Add ResearchBranch to Supabase schema
+- [x] T053 [US8] Add ResearchIteration to Supabase schema
 
 ### 10.2 Session CRUD ✅
 - [x] T054 [US8] Create session operations:
@@ -408,7 +408,7 @@ lib/research/deep-research/
 
 1. Create API routes (Phase 8)
 2. Build Research Panel UI (Phase 9)
-3. Add Firebase persistence (Phase 10)
+3. Add Supabase persistence (Phase 10)
 4. Polish & edge cases (Phase 11)
 
 ---

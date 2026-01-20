@@ -14,7 +14,7 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { mockFirestore, mockAuth, resetFirebaseMocks, MockTimestamp } from '../mocks/firebase';
+import { mockDatabase, mockAuth, resetSupabaseMocks, MockTimestamp } from '../mocks/supabase';
 import { createMockUser } from '../mocks/test-data';
 import { DOCUMENT_TEMPLATES, getTemplateById } from '@/lib/templates/document-templates';
 import {
@@ -26,14 +26,14 @@ import {
   getUserDocuments,
   renameDocument,
   updateDocumentDiscipline,
-} from '@/lib/firebase/documents';
-import { Document, DisciplineId } from '@/lib/firebase/schema';
+} from '@/lib/supabase/documents';
+import { Document, DisciplineId } from '@/lib/supabase/schema';
 
 describe('Document Lifecycle Integration Tests', () => {
   let testUserId: string;
 
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
     const mockUser = createMockUser();
     testUserId = mockUser.uid;
     mockAuth.setUser(mockUser);
@@ -439,7 +439,7 @@ describe('Document Lifecycle Integration Tests', () => {
   // ============================================================================
 
   describe('Document Deletion Flow', () => {
-    test('deletes document and removes from Firestore', async () => {
+    test('deletes document and removes from database', async () => {
       const docId = await createDocument(testUserId, 'To Delete');
 
       // Verify it exists

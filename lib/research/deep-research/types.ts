@@ -11,7 +11,6 @@
  * @see specs/001-deep-research/spec.md
  */
 
-import type { Timestamp } from 'firebase/firestore';
 import type { SearchResult } from '../types';
 
 // ============================================================================
@@ -92,6 +91,9 @@ export interface ResearchConfig {
 
   /** Quality threshold for completion (0-100) */
   qualityThreshold: number;
+
+  /** LLM model to use for research agents (default: deepseek) */
+  model?: 'deepseek' | 'claude' | 'openai' | 'gemini';
 }
 
 /**
@@ -520,9 +522,9 @@ export interface ResearchSession {
   progress: Progress;
 
   // Timestamps
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  completedAt?: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt?: Date;
 
   // Collaboration
   collaborators: Collaborator[];

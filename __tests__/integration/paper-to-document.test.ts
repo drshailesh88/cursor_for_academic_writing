@@ -11,7 +11,7 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { resetFirebaseMocks } from '../mocks/firebase';
+import { resetSupabaseMocks } from '../mocks/supabase';
 import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
 
@@ -122,7 +122,7 @@ const TEST_USER_ID = 'test-user-paper-workflows';
 
 describe('Paper Upload → Extract → Enrich → Chat → Cite', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('uploads PDF and extracts metadata', async () => {
@@ -381,7 +381,7 @@ describe('Paper Upload → Extract → Enrich → Chat → Cite', () => {
 
 describe('Multi-Paper Comparison → Summary → Insert', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('creates research matrix with multiple papers', async () => {
@@ -606,7 +606,7 @@ accuracy, while Study B (n=5,000) reported 91% accuracy.
 
 describe('Quality Assessment → Filter → Matrix', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('assesses multiple papers and assigns grades', async () => {
@@ -804,7 +804,7 @@ describe('Quality Assessment → Filter → Matrix', () => {
 
 describe('Paper Chat → Extract Findings → Cite', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('extracts key findings from paper', async () => {

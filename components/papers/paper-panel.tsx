@@ -9,7 +9,7 @@ import { PaperUpload } from './paper-upload';
 import { PaperSections } from './paper-sections';
 import { PaperChat } from './paper-chat';
 import { ExtractionButtons } from './extraction-buttons';
-import type { Paper, PaperContent, PaperMetadata } from '@/lib/firebase/schema';
+import type { Paper, PaperContent, PaperMetadata } from '@/lib/supabase/schema';
 
 interface PaperPanelProps {
   userId: string;

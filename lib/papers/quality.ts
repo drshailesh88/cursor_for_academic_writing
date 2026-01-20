@@ -1,7 +1,7 @@
 // Paper Quality Assessment
 // Assess study quality, design, and potential biases
 
-import type { Paper, PaperContent, PaperSection } from '@/lib/firebase/schema';
+import type { Paper, PaperContent, PaperSection } from '@/lib/supabase/schema';
 
 /**
  * Study design types

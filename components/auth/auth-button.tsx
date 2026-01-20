@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAuth, signOut } from '@/lib/firebase/auth';
+import { useAuth, signOut } from '@/lib/supabase/auth';
 import { LogIn, LogOut, User, ChevronDown } from 'lucide-react';
 import { AuthDialog } from './auth-dialog';
 import { PasswordResetDialog } from './password-reset-dialog';

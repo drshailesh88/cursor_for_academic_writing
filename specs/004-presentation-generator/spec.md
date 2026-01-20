@@ -235,7 +235,7 @@ Feature: Presentation Export
 | FR-6.5 | Export to Keynote | P2 |
 | FR-6.6 | Include speaker notes in exports | P0 |
 | FR-6.7 | Preserve animations in PPTX | P1 |
-| FR-6.8 | Save presentations to Firebase | P0 |
+| FR-6.8 | Save presentations to Supabase | P0 |
 | FR-6.9 | Load/edit saved presentations | P0 |
 
 ### FR-7: AI Capabilities
@@ -671,7 +671,7 @@ app/
 ## Implementation Phases
 
 ### Phase 7A: Core Engine (Week 1-2)
-- Presentation data models and Firebase schema
+- Presentation data models and Supabase schema
 - Basic AI generation pipeline
 - Slide type components (title, content, data)
 - Theme system foundation

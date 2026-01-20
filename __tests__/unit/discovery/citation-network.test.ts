@@ -8,7 +8,7 @@ import {
   NetworkCluster,
   DiscoveredPaper,
 } from '@/lib/discovery/types';
-import { Timestamp } from 'firebase/firestore';
+import { MockTimestamp } from '@/__tests__/mocks/supabase';
 import {
   buildNetwork,
   getCoCitations,
@@ -203,8 +203,8 @@ class CitationNetworkBuilder {
         onlyOpenAccess: false,
       },
       layout: { type: 'force', parameters: {} },
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      createdAt: MockTimestamp.now(),
+      updatedAt: MockTimestamp.now(),
     };
     return mockNetwork;
   }
@@ -519,8 +519,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const metrics = await builder.calculateNetworkMetrics(network);
@@ -539,8 +539,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const metrics = await builder.calculateNetworkMetrics(network);
@@ -562,8 +562,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const metrics = await builder.calculateNetworkMetrics(network);
@@ -585,8 +585,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const metrics = await builder.calculateNetworkMetrics(network);
@@ -608,8 +608,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const metrics = await builder.calculateNetworkMetrics(network);
@@ -631,8 +631,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const metrics = await builder.calculateNetworkMetrics(network);
@@ -665,8 +665,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const centrality = await builder.calculateCentrality('paper1', network);
@@ -696,8 +696,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const centrality = await builder.calculateCentrality('paper1', network);
@@ -718,8 +718,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const clusters = await builder.detectClusters(network);
@@ -739,8 +739,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const clusters = await builder.detectClusters(network);
@@ -762,8 +762,8 @@ describe('CitationNetworkBuilder', () => {
         clusters: [],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const clusters = await builder.detectClusters(network);
@@ -806,8 +806,8 @@ describe('CitationNetworkBuilder', () => {
         ],
         config: mockConfig,
         layout: { type: 'force', parameters: {} },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: MockTimestamp.now(),
+        updatedAt: MockTimestamp.now(),
       };
 
       const bridgePapers = await builder.findBridgePapers(network);

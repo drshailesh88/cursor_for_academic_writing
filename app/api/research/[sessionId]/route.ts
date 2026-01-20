@@ -5,7 +5,7 @@ import {
   getResearchSession,
   deleteResearchSession,
   toResearchSession,
-} from '@/lib/firebase/research-sessions';
+} from '@/lib/supabase/research-sessions-admin';
 
 /**
  * GET /api/research/[sessionId] - Get session details
@@ -23,11 +23,11 @@ export async function GET(
       return NextResponse.json({ session: engineSession });
     }
 
-    // Fall back to Firebase (for persisted sessions)
-    const firestoreSession = await getResearchSession(sessionId);
-    if (firestoreSession) {
+    // Fall back to Supabase (for persisted sessions)
+    const storedSession = await getResearchSession(sessionId);
+    if (storedSession) {
       return NextResponse.json({
-        session: toResearchSession(firestoreSession),
+        session: toResearchSession(storedSession),
       });
     }
 
@@ -57,7 +57,7 @@ export async function DELETE(
     // Cancel in engine if active
     researchEngine.cancelSession(sessionId);
 
-    // Delete from Firebase
+    // Delete from Supabase
     await deleteResearchSession(sessionId);
 
     return NextResponse.json({ success: true });

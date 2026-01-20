@@ -26,18 +26,18 @@
 
 ---
 
-## Phase 2: Foundational (Firebase Setup) ✅ COMPLETE
+## Phase 2: Foundational (Supabase Setup) ✅ COMPLETE
 
-**Purpose**: Configure Firebase Storage and Firestore schema
+**Purpose**: Configure Supabase Storage and Postgres schema
 
-- [x] T006 Create Firebase Storage utilities in `lib/firebase/storage.ts`:
+- [x] T006 Create Supabase Storage utilities in `lib/supabase/storage.ts`:
   - uploadPaper() - Upload PDF to Storage
   - getPaperUrl() - Get signed download URL
   - deletePaper() - Remove PDF from Storage
 
-- [x] T007 Add UploadedPaper interface to `lib/firebase/schema.ts`
-- [x] T008 Add PaperSection interface to `lib/firebase/schema.ts`
-- [x] T009 Add PaperChat interface to `lib/firebase/schema.ts`
+- [x] T007 Add UploadedPaper interface to `lib/supabase/schema.ts`
+- [x] T008 Add PaperSection interface to `lib/supabase/schema.ts`
+- [x] T009 Add PaperChat interface to `lib/supabase/schema.ts`
 
 - [x] T010 Create paper service in `lib/papers/index.ts`:
   - createPaper() - Create paper document
@@ -46,7 +46,7 @@
   - updatePaper() - Update paper metadata
   - deletePaper() - Delete paper and file
 
-**Checkpoint**: Firebase ready for paper storage ✅
+**Checkpoint**: Supabase ready for paper storage ✅
 
 ---
 
@@ -80,8 +80,8 @@
   - Accept multipart/form-data
   - Validate file type (PDF only)
   - Validate file size (< 50MB)
-  - Save to Firebase Storage
-  - Create paper document in Firestore
+  - Save to Supabase Storage
+  - Create paper document in Postgres
   - Trigger async processing
   - Return paper ID and status
 
@@ -134,7 +134,7 @@
 
 - [x] T021 [US2] Create paper chat API in `app/api/papers/chat/route.ts`:
   - POST endpoint with paperId, question, model
-  - Load paper content from Firestore
+  - Load paper content from Postgres
   - Build chat context
   - Stream response using Vercel AI SDK
   - Save chat history
@@ -211,7 +211,7 @@
   - Empty state for no papers
 
 - [x] T030 [US4] Implement paper deletion:
-  - Delete from Firestore
+  - Delete from Postgres
   - Delete PDF from Storage
   - Update library view
   - Confirmation dialog
@@ -271,7 +271,7 @@
 | Phase | Status | Tests |
 |-------|--------|-------|
 | Phase 1: Setup | ✅ 100% | - |
-| Phase 2: Firebase Setup | ✅ 100% | 10 tests |
+| Phase 2: Supabase Setup | ✅ 100% | 10 tests |
 | Phase 3: Upload & Analyze | ✅ 100% | 42 tests |
 | Phase 4: Chat with Paper | ✅ 100% | 25 tests |
 | Phase 5: Key Information Extract | ✅ 100% | 15 tests |

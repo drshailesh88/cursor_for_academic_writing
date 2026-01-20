@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic';
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
-import { getPaperContent, getPaper } from '@/lib/firebase/papers';
-import type { PaperContent, Paper } from '@/lib/firebase/schema';
+import { getPaperContent, getPaper } from '@/lib/supabase/papers';
+import type { PaperContent, Paper } from '@/lib/supabase/schema';
 import {
   hybridRetrieve,
   papersToChunks,

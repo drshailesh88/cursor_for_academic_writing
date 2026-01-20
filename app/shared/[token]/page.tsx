@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { validateShareToken } from '@/lib/collaboration/sharing';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { Loader2, AlertCircle, FileText, Eye, MessageSquare, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SharePermission } from '@/lib/collaboration/types';

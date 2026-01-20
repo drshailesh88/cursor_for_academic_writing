@@ -1,7 +1,7 @@
 /**
  * Citation Library Tests
  *
- * Tests Firestore CRUD operations for reference management.
+ * Tests database CRUD operations for reference management.
  * Covers folders, labels, search, and duplicate detection.
  */
 
@@ -33,7 +33,7 @@ import {
   updateReadStatus,
   getLibraryStats,
 } from '@/lib/citations/library';
-import { mockFirestore, resetFirebaseMocks } from '@/__tests__/mocks/firebase';
+import { mockDatabase, resetSupabaseMocks } from '@/__tests__/mocks/supabase';
 import { createTestReference } from '@/__tests__/mocks/test-data';
 import type { Reference } from '@/lib/citations/types';
 
@@ -41,7 +41,7 @@ const TEST_USER_ID = 'test-user-123';
 
 describe('Citation Library - References', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   describe('addReference', () => {
@@ -480,7 +480,7 @@ describe('Citation Library - References', () => {
 
 describe('Citation Library - Folders', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   describe('createFolder', () => {
@@ -621,7 +621,7 @@ describe('Citation Library - Folders', () => {
 
 describe('Citation Library - Labels', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   describe('createLabel', () => {
@@ -726,7 +726,7 @@ describe('Citation Library - Labels', () => {
 
 describe('Citation Library - Utilities', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   describe('toggleFavorite', () => {

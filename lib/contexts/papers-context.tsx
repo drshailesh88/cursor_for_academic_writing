@@ -9,7 +9,7 @@ import {
   ReactNode,
 } from 'react';
 import { usePapers } from '@/lib/hooks/use-papers';
-import type { Paper, PaperContent, Citation } from '@/lib/firebase/schema';
+import type { Paper, PaperContent, Citation } from '@/lib/supabase/schema';
 
 interface Message {
   id: string;

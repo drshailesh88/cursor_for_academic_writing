@@ -37,6 +37,7 @@ interface PersonalApiKeys {
   anthropic?: string;
   google?: string;
   zhipu?: string;
+  deepseek?: string;
 }
 
 // Get API key with fallback to environment variables
@@ -83,6 +84,18 @@ function createModelInstance(modelType: string, personalApiKeys: PersonalApiKeys
       return zhipu('glm-4-plus'); // GLM-4.7
     }
 
+    case 'deepseek': {
+      // DeepSeek - cheapest and reliable option
+      const apiKey = personalApiKeys.deepseek || process.env.DEEPSEEK_API_KEY;
+      if (!apiKey) throw new Error('DeepSeek API key not configured. Add it in Settings or set DEEPSEEK_API_KEY in .env.local.');
+      // DeepSeek uses OpenAI-compatible API
+      const deepseek = createOpenAI({
+        baseURL: 'https://api.deepseek.com/v1',
+        apiKey,
+      });
+      return deepseek('deepseek-chat');
+    }
+
     default:
       throw new Error(`Unknown model: ${modelType}. Please select a valid model.`);
   }
@@ -97,6 +110,7 @@ const MODELS_WITH_TOOL_SUPPORT = [
   'claude',
   'gemini',
   'glm-4-plus', // GLM-4.7 supports function calling
+  'deepseek', // DeepSeek supports function calling
 ];
 
 export async function POST(req: Request) {

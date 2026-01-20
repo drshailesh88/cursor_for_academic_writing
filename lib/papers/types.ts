@@ -8,7 +8,7 @@ import type {
   PaperReference,
   PaperParagraph,
   PaperSectionType,
-} from '@/lib/firebase/schema';
+} from '@/lib/supabase/schema';
 
 // Re-export quality types from quality.ts to avoid duplication
 export type {

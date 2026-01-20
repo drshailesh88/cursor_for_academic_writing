@@ -122,7 +122,7 @@ agent-browser --session academic-test scroll down
 | ID | Feature | Issue Description | Status | Fix Applied |
 |----|---------|-------------------|--------|-------------|
 | 1  | Auth | Google OAuth popup blocked by browser automation (COOP policy) | KNOWN_LIMITATION | Manual sign-in required |
-| 2  | Auth | Email/password auth shows "This sign-in method is not enabled" | TO_FIX | Need to enable in Firebase Console |
+| 2  | Auth | Email/password auth shows "This sign-in method is not enabled" | TO_FIX | Need to enable in Supabase Console |
 | 3  | Auth | Google blocks Playwright browser: "This browser or app may not be secure" | BLOCKING | Need to enable Email/Password auth |
 
 ---
@@ -132,7 +132,7 @@ agent-browser --session academic-test scroll down
 ### 2026-01-19 Session 1
 - Started browser automation session `academic-test`
 - **BLOCKED**: Authentication requires manual Google sign-in (popup can't be automated)
-- **FOUND**: Email/password auth is not enabled in Firebase Console
+- **FOUND**: Email/password auth is not enabled in Supabase Console
 - **NEXT**: User needs to manually sign in via Google OAuth in the browser window
 - Browser session: `agent-browser --session academic-test`
 - Browser is headed and visible on screen

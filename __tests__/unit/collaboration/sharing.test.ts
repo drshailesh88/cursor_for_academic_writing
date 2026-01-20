@@ -11,7 +11,7 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { mockFirestore, resetFirebaseMocks } from '../../mocks/firebase';
+import { mockDatabase, resetSupabaseMocks } from '../../mocks/supabase';
 import { createMockUser, createMockDocument } from '../../mocks/test-data';
 import type { DocumentShare, SharePermission } from '@/lib/collaboration/types';
 
@@ -22,12 +22,12 @@ vi.stubGlobal('crypto', {
   randomUUID: mockRandomUUID,
 });
 
-// Mock the Firebase client module
-vi.mock('@/lib/firebase/client', () => ({
-  db: () => mockFirestore,
+// Mock the Supabase client module
+vi.mock('@/lib/supabase/client', () => ({
+  db: () => mockDatabase,
 }));
 
-vi.mock('@/lib/firebase/schema', () => ({
+vi.mock('@/lib/supabase/schema', () => ({
   COLLECTIONS: {
     DOCUMENTS: 'documents',
     USERS: 'users',
@@ -53,11 +53,11 @@ describe('Document Sharing', () => {
   const testDocument = createMockDocument({ id: testDocId, userId: owner.uid });
 
   beforeEach(async () => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
     mockRandomUUID.mockClear();
 
     // Seed the document
-    await mockFirestore.doc(`documents/${testDocId}`).set({
+    await mockDatabase.doc(`documents/${testDocId}`).set({
       id: testDocId,
       userId: owner.uid,
       title: testDocument.title,
@@ -68,13 +68,13 @@ describe('Document Sharing', () => {
     });
 
     // Seed users
-    await mockFirestore.doc(`users/${owner.uid}`).set({
+    await mockDatabase.doc(`users/${owner.uid}`).set({
       uid: owner.uid,
       email: owner.email,
       displayName: owner.displayName,
     });
 
-    await mockFirestore.doc(`users/${recipient.uid}`).set({
+    await mockDatabase.doc(`users/${recipient.uid}`).set({
       uid: recipient.uid,
       email: recipient.email,
       displayName: recipient.displayName,
@@ -338,7 +338,7 @@ describe('Document Sharing', () => {
 
     test('gets documents shared with user', async () => {
       const doc2Id = 'test-document-456';
-      await mockFirestore.doc(`documents/${doc2Id}`).set({
+      await mockDatabase.doc(`documents/${doc2Id}`).set({
         id: doc2Id,
         userId: owner.uid,
         title: 'Another Document',
@@ -546,7 +546,7 @@ describe('Document Sharing', () => {
       await validateShareToken(token);
 
       // Check that it was marked as inactive
-      const sharesRef = mockFirestore.collection(`documents/${testDocId}/shares`);
+      const sharesRef = mockDatabase.collection(`documents/${testDocId}/shares`);
       const snapshot = await sharesRef.get();
 
       let foundShare = false;

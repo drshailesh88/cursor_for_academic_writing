@@ -1246,7 +1246,7 @@ A researcher wants to understand how a research field has evolved over time.
 - Papers have DOIs or PMIDs for identification
 - Citation data is available from Semantic Scholar API
 - Users are authenticated
-- Firebase is configured for storage
+- Supabase is configured for storage
 
 ---
 
@@ -1258,7 +1258,7 @@ A researcher wants to understand how a research field has evolved over time.
 - **CrossRef API**: DOI resolution
 - **OpenAlex API**: Alternative citation data
 - **D3.js** or **vis-network**: Graph visualization
-- **Firebase Firestore**: Data storage
+- **Supabase Postgres**: Data storage
 - **Zotero API**: Reference manager integration
 - **Mendeley API**: Reference manager integration
 

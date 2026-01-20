@@ -458,7 +458,7 @@ export function useDiscovery() {
             type: path.type,
           })),
           shortestPath: result.connection.shortestPath,
-          createdAt: new Date() as any, // Firestore Timestamp
+          createdAt: new Date() as any, // Database timestamp
         };
 
         setConnectionState({
@@ -575,7 +575,7 @@ export function useDiscovery() {
           gaps: result.frontiers.gaps.all,
           opportunities: result.frontiers.opportunities,
           metrics: result.frontiers.metrics,
-          generatedAt: new Date() as any, // Firestore Timestamp
+          generatedAt: new Date() as any, // Database timestamp
         };
 
         setFrontiersState({

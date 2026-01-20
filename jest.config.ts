@@ -57,7 +57,7 @@ const config: Config = {
       statements: 80,
     },
     // Critical paths require higher coverage
-    './lib/firebase/': {
+    './lib/supabase/': {
       branches: 90,
       functions: 90,
       lines: 90,

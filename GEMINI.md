@@ -5,7 +5,7 @@
 An AI-powered academic writing system with multi-database research, plagiarism detection, collaboration features, and professional document export.
 
 **Status:** All 6 Phases Complete (50 features)
-**Tech:** Next.js 14, TypeScript, TipTap, Firebase, Vercel AI SDK
+**Tech:** Next.js 14, TypeScript, TipTap, Supabase, Vercel AI SDK
 **Port:** localhost:2550
 
 ---
@@ -16,7 +16,7 @@ An AI-powered academic writing system with multi-database research, plagiarism d
 
 1. **HANDOVER.md** - Complete implementation status (50 features, 6 phases)
 2. **CLAUDE.md** - Coding standards and architecture
-3. **FIREBASE_SETUP.md** - Firebase configuration
+3. **FIREBASE_SETUP.md** - Supabase configuration
 
 ---
 
@@ -82,8 +82,8 @@ Frontend:
 └── React Resizable Panels
 
 Backend:
-├── Firebase Auth (Google Sign-in)
-├── Firestore (documents + subcollections)
+├── Supabase Auth (Google Sign-in)
+├── Supabase Postgres (documents + subcollections)
 ├── Vercel AI SDK (14 models)
 └── 4 Academic Database APIs
 
@@ -116,7 +116,7 @@ components/
     └── track-changes-panel.tsx
 
 lib/
-├── firebase/                   # Auth, Firestore, schema
+├── supabase/                   # Supabase-backed auth/data layer (legacy path)
 ├── hooks/                      # 10+ custom hooks
 │   ├── use-document.ts
 │   ├── use-plagiarism.ts
@@ -167,45 +167,37 @@ import { useState, useEffect } from 'react';
 import { Editor } from '@tiptap/react';
 
 // 3. Internal lib
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import { usePlagiarism } from '@/lib/hooks/use-plagiarism';
 
 // 4. Components
 import { Button } from '@/components/ui/button';
 
 // 5. Types
-import type { Document } from '@/lib/firebase/schema';
+import type { Document } from '@/lib/supabase/schema';
 ```
 
 ---
 
-## Firebase Schema
+## Supabase Schema
 
-```
-/users/{userId}
-  - displayName, email, photoURL, createdAt
-
-/documents/{docId}
-  - title, content, wordCount, userId, disciplineId
-  - createdAt, updatedAt
-
-/documents/{docId}/comments/{commentId}
-  - type: 'comment' | 'suggestion' | 'question'
-  - content, selectedText, authorId, resolved, replies[]
-
-/documents/{docId}/versions/{versionId}
-  - type: 'auto' | 'manual' | 'restore-backup'
-  - content, wordCount, label, createdBy, createdAt
-
-/documents/{docId}/shares/{shareId}
-  - type: 'link' | 'email'
-  - permission: 'view' | 'comment' | 'edit'
-  - token, email, password, expiresAt
-
-/documents/{docId}/changes/{changeId}
-  - type: 'insertion' | 'deletion'
-  - content, position, authorId, status, createdAt
-```
+Primary tables (see `supabase/schema.sql` for full detail):
+- `documents`
+- `document_comments`
+- `document_versions`
+- `document_shares`
+- `shared_documents`
+- `tracked_changes`
+- `user_settings`
+- `profiles`
+- `papers`
+- `paper_contents`
+- `reference_library`
+- `reference_folders`
+- `reference_labels`
+- `research_sessions`
+- `presentations`
+- `rag_cache`
 
 ---
 
@@ -257,16 +249,20 @@ export function MyComponent({ documentId, onAction }: MyComponentProps) {
 }
 ```
 
-### Adding a Firebase Operation
+### Adding a Supabase Operation
 ```typescript
-// lib/firebase/my-operation.ts
-import { db } from './client';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+// lib/supabase/my-operation.ts (Supabase-backed)
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export async function myOperation(docId: string, data: MyData) {
   try {
-    const docRef = doc(db, 'documents', docId);
-    await updateDoc(docRef, data);
+    const supabase = getSupabaseBrowserClient();
+    const { error } = await supabase
+      .from('documents')
+      .update(data)
+      .eq('id', docId);
+
+    if (error) throw error;
   } catch (error) {
     console.error('Operation failed:', error);
     throw error;
@@ -287,7 +283,7 @@ npm run build        # Production build
 
 ### Checklist
 ```
-[ ] Firebase auth works
+[ ] Supabase auth works
 [ ] Auto-save triggers (30 seconds)
 [ ] AI chat responds
 [ ] Database searches return results
@@ -394,12 +390,12 @@ node_modules/       # Dependencies
 - **NEVER commit `.env.local`**
 - **NEVER hardcode secrets**
 - Validate user owns document before operations
-- Use Firebase security rules
+- Use Supabase RLS policies
 
 ### Performance
 - Debounce auto-save (30 sec)
 - Debounce analysis (1 sec)
-- Use Firestore onSnapshot for real-time
+- Use Supabase realtime subscriptions
 - Lazy load heavy components
 
 ### Code Quality
@@ -460,7 +456,7 @@ npm run build        # Build
 **Critical files:**
 - `HANDOVER.md` - All 50 features
 - `.env.local` - API keys (never commit)
-- `lib/firebase/schema.ts` - Types
+- `lib/supabase/schema.ts` - Types
 
 ---
 

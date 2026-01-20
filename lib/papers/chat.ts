@@ -6,7 +6,7 @@ import type {
   PaperContent,
   PaperChatCitation,
   PaperParagraph,
-} from '@/lib/firebase/schema';
+} from '@/lib/supabase/schema';
 import { hybridRetrieve, buildContext, papersToChunks } from '@/lib/rag/retriever';
 import type { TextChunk, RetrievalConfig } from '@/lib/rag/types';
 import { createOpenAI } from '@ai-sdk/openai';

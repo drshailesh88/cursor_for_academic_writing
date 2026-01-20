@@ -24,8 +24,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/lib/firebase/auth';
-import { getUserResearchSessions, deleteResearchSession } from '@/lib/firebase/research-sessions';
+import { useAuth } from '@/lib/supabase/auth';
+import { getUserResearchSessions, deleteResearchSession } from '@/lib/supabase/research-sessions';
 import type { ResearchMode, SessionStatus } from '@/lib/research/deep-research/types';
 
 /**
@@ -166,8 +166,8 @@ export function ResearchHistory({
           progress: doc.progress,
           sourcesCollected: doc.sourcesCollected,
           qualityScore: doc.qualityScore,
-          createdAt: doc.createdAt.toDate(),
-          completedAt: doc.completedAt?.toDate(),
+          createdAt: doc.createdAt,
+          completedAt: doc.completedAt,
         }));
         setSessions(sessionItems);
       } catch (error) {

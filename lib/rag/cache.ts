@@ -1,87 +1,71 @@
-// Response Cache
-// Uses Firestore for persistent caching of RAG responses
-// Reduces costs by avoiding repeated LLM calls for similar queries
+// Response Cache (Supabase)
 
-import { getFirebaseDb } from '@/lib/firebase/client';
-import {
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  query,
-  where,
-  getDocs,
-  deleteDoc,
-  Timestamp,
-} from 'firebase/firestore';
+import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { Citation, CacheEntry } from './types';
-import crypto from 'crypto';
 
-const CACHE_COLLECTION = 'rag_cache';
-const CACHE_TTL_HOURS = 24; // Cache entries expire after 24 hours
+const CACHE_TTL_HOURS = 24;
 const MAX_CACHE_ENTRIES_PER_USER = 100;
 
-/**
- * Generate a cache key from query and paper IDs
- * Uses SHA-256 hash for consistent, collision-resistant keys
- */
 export function generateCacheKey(query: string, paperIds: string[]): string {
   const normalizedQuery = query.toLowerCase().trim();
   const sortedPaperIds = [...paperIds].sort();
   const input = `${normalizedQuery}:${sortedPaperIds.join(',')}`;
 
-  // Use a simple hash for browser compatibility
   let hash = 0;
   for (let i = 0; i < input.length; i++) {
     const char = input.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
+    hash = hash & hash;
   }
   return `cache_${Math.abs(hash).toString(16)}`;
 }
 
-/**
- * Check if a cached response exists and is valid
- */
 export async function getCachedResponse(
   userId: string,
   query: string,
   paperIds: string[]
 ): Promise<{ response: string; citations: Citation[] } | null> {
   try {
+    const supabase = getSupabaseAdminClient();
     const cacheKey = generateCacheKey(query, paperIds);
-    const cacheRef = doc(getFirebaseDb(), 'users', userId, CACHE_COLLECTION, cacheKey);
-    const cacheDoc = await getDoc(cacheRef);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('rag_cache')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('cache_key', cacheKey)
+      .single();
 
-    if (!cacheDoc.exists()) {
+    if (error || !data) {
       return null;
     }
 
-    const data = cacheDoc.data() as CacheEntry & {
-      createdAt: Timestamp;
-      expiresAt: Timestamp;
+    const cacheRow = data as {
+      id: string;
+      expires_at: string | null;
+      hit_count: number | null;
+      response: string;
+      citations: unknown;
     };
 
-    // Check if expired
-    const now = new Date();
-    const expiresAt = data.expiresAt.toDate();
-
-    if (now > expiresAt) {
-      // Delete expired entry
-      await deleteDoc(cacheRef);
+    const expiresAt = cacheRow.expires_at ? new Date(cacheRow.expires_at) : null;
+    if (expiresAt && new Date() > expiresAt) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('rag_cache').delete().eq('id', cacheRow.id);
       return null;
     }
 
-    // Update hit count (fire and forget)
-    setDoc(
-      cacheRef,
-      { hitCount: (data.hitCount || 0) + 1 },
-      { merge: true }
-    ).catch(() => {}); // Ignore errors
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('rag_cache')
+      .update({ hit_count: (cacheRow.hit_count || 0) + 1 })
+      .eq('id', cacheRow.id)
+      .then(() => {})
+      .catch(() => {});
 
     return {
-      response: data.response,
-      citations: data.citations,
+      response: cacheRow.response,
+      citations: (cacheRow.citations as Citation[]) || [],
     };
   } catch (error) {
     console.error('Cache read error:', error);
@@ -89,9 +73,6 @@ export async function getCachedResponse(
   }
 }
 
-/**
- * Store a response in the cache
- */
 export async function setCachedResponse(
   userId: string,
   query: string,
@@ -100,118 +81,119 @@ export async function setCachedResponse(
   citations: Citation[]
 ): Promise<void> {
   try {
+    const supabase = getSupabaseAdminClient();
     const cacheKey = generateCacheKey(query, paperIds);
-    const cacheRef = doc(getFirebaseDb(), 'users', userId, CACHE_COLLECTION, cacheKey);
-
     const now = new Date();
     const expiresAt = new Date(now.getTime() + CACHE_TTL_HOURS * 60 * 60 * 1000);
 
-    const cacheEntry: Omit<CacheEntry, 'createdAt' | 'expiresAt'> & {
-      createdAt: Timestamp;
-      expiresAt: Timestamp;
-    } = {
-      key: cacheKey,
-      query,
-      paperIds,
-      response,
-      citations,
-      createdAt: Timestamp.fromDate(now),
-      expiresAt: Timestamp.fromDate(expiresAt),
-      hitCount: 0,
-    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from('rag_cache')
+      .upsert({
+        user_id: userId,
+        cache_key: cacheKey,
+        query,
+        paper_ids: paperIds,
+        response,
+        citations,
+        hit_count: 0,
+        created_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+      }, { onConflict: 'user_id,cache_key' });
 
-    await setDoc(cacheRef, cacheEntry);
+    if (error) {
+      console.error('Cache write error:', error);
+    }
 
-    // Clean up old entries if needed (fire and forget)
     cleanupOldEntries(userId).catch(() => {});
   } catch (error) {
     console.error('Cache write error:', error);
-    // Don't throw - caching is optional
   }
 }
 
-/**
- * Clean up old cache entries to stay within limits
- */
 async function cleanupOldEntries(userId: string): Promise<void> {
   try {
-    const cacheRef = collection(getFirebaseDb(), 'users', userId, CACHE_COLLECTION);
-    const q = query(cacheRef);
-    const snapshot = await getDocs(q);
+    const supabase = getSupabaseAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('rag_cache')
+      .select('id, expires_at, hit_count')
+      .eq('user_id', userId);
 
-    if (snapshot.size <= MAX_CACHE_ENTRIES_PER_USER) {
+    if (error || !data) {
       return;
     }
 
-    // Get all entries with their expiry times
-    const entries = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ref: doc.ref,
-      expiresAt: (doc.data() as { expiresAt: Timestamp }).expiresAt?.toDate() || new Date(0),
-      hitCount: (doc.data() as { hitCount: number }).hitCount || 0,
+    if (data.length <= MAX_CACHE_ENTRIES_PER_USER) {
+      return;
+    }
+
+    type CacheEntryRow = { id: string; expires_at: string | null; hit_count: number | null };
+    const entries = (data as CacheEntryRow[]).map((row) => ({
+      id: row.id,
+      expiresAt: row.expires_at ? new Date(row.expires_at) : new Date(0),
+      hitCount: row.hit_count || 0,
     }));
 
-    // Sort by expiry time (oldest first), then by hit count (lowest first)
     entries.sort((a, b) => {
       const timeDiff = a.expiresAt.getTime() - b.expiresAt.getTime();
       if (timeDiff !== 0) return timeDiff;
       return a.hitCount - b.hitCount;
     });
 
-    // Delete oldest entries to get under the limit
     const toDelete = entries.slice(0, entries.length - MAX_CACHE_ENTRIES_PER_USER);
-    await Promise.all(toDelete.map((entry) => deleteDoc(entry.ref)));
+    if (toDelete.length) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('rag_cache').delete().in('id', toDelete.map((e) => e.id));
+    }
   } catch (error) {
     console.error('Cache cleanup error:', error);
   }
 }
 
-/**
- * Invalidate cache for specific papers
- * Call this when paper content is updated
- */
 export async function invalidatePaperCache(
   userId: string,
   paperIds: string[]
 ): Promise<void> {
   try {
-    const cacheRef = collection(getFirebaseDb(), 'users', userId, CACHE_COLLECTION);
-    const snapshot = await getDocs(cacheRef);
+    const supabase = getSupabaseAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('rag_cache')
+      .select('id, paper_ids')
+      .eq('user_id', userId);
 
-    const toDelete: Promise<void>[] = [];
+    if (error || !data) {
+      return;
+    }
 
-    snapshot.docs.forEach((doc) => {
-      const data = doc.data() as CacheEntry;
-      // Check if any of the paper IDs are in this cache entry
-      const hasOverlap = paperIds.some((id) => data.paperIds?.includes(id));
-      if (hasOverlap) {
-        toDelete.push(deleteDoc(doc.ref));
-      }
-    });
+    type CachePaperRow = { id: string; paper_ids: string[] | null };
+    const toDelete = (data as CachePaperRow[])
+      .filter((row) => {
+        const cached = row.paper_ids || [];
+        return paperIds.some((id) => cached.includes(id));
+      })
+      .map((row) => row.id);
 
-    await Promise.all(toDelete);
+    if (toDelete.length) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('rag_cache').delete().in('id', toDelete);
+    }
   } catch (error) {
     console.error('Cache invalidation error:', error);
   }
 }
 
-/**
- * Clear all cache for a user
- */
 export async function clearUserCache(userId: string): Promise<void> {
   try {
-    const cacheRef = collection(getFirebaseDb(), 'users', userId, CACHE_COLLECTION);
-    const snapshot = await getDocs(cacheRef);
-
-    await Promise.all(snapshot.docs.map((doc) => deleteDoc(doc.ref)));
+    const supabase = getSupabaseAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('rag_cache').delete().eq('user_id', userId);
   } catch (error) {
     console.error('Cache clear error:', error);
   }
 }
 
-/**
- * Get cache statistics for a user
- */
 export async function getCacheStats(userId: string): Promise<{
   totalEntries: number;
   totalHits: number;
@@ -219,30 +201,38 @@ export async function getCacheStats(userId: string): Promise<{
   newestEntry: Date | null;
 }> {
   try {
-    const cacheRef = collection(getFirebaseDb(), 'users', userId, CACHE_COLLECTION);
-    const snapshot = await getDocs(cacheRef);
+    const supabase = getSupabaseAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('rag_cache')
+      .select('created_at, hit_count')
+      .eq('user_id', userId);
+
+    if (error || !data) {
+      return {
+        totalEntries: 0,
+        totalHits: 0,
+        oldestEntry: null,
+        newestEntry: null,
+      };
+    }
 
     let totalHits = 0;
     let oldestEntry: Date | null = null;
     let newestEntry: Date | null = null;
 
-    snapshot.docs.forEach((doc) => {
-      const data = doc.data() as CacheEntry & { createdAt: Timestamp };
-      totalHits += data.hitCount || 0;
-
-      const createdAt = data.createdAt?.toDate();
+    type CacheStatsRow = { created_at: string | null; hit_count: number | null };
+    (data as CacheStatsRow[]).forEach((row) => {
+      totalHits += row.hit_count || 0;
+      const createdAt = row.created_at ? new Date(row.created_at) : null;
       if (createdAt) {
-        if (!oldestEntry || createdAt < oldestEntry) {
-          oldestEntry = createdAt;
-        }
-        if (!newestEntry || createdAt > newestEntry) {
-          newestEntry = createdAt;
-        }
+        if (!oldestEntry || createdAt < oldestEntry) oldestEntry = createdAt;
+        if (!newestEntry || createdAt > newestEntry) newestEntry = createdAt;
       }
     });
 
     return {
-      totalEntries: snapshot.size,
+      totalEntries: data.length,
       totalHits,
       oldestEntry,
       newestEntry,
@@ -257,3 +247,4 @@ export async function getCacheStats(userId: string): Promise<{
     };
   }
 }
+

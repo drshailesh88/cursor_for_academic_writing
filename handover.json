@@ -6,7 +6,7 @@
   "progress": 99,
   "status": "Fixed AI Chat 'Unknown model: anthropic' error. Legacy model names now normalized. User needs to hard refresh browser and test chat with GLM-4.7.",
 
-  "RESUME_INSTRUCTIONS": "=== READ THIS FIRST === 1) All critical bugs have been fixed. 2) User needs to: a) Add API key in Settings for AI Chat, b) Create Firestore index for papers collection if not exists. 3) Test the fixes by opening the app at localhost:2550. 4) Use browser automation for further testing if needed.",
+  "RESUME_INSTRUCTIONS": "=== READ THIS FIRST === 1) All critical bugs have been fixed. 2) User needs to: a) Add API key in Settings for AI Chat, b) Create Postgres index for papers collection if not exists. 3) Test the fixes by opening the app at localhost:2550. 4) Use browser automation for further testing if needed.",
 
   "METHODOLOGY": {
     "tool": "Vercel Agent Browser CLI (agent-browser --session test2550)",
@@ -32,11 +32,11 @@
     {
       "issue": "Papers Library Unhelpful Error Message",
       "files_modified": ["app/api/papers/route.ts", "lib/hooks/use-papers.ts"],
-      "fix": "Improved error handling to show detailed error messages and hints about missing Firestore indexes",
+      "fix": "Improved error handling to show detailed error messages and hints about missing Postgres indexes",
       "status": "FIXED"
     },
     {
-      "issue": "Missing Firestore Index Documentation",
+      "issue": "Missing Postgres Index Documentation",
       "files_created": ["firestore.indexes.json"],
       "fix": "Created firestore.indexes.json documenting all required composite indexes for the project",
       "status": "DOCUMENTATION ADDED"
@@ -44,14 +44,14 @@
     {
       "issue": "AI Chat 'Unknown model: anthropic' Error",
       "files_modified": ["app/api/chat/route.ts"],
-      "fix": "Added model name normalization at API level - legacy 'anthropic' value from Firestore settings is now converted to 'claude' before model creation. Both model instance creation and tool support check use normalized name.",
+      "fix": "Added model name normalization at API level - legacy 'anthropic' value from Postgres settings is now converted to 'claude' before model creation. Both model instance creation and tool support check use normalized name.",
       "status": "FIXED"
     }
   ],
 
   "current_task": {
     "name": "Validation Complete - User Configuration Needed",
-    "description": "All code fixes applied. User needs to: 1) Configure API key in Settings for AI Chat, 2) Create Firestore index for papers collection if fetch error persists.",
+    "description": "All code fixes applied. User needs to: 1) Configure API key in Settings for AI Chat, 2) Create Postgres index for papers collection if fetch error persists.",
     "next_action": "1) Test fixes in browser, 2) Configure API key, 3) Verify all features work"
   },
 
@@ -65,7 +65,7 @@
     {
       "id": 1,
       "priority": "P0-BLOCKER",
-      "title": "Firestore Composite Index (documents)",
+      "title": "Postgres Composite Index (documents)",
       "status": "RESOLVED - Index exists and is ENABLED"
     },
     {
@@ -73,7 +73,7 @@
       "priority": "P1-HIGH",
       "title": "Papers Library Fetch Error",
       "error": "Failed to fetch papers",
-      "notes": "May require Firestore index for papers collection. Check server console for index creation link.",
+      "notes": "May require Postgres index for papers collection. Check server console for index creation link.",
       "status": "IMPROVED ERROR HANDLING - User may need to create index"
     },
     {
@@ -130,7 +130,7 @@
     "collaboration": {"done": true, "status": "WORKING", "notes": "Share dialog fully functional"},
     "presentations": {"done": true, "status": "FIXED", "notes": "Dialog no longer closes on Select interaction"},
     "settings_dialog": {"done": true, "status": "WORKING", "notes": "4 tabs working (AI, Writing, Editor, Export)"},
-    "papers_library": {"done": true, "status": "IMPROVED", "notes": "Better error messages, may need Firestore index"},
+    "papers_library": {"done": true, "status": "IMPROVED", "notes": "Better error messages, may need Postgres index"},
     "discovery_tab": {"done": true, "status": "PRESENT", "notes": "Discovery tab visible in right panel"},
     "analysis_originality": {"done": true, "status": "PRESENT", "notes": "Analysis and Originality buttons present in toolbar"}
   },
@@ -177,13 +177,13 @@
 
   "remaining_tasks": [
     "1. USER CONFIG: Add API key in Settings for AI Chat",
-    "2. USER CONFIG: Create Firestore index for papers collection (if error persists)",
+    "2. USER CONFIG: Create Postgres index for papers collection (if error persists)",
     "3. OPTIONAL: Fix TipTap SSR hydration warning",
     "4. VERIFY: Test all fixes in real browser"
   ],
 
   "project_context": {
-    "tech_stack": "Next.js 14, TypeScript, TipTap, Firebase, Vercel AI SDK",
+    "tech_stack": "Next.js 14, TypeScript, TipTap, Supabase, Vercel AI SDK",
     "total_tests": 1822,
     "branch": "fix/dependencies-and-chat",
     "user": "Dr. Shailesh Singh"

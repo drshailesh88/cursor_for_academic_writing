@@ -1,41 +1,72 @@
-// Document Sharing Operations
+// Document Sharing Operations (Supabase)
 'use client';
 
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  Timestamp,
-  writeBatch,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
-import { COLLECTIONS } from '@/lib/firebase/schema';
-import { DocumentShare, SharedDocument, SharePermission } from './types';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import type { DocumentShare, SharedDocument, SharePermission } from './types';
 
-/**
- * Generate a cryptographically secure share token
- */
 function generateShareToken(): string {
-  // Use crypto.randomUUID for a secure token
   return crypto.randomUUID();
 }
 
-/**
- * Create a share link for a document
- * @param documentId - Document to share
- * @param userId - User creating the share
- * @param userName - Display name of user creating the share
- * @param permission - Permission level to grant
- * @param expiresIn - Optional expiration in milliseconds (e.g., 7 days = 7 * 24 * 60 * 60 * 1000)
- * @returns The share token
- */
+type ShareRow = {
+  id: string;
+  document_id: string;
+  type: 'link' | 'email';
+  share_token: string | null;
+  shared_with_email: string | null;
+  shared_with_user_id: string | null;
+  permission: SharePermission;
+  created_by: string;
+  created_by_name: string;
+  active: boolean;
+  created_at: string;
+  expires_at: string | null;
+};
+
+type SharedRow = {
+  id: string;
+  user_id: string;
+  document_id: string;
+  share_id: string;
+  permission: SharePermission;
+  owner_id: string;
+  owner_name: string;
+  title: string;
+  shared_at: string;
+  updated_at: string;
+  word_count: number;
+};
+
+function mapShare(row: ShareRow): DocumentShare {
+  return {
+    id: row.id,
+    documentId: row.document_id,
+    type: row.type,
+    shareToken: row.share_token || undefined,
+    sharedWithEmail: row.shared_with_email || undefined,
+    sharedWithUserId: row.shared_with_user_id || undefined,
+    permission: row.permission,
+    createdBy: row.created_by,
+    createdByName: row.created_by_name,
+    createdAt: new Date(row.created_at).getTime(),
+    expiresAt: row.expires_at ? new Date(row.expires_at).getTime() : undefined,
+    active: row.active,
+  };
+}
+
+function mapShared(row: SharedRow): SharedDocument {
+  return {
+    documentId: row.document_id,
+    title: row.title,
+    ownerName: row.owner_name,
+    ownerId: row.owner_id,
+    permission: row.permission,
+    sharedAt: new Date(row.shared_at).getTime(),
+    updatedAt: new Date(row.updated_at).getTime(),
+    wordCount: row.word_count,
+  };
+}
+
 export async function createShareLink(
   documentId: string,
   userId: string,
@@ -45,22 +76,29 @@ export async function createShareLink(
 ): Promise<string> {
   try {
     const shareToken = generateShareToken();
-    const now = Date.now();
-    const shareRef = doc(collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares'));
+    const expiresAt = expiresIn ? new Date(Date.now() + expiresIn).toISOString() : null;
+    const supabase = getSupabaseBrowserClient();
 
-    const shareData: Omit<DocumentShare, 'id'> = {
-      documentId,
-      type: 'link',
-      shareToken,
-      permission,
-      createdBy: userId,
-      createdByName: userName,
-      createdAt: now,
-      expiresAt: expiresIn ? now + expiresIn : undefined,
-      active: true,
-    };
+    const { data, error } = await supabase
+      .from('document_shares')
+      .insert({
+        document_id: documentId,
+        type: 'link',
+        share_token: shareToken,
+        permission,
+        created_by: userId,
+        created_by_name: userName,
+        active: true,
+        expires_at: expiresAt,
+      })
+      .select('id')
+      .single();
 
-    await setDoc(shareRef, shareData);
+    if (error || !data) {
+      console.error('Error creating share link:', error);
+      throw error;
+    }
+
     return shareToken;
   } catch (error) {
     console.error('Error creating share link:', error);
@@ -68,15 +106,6 @@ export async function createShareLink(
   }
 }
 
-/**
- * Share a document with a specific user via email
- * @param documentId - Document to share
- * @param userId - User creating the share
- * @param userName - Display name of user creating the share
- * @param email - Email address to share with
- * @param permission - Permission level to grant
- * @returns The share ID
- */
 export async function createEmailShare(
   documentId: string,
   userId: string,
@@ -85,46 +114,47 @@ export async function createEmailShare(
   permission: SharePermission
 ): Promise<string> {
   try {
-    const now = Date.now();
-    const shareRef = doc(collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares'));
+    const supabase = getSupabaseBrowserClient();
 
-    // Look up user by email (if they exist in the system)
-    const usersQuery = query(
-      collection(db(), COLLECTIONS.USERS),
-      where('email', '==', email)
-    );
-    const usersSnapshot = await getDocs(usersQuery);
-    const sharedWithUserId = usersSnapshot.empty ? undefined : usersSnapshot.docs[0].id;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
 
-    const shareData: Omit<DocumentShare, 'id'> = {
-      documentId,
-      type: 'email',
-      sharedWithEmail: email,
-      sharedWithUserId,
-      permission,
-      createdBy: userId,
-      createdByName: userName,
-      createdAt: now,
-      active: true,
-    };
+    const sharedWithUserId = profile?.id || null;
 
-    await setDoc(shareRef, shareData);
+    const { data, error } = await supabase
+      .from('document_shares')
+      .insert({
+        document_id: documentId,
+        type: 'email',
+        shared_with_email: email,
+        shared_with_user_id: sharedWithUserId,
+        permission,
+        created_by: userId,
+        created_by_name: userName,
+        active: true,
+      })
+      .select('id')
+      .single();
 
-    // If user exists, add to their sharedWithMe collection
-    if (sharedWithUserId) {
-      await addToSharedWithMe(sharedWithUserId, documentId, shareRef.id, permission);
+    if (error || !data) {
+      console.error('Error creating email share:', error);
+      throw error;
     }
 
-    return shareRef.id;
+    if (sharedWithUserId) {
+      await addToSharedWithMe(sharedWithUserId, documentId, data.id as string, permission);
+    }
+
+    return data.id as string;
   } catch (error) {
     console.error('Error creating email share:', error);
     throw error;
   }
 }
 
-/**
- * Add a document to a user's sharedWithMe collection
- */
 async function addToSharedWithMe(
   userId: string,
   documentId: string,
@@ -132,145 +162,116 @@ async function addToSharedWithMe(
   permission: SharePermission
 ): Promise<void> {
   try {
-    // Get document details
-    const docRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId);
-    const docSnap = await getDoc(docRef);
+    const supabase = getSupabaseBrowserClient();
+    const { data: doc, error: docError } = await supabase
+      .from('documents')
+      .select('title, user_id, word_count, updated_at')
+      .eq('id', documentId)
+      .single();
 
-    if (!docSnap.exists()) {
+    if (docError || !doc) {
       throw new Error('Document not found');
     }
 
-    const docData = docSnap.data();
-    const now = Date.now();
+    const { data: ownerProfile } = await supabase
+      .from('profiles')
+      .select('display_name, email')
+      .eq('id', doc.user_id)
+      .maybeSingle();
 
-    // Get owner details
-    const ownerRef = doc(db(), COLLECTIONS.USERS, docData.userId);
-    const ownerSnap = await getDoc(ownerRef);
-    const ownerData = ownerSnap.exists() ? ownerSnap.data() : null;
+    const ownerName = ownerProfile?.display_name || ownerProfile?.email || 'Unknown';
 
-    const sharedDocRef = doc(db(), COLLECTIONS.USERS, userId, 'sharedWithMe', documentId);
+    const { error } = await supabase
+      .from('shared_documents')
+      .insert({
+        user_id: userId,
+        document_id: documentId,
+        share_id: shareId,
+        permission,
+        owner_id: doc.user_id,
+        owner_name: ownerName,
+        title: doc.title,
+        shared_at: new Date().toISOString(),
+        updated_at: doc.updated_at,
+        word_count: doc.word_count || 0,
+      });
 
-    // Handle both Timestamp objects and numbers
-    const updatedAtValue = typeof docData.updatedAt === 'number'
-      ? docData.updatedAt
-      : (docData.updatedAt as Timestamp)?.toMillis() || now;
-    const sharedDocData: Omit<SharedDocument, 'documentId'> & { shareId: string } = {
-      title: docData.title,
-      ownerName: ownerData?.displayName || 'Unknown',
-      ownerId: docData.userId,
-      permission,
-      sharedAt: now,
-      updatedAt: updatedAtValue,
-      wordCount: docData.wordCount,
-      shareId,
-    };
-
-    await setDoc(sharedDocRef, sharedDocData);
+    if (error) {
+      console.error('Error adding to sharedWithMe:', error);
+      throw error;
+    }
   } catch (error) {
     console.error('Error adding to sharedWithMe:', error);
     throw error;
   }
 }
 
-/**
- * Get all shares for a document
- * @param documentId - Document ID
- * @returns Array of shares
- */
 export async function getDocumentShares(documentId: string): Promise<DocumentShare[]> {
   try {
-    const sharesRef = collection(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares');
-    const q = query(sharesRef, where('active', '==', true), orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('document_shares')
+      .select('*')
+      .eq('document_id', documentId)
+      .eq('active', true)
+      .order('created_at', { ascending: false });
 
-    const shares: DocumentShare[] = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      shares.push({
-        id: doc.id,
-        documentId: data.documentId,
-        type: data.type,
-        shareToken: data.shareToken,
-        sharedWithEmail: data.sharedWithEmail,
-        sharedWithUserId: data.sharedWithUserId,
-        permission: data.permission,
-        createdBy: data.createdBy,
-        createdByName: data.createdByName,
-        createdAt: data.createdAt,
-        expiresAt: data.expiresAt,
-        active: data.active,
-      });
-    });
+    if (error || !data) {
+      return [];
+    }
 
-    return shares;
+    return (data as ShareRow[]).map(mapShare);
   } catch (error) {
     console.error('Error getting document shares:', error);
     return [];
   }
 }
 
-/**
- * Get documents shared with the current user
- * @param userId - Current user ID
- * @returns Array of shared documents
- */
 export async function getSharedWithMe(userId: string): Promise<SharedDocument[]> {
   try {
-    const sharedRef = collection(db(), COLLECTIONS.USERS, userId, 'sharedWithMe');
-    const q = query(sharedRef, orderBy('sharedAt', 'desc'));
-    const snapshot = await getDocs(q);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('shared_documents')
+      .select('*')
+      .eq('user_id', userId)
+      .order('shared_at', { ascending: false });
 
-    const sharedDocs: SharedDocument[] = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      sharedDocs.push({
-        documentId: doc.id,
-        title: data.title,
-        ownerName: data.ownerName,
-        ownerId: data.ownerId,
-        permission: data.permission,
-        sharedAt: data.sharedAt,
-        updatedAt: data.updatedAt,
-        wordCount: data.wordCount,
-      });
-    });
+    if (error || !data) {
+      return [];
+    }
 
-    return sharedDocs;
+    return (data as SharedRow[]).map(mapShared);
   } catch (error) {
     console.error('Error getting shared documents:', error);
     return [];
   }
 }
 
-/**
- * Revoke a share
- * @param documentId - Document ID
- * @param shareId - Share ID to revoke
- */
 export async function revokeShare(documentId: string, shareId: string): Promise<void> {
   try {
-    const shareRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares', shareId);
-    const shareSnap = await getDoc(shareRef);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('document_shares')
+      .select('*')
+      .eq('id', shareId)
+      .eq('document_id', documentId)
+      .single();
 
-    if (!shareSnap.exists()) {
+    if (error || !data) {
       throw new Error('Share not found');
     }
 
-    const shareData = shareSnap.data();
+    await supabase
+      .from('document_shares')
+      .update({ active: false })
+      .eq('id', shareId);
 
-    // Mark share as inactive
-    await updateDoc(shareRef, { active: false });
-
-    // If it's an email share, remove from user's sharedWithMe
-    if (shareData.type === 'email' && shareData.sharedWithUserId) {
-      const sharedDocRef = doc(
-        db(),
-        COLLECTIONS.USERS,
-        shareData.sharedWithUserId,
-        'sharedWithMe',
-        documentId
-      );
-      await deleteDoc(sharedDocRef);
+    if (data.type === 'email' && data.shared_with_user_id) {
+      await supabase
+        .from('shared_documents')
+        .delete()
+        .eq('share_id', shareId)
+        .eq('user_id', data.shared_with_user_id);
     }
   } catch (error) {
     console.error('Error revoking share:', error);
@@ -278,40 +279,35 @@ export async function revokeShare(documentId: string, shareId: string): Promise<
   }
 }
 
-/**
- * Update share permission
- * @param documentId - Document ID
- * @param shareId - Share ID
- * @param permission - New permission level
- */
 export async function updateSharePermission(
   documentId: string,
   shareId: string,
   permission: SharePermission
 ): Promise<void> {
   try {
-    const shareRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId, 'shares', shareId);
-    const shareSnap = await getDoc(shareRef);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('document_shares')
+      .select('*')
+      .eq('id', shareId)
+      .eq('document_id', documentId)
+      .single();
 
-    if (!shareSnap.exists()) {
+    if (error || !data) {
       throw new Error('Share not found');
     }
 
-    const shareData = shareSnap.data();
+    await supabase
+      .from('document_shares')
+      .update({ permission })
+      .eq('id', shareId);
 
-    // Update share permission
-    await updateDoc(shareRef, { permission });
-
-    // If it's an email share, update in user's sharedWithMe
-    if (shareData.type === 'email' && shareData.sharedWithUserId) {
-      const sharedDocRef = doc(
-        db(),
-        COLLECTIONS.USERS,
-        shareData.sharedWithUserId,
-        'sharedWithMe',
-        documentId
-      );
-      await updateDoc(sharedDocRef, { permission });
+    if (data.type === 'email' && data.shared_with_user_id) {
+      await supabase
+        .from('shared_documents')
+        .update({ permission })
+        .eq('share_id', shareId)
+        .eq('user_id', data.shared_with_user_id);
     }
   } catch (error) {
     console.error('Error updating share permission:', error);
@@ -319,88 +315,71 @@ export async function updateSharePermission(
   }
 }
 
-/**
- * Validate a share token and get document access
- * @param token - Share token to validate
- * @returns Document ID and permission if valid, null otherwise
- */
 export async function validateShareToken(
   token: string
 ): Promise<{ documentId: string; permission: SharePermission } | null> {
   try {
-    // Query all documents' shares for this token
-    // Note: This requires a composite index on shares collection
-    const documentsRef = collection(db(), COLLECTIONS.DOCUMENTS);
-    const documentsSnapshot = await getDocs(documentsRef);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('document_shares')
+      .select('*')
+      .eq('share_token', token)
+      .eq('active', true)
+      .maybeSingle();
 
-    for (const docSnapshot of documentsSnapshot.docs) {
-      const sharesRef = collection(db(), COLLECTIONS.DOCUMENTS, docSnapshot.id, 'shares');
-      const q = query(
-        sharesRef,
-        where('shareToken', '==', token),
-        where('active', '==', true)
-      );
-      const sharesSnapshot = await getDocs(q);
-
-      if (!sharesSnapshot.empty) {
-        const shareData = sharesSnapshot.docs[0].data();
-
-        // Check if expired
-        if (shareData.expiresAt && shareData.expiresAt < Date.now()) {
-          // Mark as inactive
-          await updateDoc(sharesSnapshot.docs[0].ref, { active: false });
-          return null;
-        }
-
-        return {
-          documentId: docSnapshot.id,
-          permission: shareData.permission,
-        };
-      }
+    if (error || !data) {
+      return null;
     }
 
-    return null;
+    if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
+      await supabase
+        .from('document_shares')
+        .update({ active: false })
+        .eq('id', data.id);
+      return null;
+    }
+
+    return {
+      documentId: data.document_id,
+      permission: data.permission as SharePermission,
+    };
   } catch (error) {
     console.error('Error validating share token:', error);
     return null;
   }
 }
 
-/**
- * Check if a user has access to a document
- * @param documentId - Document ID
- * @param userId - User ID
- * @returns Permission level if user has access, null otherwise
- */
 export async function getUserDocumentPermission(
   documentId: string,
   userId: string
 ): Promise<SharePermission | null> {
   try {
-    // Check if user owns the document
-    const docRef = doc(db(), COLLECTIONS.DOCUMENTS, documentId);
-    const docSnap = await getDoc(docRef);
+    const supabase = getSupabaseBrowserClient();
+    const { data: doc } = await supabase
+      .from('documents')
+      .select('user_id')
+      .eq('id', documentId)
+      .maybeSingle();
 
-    if (!docSnap.exists()) {
+    if (!doc) {
       return null;
     }
 
-    const docData = docSnap.data();
-    if (docData.userId === userId) {
-      return 'edit'; // Owner has full edit access
+    if (doc.user_id === userId) {
+      return 'edit';
     }
 
-    // Check if document is shared with user
-    const sharedDocRef = doc(db(), COLLECTIONS.USERS, userId, 'sharedWithMe', documentId);
-    const sharedDocSnap = await getDoc(sharedDocRef);
+    const { data: shared } = await supabase
+      .from('shared_documents')
+      .select('permission')
+      .eq('document_id', documentId)
+      .eq('user_id', userId)
+      .maybeSingle();
 
-    if (sharedDocSnap.exists()) {
-      return sharedDocSnap.data().permission;
-    }
-
-    return null;
+    return (shared?.permission as SharePermission) || null;
   } catch (error) {
     console.error('Error checking user document permission:', error);
     return null;
   }
 }
+

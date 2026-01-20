@@ -12,7 +12,7 @@ import {
   addPaperTags,
   removePaperTags,
   getPaperContent,
-} from '@/lib/firebase/papers';
+} from '@/lib/supabase/papers';
 
 interface RouteParams {
   params: Promise<{ paperId: string }>;

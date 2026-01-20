@@ -391,7 +391,9 @@ export function IntegratedDiscoveryPanel({
       futureDirections: frontiersData.opportunities,
       trendingPapers: [], // Would need to be computed from emerging topics
       metrics: frontiersData.metrics,
-      generatedAt: new Date(frontiersData.generatedAt?.toDate?.() || Date.now()),
+      generatedAt: frontiersData.generatedAt instanceof Date
+        ? frontiersData.generatedAt
+        : new Date((frontiersData.generatedAt as { toDate?: () => Date })?.toDate?.() || Date.now()),
     };
   }, [frontiersData]);
 

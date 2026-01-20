@@ -2,12 +2,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../firebase/auth';
+import { useAuth } from '../supabase/auth';
 import {
   getUserSettings,
   updateUserSettings,
   resetToDefaults,
-} from '../firebase/settings';
+} from '../supabase/settings';
 import { UserSettings, DEFAULT_SETTINGS } from '../settings/types';
 import { useDebouncedCallback } from 'use-debounce';
 
@@ -44,7 +44,7 @@ export function useSettings() {
     loadSettings();
   }, [user]);
 
-  // Debounced save to Firestore (500ms delay)
+  // Debounced save to Supabase (500ms delay)
   const debouncedSave = useDebouncedCallback(
     async (userId: string, updatedSettings: Partial<UserSettings>) => {
       try {
@@ -73,7 +73,7 @@ export function useSettings() {
         export: { ...prev.export, ...(updates.export || {}) },
       }));
 
-      // Debounced save to Firestore
+      // Debounced save to Supabase
       debouncedSave(user.uid, updates);
     },
     [user, debouncedSave]

@@ -1,30 +1,13 @@
 /**
  * Citation Library Operations
  *
- * Firestore CRUD operations for managing user's reference library.
+ * Supabase-backed CRUD for managing user's reference library.
  * Supports folders, labels, search, and duplicate detection.
  */
 
 'use client';
 
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
-import { COLLECTIONS } from '@/lib/firebase/schema';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import {
   Reference,
   LibraryFolder,
@@ -33,308 +16,396 @@ import {
   ReferenceAuthor,
   generateCiteKey,
 } from './types';
-import { isDevAuthBypass } from '@/lib/firebase/auth';
 
-// Development mode localStorage storage for references
-const DEV_REFERENCES_KEY = 'dev_references';
-const DEV_FOLDERS_KEY = 'dev_folders';
-const DEV_LABELS_KEY = 'dev_labels';
+type ReferenceRow = {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  title_short: string | null;
+  abstract: string | null;
+  authors: ReferenceAuthor[] | null;
+  editors: ReferenceAuthor[] | null;
+  translators: ReferenceAuthor[] | null;
+  issued: Reference['issued'] | null;
+  accessed: Reference['accessed'] | null;
+  submitted: Reference['submitted'] | null;
+  identifiers: Reference['identifiers'] | null;
+  venue: Reference['venue'] | null;
+  publisher: Reference['publisher'] | null;
+  conference: Reference['conference'] | null;
+  thesis: Reference['thesis'] | null;
+  patent: Reference['patent'] | null;
+  keywords: string[] | null;
+  subjects: string[] | null;
+  language: string | null;
+  pdf_url: string | null;
+  pdf_storage_path: string | null;
+  supplementary_urls: string[] | null;
+  citation_count: number | null;
+  influential_citation_count: number | null;
+  folders: string[] | null;
+  labels: string[] | null;
+  notes: string | null;
+  favorite: boolean | null;
+  read_status: Reference['readStatus'] | null;
+  rating: number | null;
+  source: string | null;
+  cite_key: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
-function getDevReferences(): Reference[] {
-  if (typeof window === 'undefined') return [];
-  const stored = localStorage.getItem(DEV_REFERENCES_KEY);
-  return stored ? JSON.parse(stored) : [];
+function mapReference(row: ReferenceRow): Reference {
+  return {
+    id: row.id,
+    type: row.type as Reference['type'],
+    title: row.title,
+    titleShort: row.title_short || undefined,
+    abstract: row.abstract || undefined,
+    authors: row.authors || [],
+    editors: row.editors || [],
+    translators: row.translators || [],
+    issued: row.issued || { year: new Date().getFullYear() },
+    accessed: row.accessed || undefined,
+    submitted: row.submitted || undefined,
+    identifiers: row.identifiers || {},
+    venue: row.venue || undefined,
+    publisher: row.publisher || undefined,
+    conference: row.conference || undefined,
+    thesis: row.thesis || undefined,
+    patent: row.patent || undefined,
+    keywords: row.keywords || undefined,
+    subjects: row.subjects || undefined,
+    language: row.language || undefined,
+    pdfUrl: row.pdf_url || undefined,
+    pdfStoragePath: row.pdf_storage_path || undefined,
+    supplementaryUrls: row.supplementary_urls || undefined,
+    citationCount: row.citation_count || undefined,
+    influentialCitationCount: row.influential_citation_count || undefined,
+    folders: row.folders || undefined,
+    labels: row.labels || undefined,
+    notes: row.notes || undefined,
+    favorite: row.favorite || undefined,
+    readStatus: row.read_status || undefined,
+    rating: row.rating ? (row.rating as Reference['rating']) : undefined,
+    source: row.source || undefined,
+    citeKey: row.cite_key || undefined,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  };
 }
 
-function setDevReferences(refs: Reference[]): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(DEV_REFERENCES_KEY, JSON.stringify(refs));
+function referenceToRow(reference: Reference, userId: string) {
+  return {
+    user_id: userId,
+    type: reference.type,
+    title: reference.title,
+    title_short: reference.titleShort ?? null,
+    abstract: reference.abstract ?? null,
+    authors: reference.authors ?? [],
+    editors: reference.editors ?? [],
+    translators: reference.translators ?? [],
+    issued: reference.issued ?? null,
+    accessed: reference.accessed ?? null,
+    submitted: reference.submitted ?? null,
+    identifiers: reference.identifiers ?? null,
+    venue: reference.venue ?? null,
+    publisher: reference.publisher ?? null,
+    conference: reference.conference ?? null,
+    thesis: reference.thesis ?? null,
+    patent: reference.patent ?? null,
+    keywords: reference.keywords ?? null,
+    subjects: reference.subjects ?? null,
+    language: reference.language ?? null,
+    pdf_url: reference.pdfUrl ?? null,
+    pdf_storage_path: reference.pdfStoragePath ?? null,
+    supplementary_urls: reference.supplementaryUrls ?? null,
+    citation_count: reference.citationCount ?? null,
+    influential_citation_count: reference.influentialCitationCount ?? null,
+    folders: reference.folders ?? null,
+    labels: reference.labels ?? null,
+    notes: reference.notes ?? null,
+    favorite: reference.favorite ?? false,
+    read_status: reference.readStatus ?? null,
+    rating: reference.rating ?? null,
+    source: reference.source ?? null,
+    cite_key: reference.citeKey ?? null,
+  };
 }
 
-function getDevFolders(): LibraryFolder[] {
-  if (typeof window === 'undefined') return [];
-  const stored = localStorage.getItem(DEV_FOLDERS_KEY);
-  return stored ? JSON.parse(stored) : [];
-}
+function referenceUpdatePayload(updates: Partial<Reference>) {
+  const payload: Record<string, unknown> = {};
 
-function setDevFolders(folders: LibraryFolder[]): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(DEV_FOLDERS_KEY, JSON.stringify(folders));
-}
+  if (updates.type !== undefined) payload.type = updates.type;
+  if (updates.title !== undefined) payload.title = updates.title;
+  if (updates.titleShort !== undefined) payload.title_short = updates.titleShort;
+  if (updates.abstract !== undefined) payload.abstract = updates.abstract;
+  if (updates.authors !== undefined) payload.authors = updates.authors;
+  if (updates.editors !== undefined) payload.editors = updates.editors;
+  if (updates.translators !== undefined) payload.translators = updates.translators;
+  if (updates.issued !== undefined) payload.issued = updates.issued;
+  if (updates.accessed !== undefined) payload.accessed = updates.accessed;
+  if (updates.submitted !== undefined) payload.submitted = updates.submitted;
+  if (updates.identifiers !== undefined) payload.identifiers = updates.identifiers;
+  if (updates.venue !== undefined) payload.venue = updates.venue;
+  if (updates.publisher !== undefined) payload.publisher = updates.publisher;
+  if (updates.conference !== undefined) payload.conference = updates.conference;
+  if (updates.thesis !== undefined) payload.thesis = updates.thesis;
+  if (updates.patent !== undefined) payload.patent = updates.patent;
+  if (updates.keywords !== undefined) payload.keywords = updates.keywords;
+  if (updates.subjects !== undefined) payload.subjects = updates.subjects;
+  if (updates.language !== undefined) payload.language = updates.language;
+  if (updates.pdfUrl !== undefined) payload.pdf_url = updates.pdfUrl;
+  if (updates.pdfStoragePath !== undefined) payload.pdf_storage_path = updates.pdfStoragePath;
+  if (updates.supplementaryUrls !== undefined) payload.supplementary_urls = updates.supplementaryUrls;
+  if (updates.citationCount !== undefined) payload.citation_count = updates.citationCount;
+  if (updates.influentialCitationCount !== undefined) {
+    payload.influential_citation_count = updates.influentialCitationCount;
+  }
+  if (updates.folders !== undefined) payload.folders = updates.folders;
+  if (updates.labels !== undefined) payload.labels = updates.labels;
+  if (updates.notes !== undefined) payload.notes = updates.notes;
+  if (updates.favorite !== undefined) payload.favorite = updates.favorite;
+  if (updates.readStatus !== undefined) payload.read_status = updates.readStatus;
+  if (updates.rating !== undefined) payload.rating = updates.rating;
+  if (updates.source !== undefined) payload.source = updates.source;
+  if (updates.citeKey !== undefined) payload.cite_key = updates.citeKey;
 
-function getDevLabels(): LibraryLabel[] {
-  if (typeof window === 'undefined') return [];
-  const stored = localStorage.getItem(DEV_LABELS_KEY);
-  return stored ? JSON.parse(stored) : [];
-}
-
-function setDevLabels(labels: LibraryLabel[]): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(DEV_LABELS_KEY, JSON.stringify(labels));
-}
-
-function generateDevId(): string {
-  return 'dev-ref-' + Math.random().toString(36).substring(2, 15);
+  return payload;
 }
 
 // ============================================
 // REFERENCES
 // ============================================
 
-/**
- * Get user's references collection path
- */
-function getReferencesCollection(userId: string) {
-  return collection(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES);
-}
-
-/**
- * Add a reference to user's library
- */
 export async function addReference(
   userId: string,
   reference: Omit<Reference, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
-  // Dev mode: use localStorage
-  if (isDevAuthBypass()) {
-    const id = generateDevId();
-    const citeKey = reference.citeKey || generateCiteKey(reference as Reference);
-    const newRef: Reference = {
-      ...reference,
-      id,
-      citeKey,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as Reference;
-    const refs = getDevReferences();
-    refs.unshift(newRef);
-    setDevReferences(refs);
-    console.log('[DEV MODE] Reference added to localStorage:', id);
-    return id;
-  }
-
   try {
-    const colRef = getReferencesCollection(userId);
-    const docRef = doc(colRef);
-
-    // Generate cite key if not provided
+    const supabase = getSupabaseBrowserClient();
     const citeKey = reference.citeKey || generateCiteKey(reference as Reference);
+    const row = referenceToRow(
+      { ...(reference as Reference), citeKey, createdAt: new Date(), updatedAt: new Date() },
+      userId
+    );
 
-    const newRef = {
-      ...reference,
-      id: docRef.id,
-      citeKey,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
+    const { data, error } = await supabase
+      .from('reference_library')
+      .insert(row)
+      .select('id')
+      .single();
 
-    await setDoc(docRef, newRef);
-    return docRef.id;
+    if (error || !data) {
+      console.error('Error adding reference:', error);
+      throw error;
+    }
+
+    return data.id as string;
   } catch (error) {
     console.error('Error adding reference:', error);
     throw error;
   }
 }
 
-/**
- * Add multiple references (batch import)
- */
 export async function addReferences(
   userId: string,
   references: Omit<Reference, 'id' | 'createdAt' | 'updatedAt'>[]
 ): Promise<string[]> {
   try {
-    const batch = writeBatch(db());
-    const ids: string[] = [];
-    const colRef = getReferencesCollection(userId);
+    const supabase = getSupabaseBrowserClient();
+    const rows = references.map((ref) => {
+      const citeKey = ref.citeKey || generateCiteKey(ref as Reference);
+      return referenceToRow(
+        { ...(ref as Reference), citeKey, createdAt: new Date(), updatedAt: new Date() },
+        userId
+      );
+    });
 
-    for (const reference of references) {
-      const docRef = doc(colRef);
-      const citeKey = reference.citeKey || generateCiteKey(reference as Reference);
+    const { data, error } = await supabase
+      .from('reference_library')
+      .insert(rows)
+      .select('id');
 
-      batch.set(docRef, {
-        ...reference,
-        id: docRef.id,
-        citeKey,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      ids.push(docRef.id);
+    if (error || !data) {
+      console.error('Error adding references:', error);
+      throw error;
     }
 
-    await batch.commit();
-    return ids;
+    return (data as Array<{ id: string }>).map((row) => row.id);
   } catch (error) {
     console.error('Error adding references:', error);
     throw error;
   }
 }
 
-/**
- * Get a reference by ID
- */
 export async function getReference(
   userId: string,
   referenceId: string
 ): Promise<Reference | null> {
   try {
-    const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, referenceId);
-    const docSnap = await getDoc(docRef);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('reference_library')
+      .select('*')
+      .eq('id', referenceId)
+      .eq('user_id', userId)
+      .single();
 
-    if (!docSnap.exists()) return null;
-
-    const data = docSnap.data();
-    return {
-      ...data,
-      id: docSnap.id,
-      createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-      updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
-    } as Reference;
+    if (error || !data) return null;
+    return mapReference(data as ReferenceRow);
   } catch (error) {
     console.error('Error getting reference:', error);
     return null;
   }
 }
 
-/**
- * Update a reference
- */
 export async function updateReference(
   userId: string,
   referenceId: string,
   updates: Partial<Reference>
 ): Promise<void> {
   try {
-    const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, referenceId);
-    await updateDoc(docRef, {
-      ...updates,
-      updatedAt: serverTimestamp(),
-    });
+    const supabase = getSupabaseBrowserClient();
+    const payload = referenceUpdatePayload(updates);
+    const { error } = await supabase
+      .from('reference_library')
+      .update(payload)
+      .eq('id', referenceId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error updating reference:', error);
+      throw error;
+    }
   } catch (error) {
     console.error('Error updating reference:', error);
     throw error;
   }
 }
 
-/**
- * Delete a reference
- */
 export async function deleteReference(
   userId: string,
   referenceId: string
 ): Promise<void> {
   try {
-    const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, referenceId);
-    await deleteDoc(docRef);
+    const supabase = getSupabaseBrowserClient();
+    const { error } = await supabase
+      .from('reference_library')
+      .delete()
+      .eq('id', referenceId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error deleting reference:', error);
+      throw error;
+    }
   } catch (error) {
     console.error('Error deleting reference:', error);
     throw error;
   }
 }
 
-/**
- * Delete multiple references
- */
 export async function deleteReferences(
   userId: string,
   referenceIds: string[]
 ): Promise<void> {
   try {
-    const batch = writeBatch(db());
+    const supabase = getSupabaseBrowserClient();
+    const { error } = await supabase
+      .from('reference_library')
+      .delete()
+      .in('id', referenceIds)
+      .eq('user_id', userId);
 
-    for (const id of referenceIds) {
-      const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, id);
-      batch.delete(docRef);
+    if (error) {
+      console.error('Error deleting references:', error);
+      throw error;
     }
-
-    await batch.commit();
   } catch (error) {
     console.error('Error deleting references:', error);
     throw error;
   }
 }
 
-/**
- * Get all references for a user
- */
 export async function getAllReferences(
   userId: string,
   sortBy: 'title' | 'author' | 'year' | 'added' | 'updated' = 'added',
   sortOrder: 'asc' | 'desc' = 'desc'
 ): Promise<Reference[]> {
-  // Dev mode: use localStorage
-  if (isDevAuthBypass()) {
-    const refs = getDevReferences();
-    // Simple sorting
-    return refs.sort((a, b) => {
-      const order = sortOrder === 'asc' ? 1 : -1;
-      if (sortBy === 'title') return order * (a.title || '').localeCompare(b.title || '');
-      if (sortBy === 'year') return order * ((a.issued?.year || 0) - (b.issued?.year || 0));
-      return order * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    });
-  }
-
   try {
-    const colRef = getReferencesCollection(userId);
+    const supabase = getSupabaseBrowserClient();
+    const sortFieldMap: Record<string, string> = {
+      title: 'title',
+      year: 'issued',
+      added: 'created_at',
+      updated: 'updated_at',
+    };
 
-    // Map sort fields to Firestore fields
-    const sortField = {
-      'title': 'title',
-      'author': 'authors',
-      'year': 'issued.year',
-      'added': 'createdAt',
-      'updated': 'updatedAt',
-    }[sortBy] || 'createdAt';
+    let query = supabase
+      .from('reference_library')
+      .select('*')
+      .eq('user_id', userId);
 
-    const q = query(colRef, orderBy(sortField, sortOrder));
-    const snapshot = await getDocs(q);
+    if (sortFieldMap[sortBy]) {
+      query = query.order(sortFieldMap[sortBy], { ascending: sortOrder === 'asc' });
+    }
 
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        ...data,
-        id: doc.id,
-        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-        updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
-      } as Reference;
-    });
+    const { data, error } = await query;
+
+    if (error || !data) {
+      console.error('Error getting references:', error);
+      return [];
+    }
+
+    const refs = (data as ReferenceRow[]).map(mapReference);
+
+    if (sortBy === 'author') {
+      const order = sortOrder === 'asc' ? 1 : -1;
+      return refs.sort((a, b) => {
+        const aName = a.authors?.[0]?.family || '';
+        const bName = b.authors?.[0]?.family || '';
+        return order * aName.localeCompare(bName);
+      });
+    }
+
+    if (sortBy === 'year') {
+      const order = sortOrder === 'asc' ? 1 : -1;
+      return refs.sort((a, b) => order * ((a.issued?.year || 0) - (b.issued?.year || 0)));
+    }
+
+    return refs;
   } catch (error) {
     console.error('Error getting references:', error);
     return [];
   }
 }
 
-/**
- * Search references in library
- */
 export async function searchReferences(
   userId: string,
   options: LibrarySearchOptions
 ): Promise<Reference[]> {
   try {
-    // Get all references first (Firestore doesn't support full-text search)
     const allRefs = await getAllReferences(userId, options.sortBy, options.sortOrder);
-
     let results = allRefs;
 
-    // Filter by query text
     if (options.query) {
       const queryLower = options.query.toLowerCase();
       const searchFields = options.fields || ['title', 'authors', 'abstract', 'keywords'];
 
-      results = results.filter(ref => {
+      results = results.filter((ref) => {
         for (const field of searchFields) {
           if (field === 'title' && ref.title?.toLowerCase().includes(queryLower)) return true;
           if (field === 'authors') {
-            const authorMatch = ref.authors?.some(a =>
+            const authorMatch = ref.authors?.some((a) =>
               `${a.given} ${a.family}`.toLowerCase().includes(queryLower)
             );
             if (authorMatch) return true;
           }
           if (field === 'abstract' && ref.abstract?.toLowerCase().includes(queryLower)) return true;
           if (field === 'keywords') {
-            const keywordMatch = ref.keywords?.some(k => k.toLowerCase().includes(queryLower));
+            const keywordMatch = ref.keywords?.some((k) => k.toLowerCase().includes(queryLower));
             if (keywordMatch) return true;
           }
           if (field === 'notes' && ref.notes?.toLowerCase().includes(queryLower)) return true;
@@ -343,60 +414,44 @@ export async function searchReferences(
       });
     }
 
-    // Filter by type
     if (options.types && options.types.length > 0) {
-      results = results.filter(ref => options.types!.includes(ref.type));
+      results = results.filter((ref) => options.types!.includes(ref.type));
     }
 
-    // Filter by folder
     if (options.folders && options.folders.length > 0) {
-      results = results.filter(ref =>
-        ref.folders?.some(f => options.folders!.includes(f))
-      );
+      results = results.filter((ref) => ref.folders?.some((f) => options.folders!.includes(f)));
     }
 
-    // Filter by labels
     if (options.labels && options.labels.length > 0) {
-      results = results.filter(ref =>
-        ref.labels?.some(l => options.labels!.includes(l))
-      );
+      results = results.filter((ref) => ref.labels?.some((l) => options.labels!.includes(l)));
     }
 
-    // Filter by year range
     if (options.yearRange) {
       if (options.yearRange.start) {
-        results = results.filter(ref => ref.issued.year >= options.yearRange!.start!);
+        results = results.filter((ref) => ref.issued.year >= options.yearRange!.start!);
       }
       if (options.yearRange.end) {
-        results = results.filter(ref => ref.issued.year <= options.yearRange!.end!);
+        results = results.filter((ref) => ref.issued.year <= options.yearRange!.end!);
       }
     }
 
-    // Filter by read status
     if (options.readStatus) {
-      results = results.filter(ref => ref.readStatus === options.readStatus);
+      results = results.filter((ref) => ref.readStatus === options.readStatus);
     }
 
-    // Filter by favorite
     if (options.favorite !== undefined) {
-      results = results.filter(ref => ref.favorite === options.favorite);
+      results = results.filter((ref) => ref.favorite === options.favorite);
     }
 
-    // Apply pagination
     const offset = options.offset || 0;
     const limitCount = options.limit || results.length;
-    results = results.slice(offset, offset + limitCount);
-
-    return results;
+    return results.slice(offset, offset + limitCount);
   } catch (error) {
     console.error('Error searching references:', error);
     return [];
   }
 }
 
-/**
- * Find duplicate references by DOI or title
- */
 export async function findDuplicates(
   userId: string,
   reference: Partial<Reference>
@@ -406,7 +461,6 @@ export async function findDuplicates(
     const duplicates: Reference[] = [];
 
     for (const existing of allRefs) {
-      // Check DOI match
       if (reference.identifiers?.doi && existing.identifiers?.doi) {
         if (reference.identifiers.doi.toLowerCase() === existing.identifiers.doi.toLowerCase()) {
           duplicates.push(existing);
@@ -414,12 +468,10 @@ export async function findDuplicates(
         }
       }
 
-      // Check title similarity (normalized)
       if (reference.title && existing.title) {
         const normalizedNew = reference.title.toLowerCase().replace(/[^a-z0-9]/g, '');
         const normalizedExisting = existing.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-        if (normalizedNew.length > 20 && normalizedNew === normalizedExisting) {
+        if (normalizedNew === normalizedExisting) {
           duplicates.push(existing);
         }
       }
@@ -432,54 +484,40 @@ export async function findDuplicates(
   }
 }
 
-/**
- * Get references by folder
- */
 export async function getReferencesByFolder(
   userId: string,
   folderId: string
 ): Promise<Reference[]> {
   try {
-    const colRef = getReferencesCollection(userId);
-    const q = query(colRef, where('folders', 'array-contains', folderId));
-    const snapshot = await getDocs(q);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('reference_library')
+      .select('*')
+      .eq('user_id', userId)
+      .contains('folders', [folderId]);
 
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        ...data,
-        id: doc.id,
-        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-        updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
-      } as Reference;
-    });
+    if (error || !data) return [];
+    return (data as ReferenceRow[]).map(mapReference);
   } catch (error) {
     console.error('Error getting references by folder:', error);
     return [];
   }
 }
 
-/**
- * Get references by label
- */
 export async function getReferencesByLabel(
   userId: string,
   label: string
 ): Promise<Reference[]> {
   try {
-    const colRef = getReferencesCollection(userId);
-    const q = query(colRef, where('labels', 'array-contains', label));
-    const snapshot = await getDocs(q);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('reference_library')
+      .select('*')
+      .eq('user_id', userId)
+      .contains('labels', [label]);
 
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        ...data,
-        id: doc.id,
-        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-        updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
-      } as Reference;
-    });
+    if (error || !data) return [];
+    return (data as ReferenceRow[]).map(mapReference);
   } catch (error) {
     console.error('Error getting references by label:', error);
     return [];
@@ -490,107 +528,109 @@ export async function getReferencesByLabel(
 // FOLDERS
 // ============================================
 
-/**
- * Get folders collection path
- */
-function getFoldersCollection(userId: string) {
-  return collection(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_FOLDERS);
-}
-
-/**
- * Create a folder
- */
 export async function createFolder(
   userId: string,
   folder: Omit<LibraryFolder, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
-  try {
-    const colRef = getFoldersCollection(userId);
-    const docRef = doc(colRef);
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from('reference_folders')
+    .insert({
+      user_id: userId,
+      name: folder.name,
+      description: folder.description || null,
+      color: folder.color || null,
+      icon: folder.icon || null,
+    })
+    .select('id')
+    .single();
 
-    await setDoc(docRef, {
-      ...folder,
-      id: docRef.id,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-
-    return docRef.id;
-  } catch (error) {
+  if (error || !data) {
     console.error('Error creating folder:', error);
     throw error;
   }
+
+  return data.id as string;
 }
 
-/**
- * Get all folders
- */
 export async function getFolders(userId: string): Promise<LibraryFolder[]> {
-  // Dev mode: use localStorage
-  if (isDevAuthBypass()) {
-    return getDevFolders().sort((a, b) => a.name.localeCompare(b.name));
-  }
-
   try {
-    const colRef = getFoldersCollection(userId);
-    const q = query(colRef, orderBy('name', 'asc'));
-    const snapshot = await getDocs(q);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('reference_folders')
+      .select('*')
+      .eq('user_id', userId)
+      .order('name', { ascending: true });
 
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        ...data,
-        id: doc.id,
-        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-        updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
-      } as LibraryFolder;
-    });
+    if (error || !data) {
+      console.error('Error getting folders:', error);
+      return [];
+    }
+
+    return (data as Array<any>).map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      description: row.description || undefined,
+      color: row.color || undefined,
+      icon: row.icon || undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    }));
   } catch (error) {
     console.error('Error getting folders:', error);
     return [];
   }
 }
 
-/**
- * Update a folder
- */
 export async function updateFolder(
   userId: string,
   folderId: string,
   updates: Partial<LibraryFolder>
 ): Promise<void> {
   try {
-    const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_FOLDERS, folderId);
-    await updateDoc(docRef, {
-      ...updates,
-      updatedAt: serverTimestamp(),
-    });
+    const supabase = getSupabaseBrowserClient();
+    const payload: Record<string, unknown> = {};
+    if (updates.name !== undefined) payload.name = updates.name;
+    if (updates.description !== undefined) payload.description = updates.description;
+    if (updates.color !== undefined) payload.color = updates.color;
+    if (updates.icon !== undefined) payload.icon = updates.icon;
+
+    const { error } = await supabase
+      .from('reference_folders')
+      .update(payload)
+      .eq('id', folderId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error updating folder:', error);
+      throw error;
+    }
   } catch (error) {
     console.error('Error updating folder:', error);
     throw error;
   }
 }
 
-/**
- * Delete a folder (and remove from references)
- */
 export async function deleteFolder(userId: string, folderId: string): Promise<void> {
   try {
-    // Remove folder from all references that have it
     const refs = await getReferencesByFolder(userId, folderId);
-    const batch = writeBatch(db());
-
     for (const ref of refs) {
-      const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, ref.id);
-      const updatedFolders = (ref.folders || []).filter(f => f !== folderId);
-      batch.update(docRef, { folders: updatedFolders, updatedAt: serverTimestamp() });
+      const updatedFolders = (ref.folders || []).filter((f) => f !== folderId);
+      await updateReference(userId, ref.id, { folders: updatedFolders });
     }
 
-    // Delete the folder
-    const folderRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_FOLDERS, folderId);
-    batch.delete(folderRef);
+    const supabase = getSupabaseBrowserClient();
+    const { error } = await supabase
+      .from('reference_folders')
+      .delete()
+      .eq('id', folderId)
+      .eq('user_id', userId);
 
-    await batch.commit();
+    if (error) {
+      console.error('Error deleting folder:', error);
+      throw error;
+    }
   } catch (error) {
     console.error('Error deleting folder:', error);
     throw error;
@@ -601,89 +641,84 @@ export async function deleteFolder(userId: string, folderId: string): Promise<vo
 // LABELS
 // ============================================
 
-/**
- * Get labels collection path
- */
-function getLabelsCollection(userId: string) {
-  return collection(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_LABELS);
-}
-
-/**
- * Create a label
- */
 export async function createLabel(
   userId: string,
   label: Omit<LibraryLabel, 'id' | 'createdAt'>
 ): Promise<string> {
   try {
-    const colRef = getLabelsCollection(userId);
-    const docRef = doc(colRef);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('reference_labels')
+      .insert({
+        user_id: userId,
+        name: label.name,
+        color: label.color || null,
+      })
+      .select('id')
+      .single();
 
-    await setDoc(docRef, {
-      ...label,
-      id: docRef.id,
-      createdAt: serverTimestamp(),
-    });
+    if (error || !data) {
+      console.error('Error creating label:', error);
+      throw error;
+    }
 
-    return docRef.id;
+    return data.id as string;
   } catch (error) {
     console.error('Error creating label:', error);
     throw error;
   }
 }
 
-/**
- * Get all labels
- */
 export async function getLabels(userId: string): Promise<LibraryLabel[]> {
-  // Dev mode: use localStorage
-  if (isDevAuthBypass()) {
-    return getDevLabels().sort((a, b) => a.name.localeCompare(b.name));
-  }
-
   try {
-    const colRef = getLabelsCollection(userId);
-    const q = query(colRef, orderBy('name', 'asc'));
-    const snapshot = await getDocs(q);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from('reference_labels')
+      .select('*')
+      .eq('user_id', userId)
+      .order('name', { ascending: true });
 
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        ...data,
-        id: doc.id,
-        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
-      } as LibraryLabel;
-    });
+    if (error || !data) {
+      console.error('Error getting labels:', error);
+      return [];
+    }
+
+    return (data as Array<any>).map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      color: row.color || undefined,
+      createdAt: new Date(row.created_at),
+    }));
   } catch (error) {
     console.error('Error getting labels:', error);
     return [];
   }
 }
 
-/**
- * Delete a label (and remove from references)
- */
 export async function deleteLabel(userId: string, labelName: string): Promise<void> {
   try {
-    // Remove label from all references
     const refs = await getReferencesByLabel(userId, labelName);
-    const batch = writeBatch(db());
-
     for (const ref of refs) {
-      const docRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.REFERENCES, ref.id);
-      const updatedLabels = (ref.labels || []).filter(l => l !== labelName);
-      batch.update(docRef, { labels: updatedLabels, updatedAt: serverTimestamp() });
+      const updatedLabels = (ref.labels || []).filter((l) => l !== labelName);
+      await updateReference(userId, ref.id, { labels: updatedLabels });
     }
 
-    // Find and delete the label document
     const labels = await getLabels(userId);
-    const labelDoc = labels.find(l => l.name === labelName);
+    const labelDoc = labels.find((l) => l.name === labelName);
     if (labelDoc) {
-      const labelRef = doc(db(), COLLECTIONS.USERS, userId, COLLECTIONS.LIBRARY_LABELS, labelDoc.id);
-      batch.delete(labelRef);
-    }
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase
+        .from('reference_labels')
+        .delete()
+        .eq('id', labelDoc.id)
+        .eq('user_id', userId);
 
-    await batch.commit();
+      if (error) {
+        console.error('Error deleting label:', error);
+        throw error;
+      }
+    }
   } catch (error) {
     console.error('Error deleting label:', error);
     throw error;
@@ -694,9 +729,6 @@ export async function deleteLabel(userId: string, labelName: string): Promise<vo
 // UTILITY FUNCTIONS
 // ============================================
 
-/**
- * Add reference to folder
- */
 export async function addReferenceToFolder(
   userId: string,
   referenceId: string,
@@ -712,9 +744,6 @@ export async function addReferenceToFolder(
   }
 }
 
-/**
- * Remove reference from folder
- */
 export async function removeReferenceFromFolder(
   userId: string,
   referenceId: string,
@@ -723,13 +752,10 @@ export async function removeReferenceFromFolder(
   const ref = await getReference(userId, referenceId);
   if (!ref) throw new Error('Reference not found');
 
-  const folders = (ref.folders || []).filter(f => f !== folderId);
+  const folders = (ref.folders || []).filter((f) => f !== folderId);
   await updateReference(userId, referenceId, { folders });
 }
 
-/**
- * Add label to reference
- */
 export async function addLabelToReference(
   userId: string,
   referenceId: string,
@@ -745,9 +771,6 @@ export async function addLabelToReference(
   }
 }
 
-/**
- * Remove label from reference
- */
 export async function removeLabelFromReference(
   userId: string,
   referenceId: string,
@@ -756,85 +779,57 @@ export async function removeLabelFromReference(
   const ref = await getReference(userId, referenceId);
   if (!ref) throw new Error('Reference not found');
 
-  const labels = (ref.labels || []).filter(l => l !== label);
+  const labels = (ref.labels || []).filter((l) => l !== label);
   await updateReference(userId, referenceId, { labels });
 }
 
-/**
- * Toggle favorite status
- */
 export async function toggleFavorite(
   userId: string,
   referenceId: string
 ): Promise<boolean> {
   const ref = await getReference(userId, referenceId);
   if (!ref) throw new Error('Reference not found');
-
-  const newFavorite = !ref.favorite;
-  await updateReference(userId, referenceId, { favorite: newFavorite });
-  return newFavorite;
+  const newValue = !ref.favorite;
+  await updateReference(userId, referenceId, { favorite: newValue });
+  return newValue;
 }
 
-/**
- * Update read status
- */
 export async function updateReadStatus(
   userId: string,
   referenceId: string,
-  status: 'unread' | 'reading' | 'read'
+  status: Reference['readStatus']
 ): Promise<void> {
   await updateReference(userId, referenceId, { readStatus: status });
 }
 
-/**
- * Get library statistics
- */
 export async function getLibraryStats(userId: string): Promise<{
   totalReferences: number;
-  byType: Record<string, number>;
-  byYear: Record<number, number>;
-  favorites: number;
-  unread: number;
+  totalFolders: number;
+  totalLabels: number;
+  totalFavorites: number;
+  readStatusCounts: Record<string, number>;
 }> {
-  try {
-    const refs = await getAllReferences(userId);
+  const refs = await getAllReferences(userId);
+  const folders = await getFolders(userId);
+  const labels = await getLabels(userId);
 
-    const byType: Record<string, number> = {};
-    const byYear: Record<number, number> = {};
-    let favorites = 0;
-    let unread = 0;
+  const readStatusCounts: Record<string, number> = {
+    unread: 0,
+    reading: 0,
+    read: 0,
+  };
 
-    for (const ref of refs) {
-      // Count by type
-      byType[ref.type] = (byType[ref.type] || 0) + 1;
-
-      // Count by year
-      if (ref.issued?.year) {
-        byYear[ref.issued.year] = (byYear[ref.issued.year] || 0) + 1;
-      }
-
-      // Count favorites
-      if (ref.favorite) favorites++;
-
-      // Count unread
-      if (!ref.readStatus || ref.readStatus === 'unread') unread++;
+  refs.forEach((ref) => {
+    if (ref.readStatus) {
+      readStatusCounts[ref.readStatus] = (readStatusCounts[ref.readStatus] || 0) + 1;
     }
+  });
 
-    return {
-      totalReferences: refs.length,
-      byType,
-      byYear,
-      favorites,
-      unread,
-    };
-  } catch (error) {
-    console.error('Error getting library stats:', error);
-    return {
-      totalReferences: 0,
-      byType: {},
-      byYear: {},
-      favorites: 0,
-      unread: 0,
-    };
-  }
+  return {
+    totalReferences: refs.length,
+    totalFolders: folders.length,
+    totalLabels: labels.length,
+    totalFavorites: refs.filter((ref) => ref.favorite).length,
+    readStatusCounts,
+  };
 }

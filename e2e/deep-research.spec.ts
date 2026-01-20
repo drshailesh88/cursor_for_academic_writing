@@ -396,13 +396,13 @@ test.describe('Deep Research - Export & Save', () => {
     expect(typeof hasExport).toBe('boolean');
   });
 
-  test('should save research session to Firestore', async ({ page }) => {
+  test('should save research session to Postgres', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 
     // Check for save/persist functionality
     const hasPersistence = await page.evaluate(() => {
-      // Firebase should be initialized
+      // Supabase should be initialized
       return typeof window !== 'undefined';
     });
 

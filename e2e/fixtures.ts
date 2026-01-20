@@ -165,21 +165,21 @@ export async function elementExists(page: Page, selector: string): Promise<boole
 }
 
 /**
- * Helper function to wait for Firebase auth
+ * Helper function to wait for Supabase auth
  */
-export async function waitForFirebaseAuth(page: Page) {
-  // Wait for Firebase to initialize
+export async function waitForSupabaseAuth(page: Page) {
+  // Wait for app hydration + auth hooks
   await page.waitForFunction(() => {
-    return window && (window as any).firebase !== undefined;
+    return document.readyState === 'complete';
   }, { timeout: 10000 });
 }
 
 /**
- * Mock Firebase auth for testing without actual Google sign-in
+ * Mock Supabase auth for testing without actual Google sign-in
  */
-export async function mockFirebaseAuth(page: Page) {
+export async function mockSupabaseAuth(page: Page) {
   await page.addInitScript(() => {
-    // Mock Firebase auth state
+    // Mock auth state for test helpers
     const mockUser = {
       uid: 'test-user-id',
       email: 'test@example.com',
@@ -188,7 +188,7 @@ export async function mockFirebaseAuth(page: Page) {
       photoURL: 'https://via.placeholder.com/150',
     };
 
-    // Override Firebase auth methods
+    // Expose test user for app-side helpers
     (window as any).__TEST_USER__ = mockUser;
   });
 }

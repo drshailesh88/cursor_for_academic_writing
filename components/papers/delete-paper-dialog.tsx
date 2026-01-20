@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { Paper } from '@/lib/firebase/schema';
+import type { Paper } from '@/lib/supabase/schema';
 
 interface DeletePaperDialogProps {
   paper: Paper | null;

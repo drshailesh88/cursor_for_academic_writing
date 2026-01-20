@@ -236,7 +236,7 @@ Before deploying, test these scenarios:
 - User ID validation on all API calls
 - File type validation (PDF only)
 - File size limits (100MB max)
-- Firestore security rules prevent unauthorized access
+- Postgres security rules prevent unauthorized access
 - Citations include source verification
 
 ## Accessibility
@@ -295,7 +295,7 @@ components/papers/
 ✅ All files created successfully
 ✅ No TypeScript compilation errors
 ✅ Integrates with existing API routes
-✅ Uses existing Firebase schema types
+✅ Uses existing Supabase schema types
 ✅ Follows project coding standards
 ✅ Includes comprehensive documentation
 ✅ Ready for integration and testing
@@ -306,7 +306,7 @@ For questions or issues:
 1. Check `/components/papers/README.md` for usage examples
 2. Review existing components in `/components/papers/`
 3. Test with actual API endpoints
-4. Verify Firebase authentication is working
+4. Verify Supabase authentication is working
 
 ---
 

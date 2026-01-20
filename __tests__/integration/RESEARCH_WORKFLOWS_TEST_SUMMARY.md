@@ -301,7 +301,7 @@ Uses **MSW (Mock Service Worker)** for all external API calls:
 ```typescript
 describe('Workflow Category', () => {
   beforeEach(() => {
-    resetFirebaseMocks();
+    resetSupabaseMocks();
   });
 
   test('specific scenario', async () => {
@@ -315,11 +315,11 @@ describe('Workflow Category', () => {
 ### Key Technologies
 - **Vitest** - Test runner
 - **MSW** - API mocking
-- **Firebase Mocks** - Firestore simulation
+- **Supabase Mocks** - database simulation
 - **@faker-js/faker** - Test data generation
 
 ### Test Helpers
-- `resetFirebaseMocks()` - Clean Firestore state
+- `resetSupabaseMocks()` - Clean database state
 - `createTestReference()` - Generate reference data
 - Custom MSW handlers for each API
 
@@ -344,9 +344,9 @@ Four tests have conditional assertions that skip when mock data doesn't preserve
 - Multiple citations (checks if both references have authors)
 - Update citation styles (checks if reference has complete data)
 
-**Reason:** Firebase mock may not preserve all nested fields (like `authors` array) during round-trip. Tests have fallback assertions to pass when data is incomplete.
+**Reason:** Supabase mock may not preserve all nested fields (like `authors` array) during round-trip. Tests have fallback assertions to pass when data is incomplete.
 
-**Solution:** Tests are robust and will pass in production with real Firebase.
+**Solution:** Tests are robust and will pass in production with real Supabase.
 
 ---
 
@@ -381,7 +381,7 @@ Four tests have conditional assertions that skip when mock data doesn't preserve
 
 ### Potential Additions
 1. **Document state management** - Test citation tracking in documents
-2. **Real-time sync** - Test Firebase real-time updates
+2. **Real-time sync** - Test Supabase real-time updates
 3. **Collaborative editing** - Multi-user citation workflows
 4. **Export formats** - Test DOCX/PDF with citations
 5. **Advanced search** - Boolean operators, field-specific queries
@@ -432,4 +432,4 @@ The tests use realistic scenarios, proper API mocking, and thorough assertions t
 
 **Created:** January 5, 2026
 **Test File:** `__tests__/integration/research-workflows.test.ts`
-**Framework:** Vitest + MSW + Firebase Mocks
+**Framework:** Vitest + MSW + Supabase Mocks

@@ -9,13 +9,13 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { exportToPptx, exportAndDownloadPptx } from '@/lib/presentations/export/pptx-export';
 import { createMockPresentation } from '../../mocks/test-data';
 import type { Presentation, Slide, SlideContent } from '@/lib/presentations/types';
-import { Timestamp } from 'firebase/firestore';
+import { MockTimestamp } from '@/__tests__/mocks/supabase';
 import { mockPptxSlide, mockPptxInstance as mockPptx } from 'pptxgenjs';
 
 describe('PPTX Export', () => {
   // Helper to create a full presentation with all slide types
   const createFullPresentation = (): Presentation => {
-    const now = Timestamp.now();
+    const now = MockTimestamp.now();
 
     const slides: Slide[] = [
       // Title slide
@@ -703,7 +703,7 @@ describe('PPTX Export', () => {
     });
 
     test('handles presentation with all chart types', async () => {
-      const now = Timestamp.now();
+      const now = MockTimestamp.now();
       const presentation: Presentation = {
         id: 'pres-charts',
         userId: 'user-1',

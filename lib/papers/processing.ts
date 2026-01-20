@@ -9,7 +9,7 @@ import type {
   PaperParagraph,
   PaperAuthor,
   PaperSectionType,
-} from '@/lib/firebase/schema';
+} from '@/lib/supabase/schema';
 import { PDFProcessor } from './pdf-processor';
 import type { ProcessedPaperResult, PDFProcessingOptions } from './types';
 import { SECTION_PATTERNS } from './types';

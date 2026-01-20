@@ -18,19 +18,19 @@
    - **Placeholder extension** with custom styling
    - **Cmd+S / Ctrl+S** keyboard shortcut for manual save
 
-2. **Firebase Integration** ✅ COMPLETE
+2. **Supabase Integration** ✅ COMPLETE
    - **Authentication:**
      - Google Sign-in implemented
-     - User profiles stored in Firestore
-     - Auth hooks: `lib/firebase/auth.ts`
+     - User profiles stored in Supabase
+     - Auth hooks: `lib/supabase/auth.ts`
      - Auth UI: `components/auth/auth-button.tsx`, `components/auth/auth-guard.tsx`
 
-   - **Firestore Document Persistence:**
+   - **Supabase Document Persistence:**
      - Auto-save every 30 seconds
      - Document CRUD operations
      - User document management
-     - Schema: `lib/firebase/schema.ts`
-     - Operations: `lib/firebase/documents.ts`
+     - Schema: `lib/supabase/schema.ts`
+     - Operations: `lib/supabase/documents.ts`
 
    - **Document Management:**
      - Create new documents
@@ -90,7 +90,7 @@
       - Normalized title matching
       - Relevance ranking with citation count
     - **Document Discipline:**
-      - Discipline stored per document in Firestore
+      - Discipline stored per document in Supabase
       - Selector in chat interface
       - Persists across sessions
 
@@ -98,7 +98,7 @@
     - Location: `lib/citations/`, `components/citations/`, `lib/hooks/use-citations.ts`
     - **Reference Library:**
       - 30+ reference types (CSL-compatible)
-      - Firestore nested collections (references, folders, labels)
+      - Supabase tables (reference_library, reference_folders, reference_labels)
       - Full CRUD with search and filtering
     - **Cite-While-You-Write:**
       - Cmd+Shift+P keyboard shortcut
@@ -172,9 +172,9 @@
       - AI-powered data extraction
       - Quality assessment scoring
       - Bias and methodology evaluation
-    - **Firebase Integration:**
-      - PDF storage in Firebase Storage
-      - Paper metadata in Firestore
+    - **Supabase Integration:**
+      - PDF storage in Supabase Storage
+      - Paper metadata in Supabase
       - Section storage and retrieval
       - 104 passing tests
 
@@ -279,10 +279,10 @@
 
 ```
 cursor_for_academic_writing/
-├── .env.local                          ✅ API keys (needs Firebase config)
+├── .env.local                          ✅ API keys (needs Supabase config)
 ├── .env.example                        ✅ Template
 ├── HANDOVER.md                         ✅ This file
-├── FIREBASE_SETUP.md                   ✅ Firebase setup guide
+├── FIREBASE_SETUP.md                   ✅ Supabase setup guide
 ├── README.md                           ✅ Project readme
 ├── package.json                        ✅ Dependencies
 ├── tsconfig.json                       ✅ ES2022 target
@@ -376,14 +376,19 @@ cursor_for_academic_writing/
 │       └── keyboard-shortcuts.tsx      ✅ Shortcuts modal
 │
 ├── lib/
-│   ├── firebase/
-│   │   ├── client.ts                   ✅ Firebase client SDK
-│   │   ├── admin.ts                    ✅ Firebase admin SDK
-│   │   ├── auth.ts                     ✅ Auth hooks (no `any` types)
+│   ├── supabase/
+│   │   ├── admin.ts                    ✅ Supabase admin client
+│   │   ├── auth.ts                     ✅ Auth helpers
+│   │   ├── client.ts                   ✅ Supabase browser client
+│   │   ├── documents-admin.ts          ✅ Server-side documents helper
 │   │   ├── documents.ts                ✅ Document CRUD + discipline
+│   │   ├── papers.ts                   ✅ Paper library CRUD
 │   │   ├── presentations.ts            ✅ Presentation CRUD
-│   │   ├── storage.ts                  ✅ File upload/download
-│   │   └── schema.ts                   ✅ Data types + DisciplineId
+│   │   ├── research-sessions-admin.ts  ✅ Server-side research sessions
+│   │   ├── research-sessions.ts        ✅ Research session CRUD
+│   │   ├── schema.ts                   ✅ Data types + DisciplineId
+│   │   ├── server.ts                   ✅ Supabase server client
+│   │   └── settings.ts                 ✅ User settings CRUD
 │   ├── hooks/
 │   │   ├── use-document.ts             ✅ Document hook + updateDiscipline
 │   │   ├── use-theme.ts                ✅ Theme management hook
@@ -483,7 +488,7 @@ cursor_for_academic_writing/
    - If signed in → Shows main app
 
 2. **After Sign-In (Google)**
-   - User profile created/updated in Firestore
+   - User profile created/updated in Supabase
    - Initial document created automatically
    - Main app loads with three panels
 
@@ -527,8 +532,8 @@ cursor_for_academic_writing/
   "@tiptap/extension-table": "^3.13.0",
   "@tiptap/extension-character-count": "^3.13.0",
   "@tiptap/extension-placeholder": "^3.13.0",
-  "firebase": "^10.12.0",
-  "firebase-admin": "^12.1.0",
+  "@supabase/ssr": "^0.8.0",
+  "@supabase/supabase-js": "^2.90.1",
   "date-fns": "^3.6.0",
   "react-resizable-panels": "^2.1.9",
   "ai": "^3.0.0",
@@ -553,21 +558,21 @@ cursor_for_academic_writing/
 - **Deep Research:** eventsource-parser, fast-xml-parser, string-similarity
 - **Chat with Papers:** pdf-parse, @types/pdf-parse
 - **Presentation Generator:** pptxgenjs, jspdf (SVG charts, no Chart.js needed)
-- **All Features:** firebase, ai SDK, TipTap
+- **All Features:** supabase, ai SDK, TipTap
 
 ---
 
-## 🔥 FIREBASE SETUP REQUIRED
+## 🔥 SUPABASE SETUP REQUIRED
 
-**CRITICAL:** Firebase must be configured before the app will work properly.
+**CRITICAL:** Supabase must be configured before the app will work properly.
 
 ### Setup Steps:
 1. Follow the guide: `FIREBASE_SETUP.md`
-2. Create Firebase project at https://console.firebase.google.com/
-3. Enable Google Authentication
-4. Set up Firestore Database
-5. Generate service account key
-6. Update `.env.local` with Firebase credentials
+2. Create Supabase project at https://supabase.com/dashboard
+3. Enable Google Authentication (optional)
+4. Run `supabase/schema.sql` in SQL Editor
+5. Create `papers` storage bucket (public)
+6. Update `.env.local` with Supabase credentials
 
 ---
 
@@ -602,7 +607,7 @@ cursor_for_academic_writing/
 22. ✅ **Unified Search Aggregator** - DOI deduplication, relevance ranking
 23. ✅ **15 Scientific Disciplines** - Custom prompts with field-specific conventions
 24. ✅ **Discipline Selector UI** - Compact dropdown with full grid view
-25. ✅ **Document Discipline Persistence** - Stored per document in Firestore
+25. ✅ **Document Discipline Persistence** - Stored per document in Supabase
 26. ✅ **5 Research Tools in AI Chat** - Unified, PubMed, arXiv, Semantic Scholar, OpenAlex
 
 ### Session 4 Features (Latest - Phase 2 Citation Management):
@@ -610,7 +615,7 @@ cursor_for_academic_writing/
     - Location: `lib/citations/types.ts`, `lib/citations/library.ts`
     - 30+ reference types (journal, book, conference, thesis, patent, etc.)
     - 86+ subtypes following CSL specification
-    - Firestore nested collections: references, folders, labels
+    - Supabase tables: reference_library, reference_folders, reference_labels
     - Full CRUD operations with search and filtering
 28. ✅ **Cite-While-You-Write (Cmd+Shift+P)**
     - Location: `components/citations/citation-dialog.tsx`
@@ -764,7 +769,7 @@ cursor_for_academic_writing/
     - **Match Type Classification:** exact, near-exact, paraphrase, mosaic, structural
 
 42. ✅ **Self-Plagiarism Detection**
-    - Compares against user's own documents in Firestore
+    - Compares against user's own documents in Supabase
     - Shows source document title and snippet
     - Useful for academic text reuse awareness
 
@@ -806,7 +811,7 @@ cursor_for_academic_writing/
 47. ✅ **Comments & Suggestions System**
     - Location: `lib/collaboration/comments.ts`, `components/collaboration/`
     - **Comment Types:** comment, suggestion, question
-    - **Firestore Subcollections:** /documents/{docId}/comments
+    - **Supabase Table:** document_comments
     - **Real-time Sync:** onSnapshot listener for live updates
     - **Comment Features:**
       - Text selection-based commenting
@@ -820,7 +825,7 @@ cursor_for_academic_writing/
 
 48. ✅ **Version History System**
     - Location: `lib/collaboration/versions.ts`, `components/collaboration/`
-    - **Firestore Subcollections:** /documents/{docId}/versions
+    - **Supabase Table:** document_versions
     - **Version Types:** auto (every 5 min), manual, restore-backup
     - **Features:**
       - Auto-save versions every 5 minutes
@@ -842,7 +847,7 @@ cursor_for_academic_writing/
       - Optional password protection
       - Expiry dates for temporary access
       - Token validation endpoint
-    - **Firestore Schema:** /documents/{docId}/shares
+    - **Supabase Table:** document_shares
     - **UI Components:**
       - `share-dialog.tsx` - Two-tab dialog (Link/People)
       - `shared-with-me-list.tsx` - List of shared documents
@@ -859,7 +864,7 @@ cursor_for_academic_writing/
       - Accept change (apply insertion, remove deletion)
       - Reject change (remove insertion, restore deletion)
       - Batch accept/reject all
-    - **Firestore Schema:** /documents/{docId}/changes
+    - **Supabase Table:** tracked_changes
     - **UI Components:**
       - `track-changes-toolbar.tsx` - Track/Show toggles
       - `track-changes-panel.tsx` - Changes list with filtering
@@ -871,7 +876,7 @@ cursor_for_academic_writing/
 - Fixed `toAIStreamResponse` → `toDataStreamResponse` (AI SDK update)
 - Fixed OpenRouter model configuration using createOpenAI
 - Fixed TypeScript regex flags error (ES2022 target)
-- Fixed FieldValue type for Firebase timestamps
+- Fixed Date types for Supabase timestamps
 
 ---
 
@@ -887,7 +892,7 @@ Premium AI-powered presentation generator that creates publication-quality slide
 
 #### Core Engine (Phase 7A) ✅
 - **Type System:** `lib/presentations/types.ts` - 500+ lines of TypeScript interfaces
-- **Firebase Operations:** `lib/firebase/presentations.ts` - Full CRUD for presentations
+- **Supabase-backed Operations:** `lib/supabase/presentations.ts` - Full CRUD for presentations
 - **Theme System:** `lib/presentations/themes.ts` - Academic, Dark, Minimal themes
 - **Content Extraction:** `lib/presentations/extractors/content-extractor.ts`
 - **Structure Analysis:** `lib/presentations/analyzers/structure-analyzer.ts`
@@ -995,7 +1000,7 @@ The ONLY presentation tool that:
 ## 🔍 TESTING CHECKLIST
 
 Before deploying:
-- [ ] Firebase setup completed
+- [ ] Supabase setup completed
 - [ ] Sign in with Google works
 - [ ] New document creation works
 - [ ] Document list shows all docs
@@ -1138,7 +1143,7 @@ npm start            # Serve production build
 
 **Last Updated:** January 5, 2026
 **Status:** ✅ ALL 10 PHASES COMPLETE | 🚀 PRODUCTION READY | 📊 1,822 TESTS PASSING
-**Ready for:** Firebase Configuration → Production Deploy
+**Ready for:** Supabase Configuration → Production Deploy
 
 🎯 **The Academic Writing Platform is FEATURE COMPLETE!**
 

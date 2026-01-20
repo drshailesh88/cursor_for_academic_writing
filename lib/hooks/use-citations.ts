@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Editor } from '@tiptap/react';
-import { useAuth } from '@/lib/firebase/auth';
+import { useAuth } from '@/lib/supabase/auth';
 import {
   getAllReferences,
   getReference,
