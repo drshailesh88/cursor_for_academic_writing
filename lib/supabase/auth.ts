@@ -15,7 +15,7 @@ export interface AuthUser {
 const DEV_AUTH_BYPASS = process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === 'true';
 
 const DEV_MOCK_USER: AuthUser = {
-  uid: 'dev-test-user',
+  uid: '00000000-0000-0000-0000-000000000001',
   email: 'dev@test.local',
   displayName: 'Dev Test User',
   photoURL: null,
