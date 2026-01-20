@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import { DevModeIndicator } from "@/components/auth/dev-mode-indicator";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -19,6 +20,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.variable}>
         {children}
+        <DevModeIndicator />
         <Toaster
           position="bottom-right"
           richColors

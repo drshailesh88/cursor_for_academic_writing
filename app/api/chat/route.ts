@@ -65,7 +65,7 @@ function createModelInstance(modelType: string, personalApiKeys: PersonalApiKeys
       const apiKey = getApiKey(personalApiKeys.google, 'GOOGLE_API_KEY');
       if (!apiKey) throw new Error('Google API key not configured. Add it in Settings or .env.local.');
       const google = createGoogleGenerativeAI({ apiKey });
-      return google('gemini-2.0-flash');
+      return google('gemini-1.5-flash'); // Using stable model name
     }
 
     case 'glm-4-plus': {
@@ -101,18 +101,28 @@ const MODELS_WITH_TOOL_SUPPORT = [
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    console.log('[CHAT API] Received request:', JSON.stringify({ model: body.model, discipline: body.discipline, messageCount: body.messages?.length }));
+
     const {
       messages,
-      model = 'glm-4-plus',
+      model = 'claude', // Changed default to claude
       documentId,
       discipline = DEFAULT_DISCIPLINE,
       personalApiKeys = {},
-    } = await req.json();
+    } = body;
 
     // Create model instance with personal API key
     // Normalize model name before creating instance (handle legacy "anthropic" value)
     const normalizedModelName = model === 'anthropic' ? 'claude' : model;
-    const selectedModel = createModelInstance(normalizedModelName, personalApiKeys);
+    console.log('[CHAT API] Creating model instance for:', normalizedModelName);
+    let selectedModel;
+    try {
+      selectedModel = createModelInstance(normalizedModelName, personalApiKeys);
+    } catch (modelError) {
+      console.error('[CHAT API] Model creation error:', modelError);
+      throw modelError;
+    }
     const supportsTools = MODELS_WITH_TOOL_SUPPORT.includes(normalizedModelName);
 
     // Validate discipline at runtime and use default if invalid

@@ -1,0 +1,21 @@
+{
+  "task": "Create a development-only authentication bypass for automated testing",
+  "requirements": [
+    "Only active when NEXT_PUBLIC_DEV_AUTH_BYPASS=true is set in .env.local",
+    "Provide a mock user state that mimics Firebase auth",
+    "Allow bypassing the sign-in dialog in development",
+    "Show a visible 'DEV MODE' indicator when bypass is active",
+    "Don't modify production behavior",
+    "Auto-sign-in with test user (uid: 'dev-test-user', email: 'dev@test.local', displayName: 'Dev Test User')"
+  ],
+  "files_to_modify": [
+    "lib/firebase/auth.ts",
+    "components/auth/auth-dialog.tsx",
+    "app/page.tsx"
+  ],
+  "iteration": 1,
+  "started_at": "2026-01-19T13:30:00Z",
+  "completed_at": "2026-01-19T14:15:00Z",
+  "completion_promise": "Development auth bypass is working: browser automation can access the app without manual sign-in when NEXT_PUBLIC_DEV_AUTH_BYPASS=true",
+  "status": "completed"
+}

@@ -25,7 +25,7 @@ export function ChatInterface({
   onDisciplineChange,
 }: ChatInterfaceProps) {
   const { settings } = useSettings();
-  const [selectedModel, setSelectedModel] = useState<string>('glm-4-plus');
+  const [selectedModel, setSelectedModel] = useState<string>('claude'); // Default to Claude which has server-side API key
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showDisciplineSelector, setShowDisciplineSelector] = useState(false);
   const [showApiKeyWarning, setShowApiKeyWarning] = useState(false);
@@ -42,7 +42,13 @@ export function ChatInterface({
   }, [settings?.ai?.defaultModel]);
 
   // Check if API key is configured for selected model
+  // Server-side API keys (in .env.local) are available for main models
   const hasApiKey = useCallback(() => {
+    // Main models have server-side API keys configured
+    const modelsWithServerKeys = ['claude', 'openai', 'gemini', 'glm-4-plus'];
+    if (modelsWithServerKeys.includes(selectedModel)) return true;
+
+    // For other models, check personal API keys
     if (!settings?.ai?.personalApiKeys) return false;
     if (selectedModel === 'glm-4-plus') return !!settings.ai.personalApiKeys.zhipu;
     if (selectedModel === 'claude') return !!settings.ai.personalApiKeys.anthropic;

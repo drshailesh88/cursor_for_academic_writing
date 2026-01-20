@@ -18,12 +18,47 @@ import {
 } from 'firebase/firestore';
 import { getFirebaseDb } from './client';
 import { COLLECTIONS, Document, DocumentMetadata, DisciplineId, createNewDocument } from './schema';
+import { isDevAuthBypass } from './auth';
+
+// Development mode localStorage storage
+const DEV_STORAGE_KEY = 'dev_documents';
+
+function getDevDocuments(): Document[] {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem(DEV_STORAGE_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+function setDevDocuments(docs: Document[]): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(DEV_STORAGE_KEY, JSON.stringify(docs));
+}
+
+function generateDevId(): string {
+  return 'dev-' + Math.random().toString(36).substring(2, 15);
+}
 
 // Create a new document
 export async function createDocument(
   userId: string,
   title: string = 'Untitled Document'
 ): Promise<string> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const id = generateDevId();
+    const newDoc: Document = {
+      ...createNewDocument(userId, title),
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const docs = getDevDocuments();
+    docs.unshift(newDoc);
+    setDevDocuments(docs);
+    console.log('[DEV MODE] Document created in localStorage:', id);
+    return id;
+  }
+
   try {
     const docRef = doc(collection(getFirebaseDb(), COLLECTIONS.DOCUMENTS));
     const newDoc = {
@@ -42,6 +77,13 @@ export async function createDocument(
 
 // Get a document by ID
 export async function getDocument(documentId: string): Promise<Document | null> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const docs = getDevDocuments();
+    const doc = docs.find(d => d.id === documentId);
+    return doc || null;
+  }
+
   try {
     const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     const docSnap = await getDoc(docRef);
@@ -68,6 +110,17 @@ export async function updateDocument(
   documentId: string,
   updates: Partial<Document>
 ): Promise<void> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const docs = getDevDocuments();
+    const index = docs.findIndex(d => d.id === documentId);
+    if (index !== -1) {
+      docs[index] = { ...docs[index], ...updates, updatedAt: new Date() };
+      setDevDocuments(docs);
+    }
+    return;
+  }
+
   try {
     const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     await updateDoc(docRef, {
@@ -86,6 +139,17 @@ export async function saveDocumentContent(
   content: string,
   wordCount: number
 ): Promise<void> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const docs = getDevDocuments();
+    const index = docs.findIndex(d => d.id === documentId);
+    if (index !== -1) {
+      docs[index] = { ...docs[index], content, wordCount, updatedAt: new Date() };
+      setDevDocuments(docs);
+    }
+    return;
+  }
+
   try {
     const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     await updateDoc(docRef, {
@@ -101,6 +165,15 @@ export async function saveDocumentContent(
 
 // Delete a document
 export async function deleteDocument(documentId: string): Promise<void> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const docs = getDevDocuments();
+    const filtered = docs.filter(d => d.id !== documentId);
+    setDevDocuments(filtered);
+    console.log('[DEV MODE] Document deleted from localStorage:', documentId);
+    return;
+  }
+
   try {
     const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     await deleteDoc(docRef);
@@ -115,6 +188,22 @@ export async function getUserDocuments(
   userId: string,
   limitCount: number = 50
 ): Promise<DocumentMetadata[]> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const docs = getDevDocuments()
+      .filter(d => d.userId === userId)
+      .slice(0, limitCount)
+      .map(d => ({
+        id: d.id,
+        title: d.title,
+        updatedAt: new Date(d.updatedAt),
+        wordCount: d.wordCount || 0,
+        folder: d.folder,
+        discipline: d.discipline,
+      }));
+    return docs;
+  }
+
   try {
     const q = query(
       collection(getFirebaseDb(), COLLECTIONS.DOCUMENTS),
@@ -158,6 +247,17 @@ export async function renameDocument(
   documentId: string,
   newTitle: string
 ): Promise<void> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const docs = getDevDocuments();
+    const index = docs.findIndex(d => d.id === documentId);
+    if (index !== -1) {
+      docs[index] = { ...docs[index], title: newTitle, updatedAt: new Date() };
+      setDevDocuments(docs);
+    }
+    return;
+  }
+
   try {
     const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     await updateDoc(docRef, {
@@ -175,6 +275,17 @@ export async function updateDocumentDiscipline(
   documentId: string,
   discipline: DisciplineId
 ): Promise<void> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const docs = getDevDocuments();
+    const index = docs.findIndex(d => d.id === documentId);
+    if (index !== -1) {
+      docs[index] = { ...docs[index], discipline, updatedAt: new Date() };
+      setDevDocuments(docs);
+    }
+    return;
+  }
+
   try {
     const docRef = doc(getFirebaseDb(), COLLECTIONS.DOCUMENTS, documentId);
     await updateDoc(docRef, {

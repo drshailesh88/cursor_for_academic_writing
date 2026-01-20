@@ -39,7 +39,7 @@ export interface UserSettings {
 // Default settings for new users
 export const DEFAULT_SETTINGS: UserSettings = {
   ai: {
-    defaultModel: 'glm-4-plus', // Default to GLM-4.7 for testing (requires Z.AI key)
+    defaultModel: 'claude', // Default to Claude (Anthropic)
     temperature: 0.7,
     personalApiKeys: {},
   },

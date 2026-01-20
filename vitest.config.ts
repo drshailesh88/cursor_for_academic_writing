@@ -58,25 +58,12 @@ export default defineConfig({
     // Reporter - verbose output
     reporters: ['verbose'],
 
-    // Parallel execution
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: false,
-      },
-    },
-
-    // Dependencies to inline (for ESM compatibility)
+    // Dependencies to inline (ESM compatibility)
     deps: {
-      inline: [
-        /msw/,
-      ],
-    },
-
-    // Server configuration for optional dependencies
-    server: {
-      deps: {
-        inline: ['pptxgenjs'],
+      optimizer: {
+        web: {
+          include: ['pptxgenjs', 'msw'],
+        },
       },
     },
   },

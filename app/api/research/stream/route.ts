@@ -6,36 +6,12 @@
  */
 
 import { NextRequest } from 'next/server';
-
-/**
- * Event types that can be streamed
- */
-type StreamEventType =
-  | 'status'
-  | 'perspective_added'
-  | 'branch_update'
-  | 'learning'
-  | 'source_found'
-  | 'synthesis'
-  | 'complete'
-  | 'error';
-
-interface StreamEvent {
-  type: StreamEventType;
-  timestamp: number;
-  data: unknown;
-}
-
-/**
- * In-memory session store (in production, use Redis or similar)
- * This simulates a session tracking system
- */
-const sessionStore = new Map<string, {
-  status: string;
-  progress: number;
-  events: StreamEvent[];
-  completedAt?: number;
-}>();
+import {
+  type StreamEventType,
+  type StreamEvent,
+  sessionStore,
+  getOrCreateSession,
+} from '@/lib/research/stream-utils';
 
 /**
  * GET /api/research/stream?sessionId=xxx
@@ -76,17 +52,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Check if session exists
-  // In production, this would query a database or cache
-  const session = sessionStore.get(sessionId);
-  if (!session) {
-    // Create a new session entry for this request
-    sessionStore.set(sessionId, {
-      status: 'initializing',
-      progress: 0,
-      events: [],
-    });
-  }
+  // Get or create session
+  getOrCreateSession(sessionId);
 
   // Create SSE stream
   const stream = new ReadableStream({
@@ -146,7 +113,7 @@ export async function GET(request: NextRequest) {
           try {
             // Send heartbeat comment (SSE comments keep connection alive)
             controller.enqueue(encoder.encode(': heartbeat\n\n'));
-          } catch (error) {
+          } catch {
             clearInterval(heartbeatInterval);
           }
         }, 15000); // Every 15 seconds
@@ -198,31 +165,4 @@ export async function GET(request: NextRequest) {
       'X-Accel-Buffering': 'no', // Disable nginx buffering for Vercel
     },
   });
-}
-
-/**
- * Utility: Publish event to a session stream
- * This would be called by the research engine to push events
- */
-export function publishToStream(sessionId: string, type: StreamEventType, data: unknown) {
-  const session = sessionStore.get(sessionId);
-  if (session) {
-    session.events.push({
-      type,
-      timestamp: Date.now(),
-      data,
-    });
-  }
-}
-
-/**
- * Utility: Mark session as complete
- */
-export function completeSession(sessionId: string) {
-  const session = sessionStore.get(sessionId);
-  if (session) {
-    session.status = 'complete';
-    session.progress = 100;
-    session.completedAt = Date.now();
-  }
 }

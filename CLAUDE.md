@@ -1,5 +1,39 @@
 # Claude Code Instructions
 
+## 🚨 SESSION CONTINUITY PROTOCOL (READ FIRST!)
+
+> **CRITICAL: If this is a new session, READ `handover.json` IMMEDIATELY before doing anything else.**
+> This ensures you don't lose track of ongoing work like the character in Memento.
+
+### How to Resume Work
+```bash
+# ALWAYS start every new session by:
+1. Read handover.json - understand current state
+2. Check "current_task" - what were we working on?
+3. Check "next_steps" - what should happen next?
+4. Check "issues" array - any open problems?
+5. Check "validation_progress" - testing status
+6. Update handover.json after EVERY major action
+```
+
+### State Files
+- **`handover.json`** - Primary state persistence (JSON format)
+- **`specs/TRACKING.md`** - Feature implementation tracking
+- **`HANDOVER.md`** - Complete project documentation
+
+### Update Protocol
+After every significant action:
+1. Update `handover.json` with current progress
+2. Update `current_task` and `next_steps`
+3. Log any issues found to `issues` array
+4. Update `last_updated` timestamp
+5. Take screenshots during browser testing
+
+### Dev Server Constant
+**ALWAYS use: `http://localhost:2550`** - This is the dev server URL for all testing.
+
+---
+
 ## Task Master AI Instructions
 **Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskmaster/CLAUDE.md
@@ -775,6 +809,71 @@ This project supports work with multiple AI assistants:
 
 ---
 
-**Last Updated:** January 2, 2026
+---
+
+## 🧪 BROWSER AUTOMATION TESTING PROTOCOL
+
+### Tool: Vercel Agent Browser CLI
+The project uses Vercel Agent Browser CLI for browser automation testing.
+
+### CLI Commands Reference
+```bash
+agent-browser open <url>              # Open browser session, returns session_id
+agent-browser snapshot <session_id>   # Take page snapshot with element refs
+agent-browser click <session_id> <ref> # Click element by reference
+agent-browser type <session_id> <ref> <text> # Type into form field
+agent-browser screenshot <session_id> <path>  # Save screenshot
+agent-browser scroll <session_id> <direction> <amount>
+agent-browser close <session_id>      # Close session
+```
+
+### Testing Workflow
+1. **Site Mapping** - Navigate to all pages, take snapshots, catalog elements
+2. **Functional Testing** - Click all buttons, fill all forms, verify API responses
+3. **Regression Testing** - Re-test after fixes to ensure no breaks
+4. **Edge Cases** - Test invalid inputs, responsive views, error states
+
+### Screenshot Naming Convention
+```
+screenshots/[category]_[action]_[result].png
+# Examples:
+screenshots/auth_login_success.png
+screenshots/chat_message_sent.png
+screenshots/export_docx_download.png
+```
+
+### Validation Categories
+- Authentication (Google Sign-in, auth guard)
+- Document CRUD (create, read, update, delete)
+- Editor Features (formatting, tables, shortcuts)
+- AI Chat (model selection, messages, research tools)
+- Research Tools (PubMed, arXiv, Semantic Scholar, OpenAlex)
+- Citations (insert, bibliography, styles)
+- Writing Analysis (readability, style, AI detection)
+- Export (DOCX, PDF)
+- Collaboration (comments, versions, sharing, track changes)
+- Presentations (generate, edit, export)
+
+---
+
+## 🔄 RALPH LOOP PROTOCOL
+
+For iterative fixing, use the Ralph Loop methodology:
+
+```bash
+/ralph-loop "Fix all issues found during validation:
+1. Read handover.json for current issues
+2. Prioritize by severity (critical → edge cases)
+3. Use TDD: write test → implement fix → verify
+4. Run browser validation after each fix
+5. Update handover.json with progress
+6. Continue until all issues resolved
+Output <promise>DONE</promise> when complete."
+--completion-promise "DONE" --max-iterations 50
+```
+
+---
+
+**Last Updated:** January 19, 2026
 **Project Location:** `/Users/shaileshsingh/cursor for academic writing`
 **Maintained by:** Dr. Shailesh

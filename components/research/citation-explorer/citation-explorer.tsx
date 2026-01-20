@@ -4,12 +4,18 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Network, Loader2, AlertCircle } from 'lucide-react';
 import { useCitationExplorer } from './citation-explorer-context';
-import { GraphVisualization } from './graph-visualization';
 import { NodeDetailPanel } from './node-detail-panel';
 import { GraphControls, GraphStatsDisplay, ClusterLegend } from './graph-controls';
+
+// Dynamically import graph visualization to avoid SSR issues with react-force-graph-2d
+const GraphVisualization = dynamic(
+  () => import('./graph-visualization').then((mod) => mod.GraphVisualization),
+  { ssr: false, loading: () => <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div> }
+);
 
 export function CitationExplorer() {
   const {

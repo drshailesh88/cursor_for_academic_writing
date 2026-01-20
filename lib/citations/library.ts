@@ -33,6 +33,49 @@ import {
   ReferenceAuthor,
   generateCiteKey,
 } from './types';
+import { isDevAuthBypass } from '@/lib/firebase/auth';
+
+// Development mode localStorage storage for references
+const DEV_REFERENCES_KEY = 'dev_references';
+const DEV_FOLDERS_KEY = 'dev_folders';
+const DEV_LABELS_KEY = 'dev_labels';
+
+function getDevReferences(): Reference[] {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem(DEV_REFERENCES_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+function setDevReferences(refs: Reference[]): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(DEV_REFERENCES_KEY, JSON.stringify(refs));
+}
+
+function getDevFolders(): LibraryFolder[] {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem(DEV_FOLDERS_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+function setDevFolders(folders: LibraryFolder[]): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(DEV_FOLDERS_KEY, JSON.stringify(folders));
+}
+
+function getDevLabels(): LibraryLabel[] {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem(DEV_LABELS_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+function setDevLabels(labels: LibraryLabel[]): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(DEV_LABELS_KEY, JSON.stringify(labels));
+}
+
+function generateDevId(): string {
+  return 'dev-ref-' + Math.random().toString(36).substring(2, 15);
+}
 
 // ============================================
 // REFERENCES
@@ -52,6 +95,24 @@ export async function addReference(
   userId: string,
   reference: Omit<Reference, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const id = generateDevId();
+    const citeKey = reference.citeKey || generateCiteKey(reference as Reference);
+    const newRef: Reference = {
+      ...reference,
+      id,
+      citeKey,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as Reference;
+    const refs = getDevReferences();
+    refs.unshift(newRef);
+    setDevReferences(refs);
+    console.log('[DEV MODE] Reference added to localStorage:', id);
+    return id;
+  }
+
   try {
     const colRef = getReferencesCollection(userId);
     const docRef = doc(colRef);
@@ -202,6 +263,18 @@ export async function getAllReferences(
   sortBy: 'title' | 'author' | 'year' | 'added' | 'updated' = 'added',
   sortOrder: 'asc' | 'desc' = 'desc'
 ): Promise<Reference[]> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const refs = getDevReferences();
+    // Simple sorting
+    return refs.sort((a, b) => {
+      const order = sortOrder === 'asc' ? 1 : -1;
+      if (sortBy === 'title') return order * (a.title || '').localeCompare(b.title || '');
+      if (sortBy === 'year') return order * ((a.issued?.year || 0) - (b.issued?.year || 0));
+      return order * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    });
+  }
+
   try {
     const colRef = getReferencesCollection(userId);
 
@@ -453,6 +526,11 @@ export async function createFolder(
  * Get all folders
  */
 export async function getFolders(userId: string): Promise<LibraryFolder[]> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    return getDevFolders().sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   try {
     const colRef = getFoldersCollection(userId);
     const q = query(colRef, orderBy('name', 'asc'));
@@ -558,6 +636,11 @@ export async function createLabel(
  * Get all labels
  */
 export async function getLabels(userId: string): Promise<LibraryLabel[]> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    return getDevLabels().sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   try {
     const colRef = getLabelsCollection(userId);
     const q = query(colRef, orderBy('name', 'asc'));

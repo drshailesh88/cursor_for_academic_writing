@@ -73,13 +73,58 @@ export async function signOut() {
   }
 }
 
+// Development auth bypass configuration
+const DEV_AUTH_BYPASS = process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === 'true';
+
+// Mock user for development/testing
+const DEV_MOCK_USER = {
+  uid: 'dev-test-user',
+  email: 'dev@test.local',
+  displayName: 'Dev Test User',
+  photoURL: null,
+  emailVerified: true,
+  isAnonymous: false,
+  metadata: {},
+  providerData: [],
+  refreshToken: '',
+  tenantId: null,
+  delete: async () => {},
+  getIdToken: async () => 'dev-mock-token',
+  getIdTokenResult: async () => ({
+    token: 'dev-mock-token',
+    expirationTime: new Date(Date.now() + 3600000).toISOString(),
+    authTime: new Date().toISOString(),
+    issuedAtTime: new Date().toISOString(),
+    signInProvider: 'dev-bypass',
+    signInSecondFactor: null,
+    claims: {},
+  }),
+  reload: async () => {},
+  toJSON: () => ({}),
+  phoneNumber: null,
+  providerId: 'dev-bypass',
+} as unknown as User;
+
+// Check if dev auth bypass is enabled
+export function isDevAuthBypass(): boolean {
+  return DEV_AUTH_BYPASS;
+}
+
 // Custom hook to get current user
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(DEV_AUTH_BYPASS ? DEV_MOCK_USER : null);
+  const [loading, setLoading] = useState(!DEV_AUTH_BYPASS);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    // In dev bypass mode, skip Firebase auth listener
+    if (DEV_AUTH_BYPASS) {
+      console.log('[DEV MODE] Auth bypass active - using mock user');
+      setUser(DEV_MOCK_USER);
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(
       getFirebaseAuth(),
       (user) => {
@@ -95,7 +140,7 @@ export function useAuth() {
     return () => unsubscribe();
   }, []);
 
-  return { user, loading, error };
+  return { user, loading, error, isDevMode: DEV_AUTH_BYPASS };
 }
 
 // Get user profile from Firestore

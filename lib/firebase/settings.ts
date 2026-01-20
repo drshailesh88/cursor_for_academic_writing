@@ -5,12 +5,45 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getFirebaseDb } from './client';
 import { COLLECTIONS } from './schema';
 import { UserSettings, DEFAULT_SETTINGS } from '../settings/types';
+import { isDevAuthBypass } from './auth';
+
+// Development mode localStorage storage for settings
+const DEV_SETTINGS_KEY = 'dev_user_settings';
+
+function getDevSettings(): UserSettings {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS;
+  const stored = localStorage.getItem(DEV_SETTINGS_KEY);
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    // Force default model to 'claude' in dev mode to avoid glm-4-plus issues
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      ai: {
+        ...DEFAULT_SETTINGS.ai,
+        ...parsed.ai,
+        defaultModel: 'claude', // Force Claude in dev mode
+      },
+    };
+  }
+  return DEFAULT_SETTINGS;
+}
+
+function setDevSettings(settings: UserSettings): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(DEV_SETTINGS_KEY, JSON.stringify(settings));
+}
 
 /**
  * Get user settings from Firestore
  * Returns default settings if none exist
  */
 export async function getUserSettings(userId: string): Promise<UserSettings> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    return getDevSettings();
+  }
+
   try {
     const userRef = doc(getFirebaseDb(), COLLECTIONS.USERS, userId);
     const userSnap = await getDoc(userRef);
@@ -59,6 +92,19 @@ export async function updateUserSettings(
   userId: string,
   settings: Partial<UserSettings>
 ): Promise<void> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    const currentSettings = getDevSettings();
+    const updatedSettings: UserSettings = {
+      ai: { ...currentSettings.ai, ...(settings.ai || {}) },
+      writing: { ...currentSettings.writing, ...(settings.writing || {}) },
+      editor: { ...currentSettings.editor, ...(settings.editor || {}) },
+      export: { ...currentSettings.export, ...(settings.export || {}) },
+    };
+    setDevSettings(updatedSettings);
+    return;
+  }
+
   try {
     const userRef = doc(getFirebaseDb(), COLLECTIONS.USERS, userId);
     const userSnap = await getDoc(userRef);
@@ -93,6 +139,12 @@ export async function updateUserSettings(
  * Reset user settings to defaults
  */
 export async function resetToDefaults(userId: string): Promise<void> {
+  // Dev mode: use localStorage
+  if (isDevAuthBypass()) {
+    setDevSettings(DEFAULT_SETTINGS);
+    return;
+  }
+
   try {
     const userRef = doc(getFirebaseDb(), COLLECTIONS.USERS, userId);
 

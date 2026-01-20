@@ -345,13 +345,39 @@ function ThreePanelContent() {
 
     try {
       if (format === 'pptx') {
-        // TODO: PPTX export temporarily disabled due to Node.js module compatibility
-        // Need to move to server-side API route
-        toast.error('PPTX export temporarily unavailable. Use PDF export instead.');
-        return;
-        // const { exportToPptx } = await import('@/lib/presentations/export/pptx-export');
-        // const blob = await exportToPptx(currentPresentation);
-        // downloadBlob(blob, `${currentPresentation.title}.pptx`);
+        // Call server-side API for PPTX generation (pptxgenjs is Node.js only)
+        toast.loading('Generating PowerPoint...', { id: 'pptx-export' });
+
+        const response = await fetch('/api/presentations/export-pptx', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            presentation: {
+              id: currentPresentation.id,
+              title: currentPresentation.title,
+              description: currentPresentation.description,
+              theme: currentPresentation.theme,
+              slides: currentPresentation.slides,
+              settings: currentPresentation.settings,
+            },
+            options: {
+              includeNotes: true,
+              includeSlideNumbers: currentPresentation.settings.showSlideNumbers,
+            },
+          }),
+        });
+
+        toast.dismiss('pptx-export');
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to generate PPTX');
+        }
+
+        const blob = await response.blob();
+        downloadBlob(blob, `${currentPresentation.title}.pptx`);
       } else {
         const { exportToPdf } = await import('@/lib/presentations/export/pdf-export');
         const blob = await exportToPdf(currentPresentation);
@@ -360,6 +386,7 @@ function ThreePanelContent() {
       toast.success(`Exported as ${format.toUpperCase()}`);
     } catch (error) {
       console.error('Export error:', error);
+      toast.dismiss('pptx-export');
       toast.error(`Failed to export as ${format.toUpperCase()}`);
     }
   };
