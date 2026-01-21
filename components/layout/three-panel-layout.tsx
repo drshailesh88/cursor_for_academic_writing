@@ -53,6 +53,7 @@ import {
   PaperChat,
   usePaperLibrary,
 } from '@/components/papers';
+import { DiscoveryProvider } from '@/lib/contexts/discovery-context';
 import { GenerationDialog } from '@/components/presentations/generation-dialog';
 import { PresentationMode } from '@/components/presentations/presentation-mode';
 import { GenerationConfig, Presentation } from '@/lib/presentations/types';
@@ -100,13 +101,15 @@ export function ThreePanelLayout() {
   return (
     <ResearchProvider>
       <CitationExplorerProvider>
-        {user ? (
-          <PaperLibraryProvider userId={user.uid}>
+        <DiscoveryProvider>
+          {user ? (
+            <PaperLibraryProvider userId={user.uid}>
+              <ThreePanelContent />
+            </PaperLibraryProvider>
+          ) : (
             <ThreePanelContent />
-          </PaperLibraryProvider>
-        ) : (
-          <ThreePanelContent />
-        )}
+          )}
+        </DiscoveryProvider>
       </CitationExplorerProvider>
     </ResearchProvider>
   );

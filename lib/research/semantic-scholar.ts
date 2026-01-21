@@ -20,6 +20,66 @@ import {
 
 const API_BASE = 'https://api.semanticscholar.org/graph/v1';
 
+// ============================================================================
+// Response Cache - Reduces API calls and helps with rate limiting
+// ============================================================================
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+// Cache TTL: 15 minutes (in milliseconds)
+const CACHE_TTL = 15 * 60 * 1000;
+
+// In-memory cache for API responses
+const paperCache = new Map<string, CacheEntry<SemanticScholarPaper>>();
+const searchCache = new Map<string, CacheEntry<SemanticScholarSearchResponse>>();
+const citationsCache = new Map<string, CacheEntry<SemanticScholarPaper[]>>();
+const referencesCache = new Map<string, CacheEntry<SemanticScholarPaper[]>>();
+
+/**
+ * Get cached data if valid
+ */
+function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+    return entry.data;
+  }
+  // Remove expired entry
+  if (entry) {
+    cache.delete(key);
+  }
+  return null;
+}
+
+/**
+ * Store data in cache
+ */
+function setCache<T>(cache: Map<string, CacheEntry<T>>, key: string, data: T): void {
+  cache.set(key, { data, timestamp: Date.now() });
+
+  // Limit cache size to prevent memory issues
+  if (cache.size > 1000) {
+    // Remove oldest entries
+    const entries = Array.from(cache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    entries.slice(0, 200).forEach(([k]) => cache.delete(k));
+  }
+}
+
+/**
+ * Clear all caches (useful for testing or force refresh)
+ */
+export function clearSemanticScholarCache(): void {
+  paperCache.clear();
+  searchCache.clear();
+  citationsCache.clear();
+  referencesCache.clear();
+}
+
+// ============================================================================
+
 // Fields to request from the API
 const PAPER_FIELDS = [
   'paperId',
@@ -232,6 +292,12 @@ export async function searchSemanticScholar(query: SearchQuery): Promise<SearchR
  * Get paper by Semantic Scholar ID
  */
 export async function getSemanticScholarById(paperId: string): Promise<SearchResult | null> {
+  // Check cache first
+  const cached = getCached(paperCache, paperId);
+  if (cached) {
+    return toSearchResult(cached);
+  }
+
   const url = new URL(`${API_BASE}/paper/${paperId}`);
   url.searchParams.set('fields', PAPER_FIELDS);
 
@@ -243,6 +309,8 @@ export async function getSemanticScholarById(paperId: string): Promise<SearchRes
     if (!response.ok) return null;
 
     const paper: SemanticScholarPaper = await response.json();
+    // Cache the result
+    setCache(paperCache, paperId, paper);
     return toSearchResult(paper);
   } catch {
     return null;
@@ -298,6 +366,13 @@ export async function getRelatedPapers(paperId: string, limit = 10): Promise<Sea
  * Get papers that cite this paper
  */
 export async function getCitations(paperId: string, limit = 20): Promise<SearchResult[]> {
+  // Check cache first
+  const cacheKey = `${paperId}:${limit}`;
+  const cached = getCached(citationsCache, cacheKey);
+  if (cached) {
+    return cached.map((p) => toSearchResult(p));
+  }
+
   const url = new URL(`${API_BASE}/paper/${paperId}/citations`);
   url.searchParams.set('limit', String(limit));
   url.searchParams.set('fields', `citingPaper.${PAPER_FIELDS}`);
@@ -310,7 +385,10 @@ export async function getCitations(paperId: string, limit = 20): Promise<SearchR
     if (!response.ok) return [];
 
     const data: { data: { citingPaper: SemanticScholarPaper }[] } = await response.json();
-    return data.data.map((d) => toSearchResult(d.citingPaper));
+    const papers = data.data.map((d) => d.citingPaper);
+    // Cache the raw papers
+    setCache(citationsCache, cacheKey, papers);
+    return papers.map((p) => toSearchResult(p));
   } catch {
     return [];
   }
@@ -320,6 +398,13 @@ export async function getCitations(paperId: string, limit = 20): Promise<SearchR
  * Get papers this paper references
  */
 export async function getReferences(paperId: string, limit = 20): Promise<SearchResult[]> {
+  // Check cache first
+  const cacheKey = `${paperId}:${limit}`;
+  const cached = getCached(referencesCache, cacheKey);
+  if (cached) {
+    return cached.map((p) => toSearchResult(p));
+  }
+
   const url = new URL(`${API_BASE}/paper/${paperId}/references`);
   url.searchParams.set('limit', String(limit));
   url.searchParams.set('fields', `citedPaper.${PAPER_FIELDS}`);
@@ -332,7 +417,10 @@ export async function getReferences(paperId: string, limit = 20): Promise<Search
     if (!response.ok) return [];
 
     const data: { data: { citedPaper: SemanticScholarPaper }[] } = await response.json();
-    return data.data.map((d) => toSearchResult(d.citedPaper));
+    const papers = data.data.map((d) => d.citedPaper);
+    // Cache the raw papers
+    setCache(referencesCache, cacheKey, papers);
+    return papers.map((p) => toSearchResult(p));
   } catch {
     return [];
   }

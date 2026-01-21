@@ -20,9 +20,9 @@ const PapersPanelCompact = lazy(() =>
   }))
 );
 
-const DiscoveryPanelCompact = lazy(() =>
-  import('@/components/research/discovery-panel-compact').then((mod) => ({
-    default: mod.DiscoveryPanelCompact,
+const IntegratedDiscoveryPanel = lazy(() =>
+  import('@/components/discovery/integrated-discovery-panel').then((mod) => ({
+    default: mod.IntegratedDiscoveryPanel,
   }))
 );
 
@@ -119,12 +119,18 @@ export function TabContent({
         id="panel-discovery"
         aria-labelledby="tab-discovery"
         hidden={activeTab !== 'discovery'}
-        className={activeTab === 'discovery' ? 'h-full' : 'hidden'}
+        className={activeTab === 'discovery' ? 'h-full overflow-auto' : 'hidden'}
       >
         <Suspense fallback={<LoadingFallback />}>
-          <DiscoveryPanelCompact
-            documentContent={documentContent}
-            onInsertToEditor={onInsertToEditor}
+          <IntegratedDiscoveryPanel
+            onAddCitation={(citation) => {
+              if (onInsertToEditor) {
+                // Format citation for insertion
+                const citationText = `(${citation.authors.slice(0, 3).join(', ')}${citation.authors.length > 3 ? ' et al.' : ''})`;
+                onInsertToEditor(citationText);
+              }
+            }}
+            className="h-full"
           />
         </Suspense>
       </div>

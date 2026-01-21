@@ -117,6 +117,37 @@ function mapPaperContent(row: PaperContentRow): PaperContent {
 // PAPER STORAGE OPERATIONS
 // ============================================================================
 
+/**
+ * Sanitize filename for Supabase Storage
+ * Supabase Storage has strict key restrictions - only allows alphanumeric, underscores, hyphens, periods, and slashes
+ */
+function sanitizeFileName(fileName: string): string {
+  // Separate extension from filename
+  const lastDot = fileName.lastIndexOf('.');
+  const ext = lastDot > 0 ? fileName.slice(lastDot) : '';
+  const baseName = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+
+  // Sanitize the base name
+  const sanitizedBase = baseName
+    .replace(/[—–]/g, '-')        // Replace em-dash and en-dash with hyphen
+    .replace(/:/g, '-')            // Replace colons with hyphens
+    .replace(/[,;]/g, '')          // Remove commas and semicolons
+    .replace(/\s+/g, '_')          // Replace spaces with underscores
+    .replace(/['"]/g, '')          // Remove quotes
+    .replace(/[()[\]{}]/g, '')     // Remove brackets and parentheses
+    .replace(/[^a-zA-Z0-9_-]/g, '') // Remove any other special characters (no period in base)
+    .replace(/_+/g, '_')           // Collapse multiple underscores
+    .replace(/-+/g, '-')           // Collapse multiple hyphens
+    .replace(/^[_-]+/, '')         // Remove leading underscores, hyphens
+    .replace(/[_-]+$/, '')         // Remove trailing underscores, hyphens
+    .slice(0, 190);                // Limit base filename length (leave room for extension)
+
+  // Sanitize extension (just keep alphanumeric)
+  const sanitizedExt = ext.toLowerCase().replace(/[^a-z0-9.]/g, '');
+
+  return sanitizedBase + sanitizedExt;
+}
+
 export async function uploadPaperFile(
   userId: string,
   paperId: string,
@@ -124,7 +155,8 @@ export async function uploadPaperFile(
   fileName: string
 ): Promise<{ url: string; path: string }> {
   const supabase = getSupabaseAdminClient();
-  const storagePath = `${userId}/${paperId}/${fileName}`;
+  const sanitizedFileName = sanitizeFileName(fileName);
+  const storagePath = `${userId}/${paperId}/${sanitizedFileName}`;
 
   const { error } = await supabase.storage
     .from('papers')

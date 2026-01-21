@@ -79,7 +79,7 @@ async function legacySseResponse(
           progress: 0,
         });
 
-        const session = await startResearch(topic.trim(), mode as LegacyResearchMode, legacyConfig);
+        const session = await startResearch(topic.trim(), mode as 'quick' | 'standard' | 'deep' | 'exhaustive' | 'systematic', legacyConfig);
 
         sendEvent('session_created', {
           sessionId: session.id,

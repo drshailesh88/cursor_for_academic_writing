@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,6 +9,7 @@ import { PaperUpload } from './paper-upload';
 import { PaperSections } from './paper-sections';
 import { PaperChat } from './paper-chat';
 import { ExtractionButtons } from './extraction-buttons';
+import { usePaperLibrary } from './paper-library-context';
 import type { Paper, PaperContent, PaperMetadata } from '@/lib/supabase/schema';
 
 interface PaperPanelProps {
@@ -42,6 +43,21 @@ export function PaperPanel({
 }: PaperPanelProps) {
   const [view, setView] = useState<'library' | 'upload' | 'paper'>('library');
   const [activeTab, setActiveTab] = useState<'sections' | 'chat' | 'extract'>('sections');
+
+  // Get paper library context for chat functionality
+  const { addPaperToChat, chatPaperIds } = usePaperLibrary();
+
+  // Automatically add current paper to chat when Chat tab is active
+  useEffect(() => {
+    if (
+      activeTab === 'chat' &&
+      currentPaper &&
+      currentPaper.processingStatus === 'ready' &&
+      !chatPaperIds.includes(currentPaper.id)
+    ) {
+      addPaperToChat(currentPaper.id);
+    }
+  }, [activeTab, currentPaper, chatPaperIds, addPaperToChat]);
 
   const handleUploadClick = () => {
     setView('upload');

@@ -183,39 +183,67 @@ export class PDFProcessor {
   }
 
   /**
-   * Extract raw text from PDF using pdf-parse
+   * Extract raw text from PDF using unpdf (serverless-compatible)
    */
   private async extractText(buffer: ArrayBuffer): Promise<RawExtractionResult> {
     try {
       // Dynamic import for server-side only
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const pdfParse = require('pdf-parse') as (buffer: Buffer) => Promise<{
-        text: string;
-        numpages: number;
-        info?: {
-          Title?: string;
-          Author?: string;
-          Subject?: string;
-          Keywords?: string;
-          Creator?: string;
-          Producer?: string;
-        };
-      }>;
-      const nodeBuffer = Buffer.from(buffer);
+      const { getDocumentProxy } = require('unpdf') as {
+        getDocumentProxy: (data: Uint8Array) => Promise<{
+          numPages: number;
+          getPage: (num: number) => Promise<{
+            getTextContent: () => Promise<{
+              items: Array<{ str: string }>;
+            }>;
+          }>;
+          getMetadata?: () => Promise<{
+            info?: {
+              Title?: string;
+              Author?: string;
+              Subject?: string;
+              Keywords?: string;
+              Creator?: string;
+              Producer?: string;
+            };
+          }>;
+        }>;
+      };
 
-      const data = await pdfParse(nodeBuffer);
+      const uint8Array = new Uint8Array(buffer);
+      const pdf = await getDocumentProxy(uint8Array);
+
+      // Extract text from all pages
+      const pages: string[] = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        pages.push(pageText);
+      }
+
+      // Try to get metadata
+      let metadata: RawExtractionResult['metadata'] = {};
+      try {
+        if (pdf.getMetadata) {
+          const meta = await pdf.getMetadata();
+          metadata = {
+            title: meta.info?.Title,
+            author: meta.info?.Author,
+            subject: meta.info?.Subject,
+            keywords: meta.info?.Keywords,
+            creator: meta.info?.Creator,
+            producer: meta.info?.Producer,
+          };
+        }
+      } catch {
+        // Metadata extraction failed, continue without it
+      }
 
       return {
-        text: data.text,
-        pageCount: data.numpages,
-        metadata: {
-          title: data.info?.Title,
-          author: data.info?.Author,
-          subject: data.info?.Subject,
-          keywords: data.info?.Keywords,
-          creator: data.info?.Creator,
-          producer: data.info?.Producer,
-        },
+        text: pages.join('\n\n').trim(),
+        pageCount: pdf.numPages,
+        metadata,
       };
     } catch (error) {
       console.error('PDF extraction failed:', error);
